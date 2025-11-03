@@ -18,13 +18,13 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QTabWidget, QLabel, QLineEdit, QPushButton, QComboBox, QCheckBox,
     QTableWidget, QTableWidgetItem, QFileDialog, QMessageBox, QGroupBox,
     QSpinBox, QHeaderView, QMenuBar, QMenu
 )
 from PyQt6.QtCore import Qt, QSettings
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QColor
 
 from models import Character, Ship, DataProp, RelationshipInfo, StorageContainer, StorageItem
 
@@ -493,6 +493,20 @@ class SpaceHavenEditor(QMainWindow):
         header_layout.addStretch()
         details_layout.addLayout(header_layout)
 
+        # Homeship selector
+        homeship_layout = QHBoxLayout()
+        homeship_label = QLabel("Homeship:")
+        homeship_label.setStyleSheet("font-size: 12px; font-weight: bold;")
+        homeship_layout.addWidget(homeship_label)
+
+        self.homeship_combo = QComboBox()
+        self.homeship_combo.setMinimumWidth(200)
+        self.homeship_combo.currentIndexChanged.connect(self.on_homeship_changed)
+        homeship_layout.addWidget(self.homeship_combo)
+
+        homeship_layout.addStretch()
+        details_layout.addLayout(homeship_layout)
+
         # Attributes section
         attr_header_layout = QHBoxLayout()
         attr_label = QLabel("Attributes")
@@ -538,6 +552,19 @@ class SpaceHavenEditor(QMainWindow):
         traits_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #0066cc;")
         details_layout.addWidget(traits_label)
 
+        # Add trait controls
+        add_trait_widget = QWidget()
+        add_trait_layout = QHBoxLayout(add_trait_widget)
+        add_trait_layout.setContentsMargins(10, 5, 10, 5)
+        self.trait_combo = QComboBox()
+        self.populate_trait_combo()
+        add_trait_layout.addWidget(QLabel("Add Trait:"))
+        add_trait_layout.addWidget(self.trait_combo, 1)
+        add_trait_btn = QPushButton("Add")
+        add_trait_btn.clicked.connect(self.on_add_trait)
+        add_trait_layout.addWidget(add_trait_btn)
+        details_layout.addWidget(add_trait_widget)
+
         self.traits_container = QWidget()
         self.traits_layout = QVBoxLayout(self.traits_container)
         self.traits_layout.setSpacing(2)
@@ -554,6 +581,97 @@ class SpaceHavenEditor(QMainWindow):
         self.conditions_layout.setSpacing(2)
         self.conditions_layout.setContentsMargins(10, 0, 0, 0)
         details_layout.addWidget(self.conditions_container)
+
+        # Relationships section
+        relationships_label = QLabel("Relationships")
+        relationships_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #0066cc;")
+        details_layout.addWidget(relationships_label)
+
+        self.relationships_container = QWidget()
+        self.relationships_layout = QVBoxLayout(self.relationships_container)
+        self.relationships_layout.setSpacing(2)
+        self.relationships_layout.setContentsMargins(10, 0, 0, 0)
+        details_layout.addWidget(self.relationships_container)
+
+        # Job Priorities section
+        job_priorities_label = QLabel("Job Priorities (Occupation)")
+        job_priorities_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #0066cc;")
+        details_layout.addWidget(job_priorities_label)
+
+        self.job_priorities_container = QWidget()
+        self.job_priorities_layout = QVBoxLayout(self.job_priorities_container)
+        self.job_priorities_layout.setSpacing(2)
+        self.job_priorities_layout.setContentsMargins(10, 0, 0, 0)
+        details_layout.addWidget(self.job_priorities_container)
+
+        # Appearance section
+        appearance_label = QLabel("Appearance")
+        appearance_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #0066cc;")
+        details_layout.addWidget(appearance_label)
+
+        # Appearance editor controls
+        appearance_editor = QWidget()
+        appearance_editor_layout = QGridLayout(appearance_editor)
+        appearance_editor_layout.setContentsMargins(10, 5, 10, 5)
+        appearance_editor_layout.setSpacing(5)
+
+        # Skin tone selector
+        appearance_editor_layout.addWidget(QLabel("Skin Tone:"), 0, 0)
+        self.skin_combo = QComboBox()
+        self.skin_combo.addItem("Light skin", "744")
+        self.skin_combo.addItem("Dark skin", "743")
+        self.skin_combo.addItem("Medium skin", "745")
+        self.skin_combo.currentIndexChanged.connect(self.on_appearance_changed)
+        appearance_editor_layout.addWidget(self.skin_combo, 0, 1)
+
+        # Sleeve length selector
+        appearance_editor_layout.addWidget(QLabel("Sleeves:"), 1, 0)
+        self.sleeve_combo = QComboBox()
+        self.sleeve_combo.addItem("Short sleeves", "false")
+        self.sleeve_combo.addItem("Long sleeves", "true")
+        self.sleeve_combo.currentIndexChanged.connect(self.on_appearance_changed)
+        appearance_editor_layout.addWidget(self.sleeve_combo, 1, 1)
+
+        # Gloves selector
+        appearance_editor_layout.addWidget(QLabel("Gloves:"), 2, 0)
+        self.gloves_combo = QComboBox()
+        self.gloves_combo.addItem("With gloves", "false")
+        self.gloves_combo.addItem("No gloves", "true")
+        self.gloves_combo.currentIndexChanged.connect(self.on_appearance_changed)
+        appearance_editor_layout.addWidget(self.gloves_combo, 2, 1)
+
+        # Shirt color (numeric input)
+        appearance_editor_layout.addWidget(QLabel("Shirt Color ID:"), 3, 0)
+        self.shirt_color_input = QLineEdit()
+        self.shirt_color_input.setPlaceholderText("e.g., 2360")
+        self.shirt_color_input.textChanged.connect(self.on_color_id_changed)
+        appearance_editor_layout.addWidget(self.shirt_color_input, 3, 1)
+
+        # Pants color (numeric input)
+        appearance_editor_layout.addWidget(QLabel("Pants Color ID:"), 4, 0)
+        self.pants_color_input = QLineEdit()
+        self.pants_color_input.setPlaceholderText("e.g., 2364")
+        self.pants_color_input.textChanged.connect(self.on_color_id_changed)
+        appearance_editor_layout.addWidget(self.pants_color_input, 4, 1)
+
+        details_layout.addWidget(appearance_editor)
+
+        self.appearance_container = QWidget()
+        self.appearance_layout = QVBoxLayout(self.appearance_container)
+        self.appearance_layout.setSpacing(2)
+        self.appearance_layout.setContentsMargins(10, 0, 0, 0)
+        details_layout.addWidget(self.appearance_container)
+
+        # Equipment/Loadout section
+        equipment_label = QLabel("Equipment & Loadout")
+        equipment_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #0066cc;")
+        details_layout.addWidget(equipment_label)
+
+        self.equipment_container = QWidget()
+        self.equipment_layout = QVBoxLayout(self.equipment_container)
+        self.equipment_layout.setSpacing(2)
+        self.equipment_layout.setContentsMargins(10, 0, 0, 0)
+        details_layout.addWidget(self.equipment_container)
 
         details_layout.addStretch()
 
@@ -1143,10 +1261,33 @@ class SpaceHavenEditor(QMainWindow):
 
                 # Get basic attributes from <c> element
                 character.character_name = char_elem.get("name", "Unknown")
+                character.character_last_name = char_elem.get("lname", "")
                 character.character_entity_id = int(char_elem.get("entId", "0"))
                 character.ship_sid = ship_sid  # From parent ship
 
-                self.logger.info(f"    Loaded: {character.character_name} (Entity ID: {character.character_entity_id})")
+                # Load homeship from <ai> element
+                ai_elem = char_elem.find("ai")
+                if ai_elem is not None:
+                    character.homeship_sid = int(ai_elem.get("hsid", "0"))
+                    self.logger.debug(f"    Homeship ID: {character.homeship_sid}")
+
+                # Load appearance data from <c> attributes
+                character.appearance = {
+                    "bb": char_elem.get("bb", ""),
+                    "bs": char_elem.get("bs", ""),
+                    "bh": char_elem.get("bh", ""),
+                    "bp": char_elem.get("bp", ""),
+                    "orgColor": char_elem.get("orgColor", ""),
+                    "colorSet": char_elem.get("colorSet", "")
+                }
+
+                # Load colors element if present
+                colors_elem = char_elem.find("colors")
+                if colors_elem is not None:
+                    character.colors = dict(colors_elem.attrib)
+
+                full_name = f"{character.character_name} {character.character_last_name}".strip()
+                self.logger.info(f"    Loaded: {full_name} (Entity ID: {character.character_entity_id})")
 
                 # Load personality data from <pers> element
                 pers_elem = char_elem.find("pers")
@@ -1212,13 +1353,87 @@ class SpaceHavenEditor(QMainWindow):
                             condition_count += 1
                             self.logger.debug(f"      Condition: {prop.name} ({prop.id})")
                         self.logger.info(f"    Loaded {condition_count} conditions")
+
+                    # Load relationships from <pers>/<sociality>/<relationships>
+                    sociality_elem = pers_elem.find("sociality")
+                    if sociality_elem is not None:
+                        relationships_elem = sociality_elem.find("relationships")
+                        if relationships_elem is not None:
+                            rel_count = 0
+                            for rel_elem in relationships_elem.findall("l"):
+                                rel = RelationshipInfo()
+                                rel.target_entity_id = int(rel_elem.get("targetId", "0"))
+                                rel.friendship = int(rel_elem.get("friendship", "0"))
+                                rel.attraction = int(rel_elem.get("attraction", "0"))
+                                rel.compatibility = int(rel_elem.get("compatibility", "0"))
+                                rel.best_friends = rel_elem.get("bestFriends", "false").lower() == "true"
+                                rel.lovers = rel_elem.get("lovers", "false").lower() == "true"
+                                # We'll resolve target_name later when all characters are loaded
+                                character.character_relationships.append(rel)
+                                rel_count += 1
+                                self.logger.debug(f"      Relationship to entId {rel.target_entity_id}: {rel.get_relationship_type()}")
+                            self.logger.info(f"    Loaded {rel_count} relationships")
+
+                    # Load job priorities from <pers>/<jobsetting>
+                    jobsetting_elem = pers_elem.find("jobsetting")
+                    if jobsetting_elem is not None:
+                        for job_elem in jobsetting_elem.findall("j"):
+                            profession = job_elem.get("profession", "")
+                            priority = job_elem.get("priority", "Normal")
+                            character.job_priorities[profession] = priority
+                        self.logger.info(f"    Loaded {len(character.job_priorities)} job priorities")
                 else:
                     self.logger.warning(f"    No <pers> element found for {character.character_name}")
+
+                # Load loadout/equipment from <loadout> element
+                loadout_elem = char_elem.find("loadout")
+                if loadout_elem is not None:
+                    character.loadout = {
+                        "headgear": int(loadout_elem.get("headgear", "0")),
+                        "armor": int(loadout_elem.get("armor", "0")),
+                        "primary": int(loadout_elem.get("primary", "0")),
+                        "attachment": int(loadout_elem.get("attachment", "0")),
+                        "secondary": int(loadout_elem.get("secondary", "0")),
+                        "pocket1": int(loadout_elem.get("pocket1", "0")),
+                        "pocket2": int(loadout_elem.get("pocket2", "0")),
+                        "pocket3": int(loadout_elem.get("pocket3", "0")),
+                    }
+                    equipped_count = sum(1 for v in character.loadout.values() if v > 0)
+                    self.logger.info(f"    Loaded loadout: {equipped_count} items equipped")
+
+                # Load augmentations from <aug> element
+                aug_elem = char_elem.find("aug")
+                if aug_elem is not None:
+                    character.augmentations = {
+                        "primary": int(aug_elem.get("primary", "0")),
+                        "secondary": int(aug_elem.get("secondary", "0")),
+                    }
+                    if character.augmentations["primary"] > 0 or character.augmentations["secondary"] > 0:
+                        self.logger.info(f"    Loaded augmentations")
 
                 self.characters.append(character)
                 total_characters += 1
 
         self.logger.info(f"Total characters loaded: {total_characters}")
+
+        # Resolve relationship target names now that all characters are loaded
+        self._resolve_relationship_names()
+
+    def _resolve_relationship_names(self):
+        """Resolve target entity IDs to character names for all relationships"""
+        # Create a lookup dict of entity_id -> character_name
+        entity_name_map = {}
+        for char in self.characters:
+            entity_name_map[char.character_entity_id] = char.character_name
+
+        # Update all relationships with resolved names
+        for char in self.characters:
+            for rel in char.character_relationships:
+                if rel.target_entity_id in entity_name_map:
+                    rel.target_name = entity_name_map[rel.target_entity_id]
+                else:
+                    rel.target_name = f"Unknown ({rel.target_entity_id})"
+                    self.logger.warning(f"Could not resolve relationship target: {rel.target_entity_id}")
             
     def update_global_settings(self):
         """Update global settings in memory"""
@@ -1396,7 +1611,9 @@ class SpaceHavenEditor(QMainWindow):
         for char in self.characters:
             if char.ship_sid == ship_sid:
                 from PyQt6.QtWidgets import QListWidgetItem
-                item = QListWidgetItem(char.character_name)
+                # Show full name if last name exists
+                display_name = f"{char.character_name} {char.character_last_name}".strip()
+                item = QListWidgetItem(display_name)
                 item.setData(256, char)  # Store character object as item data (Qt.UserRole = 256)
                 self.crew_list.addItem(item)
                 crew_count += 1
@@ -1453,11 +1670,31 @@ class SpaceHavenEditor(QMainWindow):
         self.crew_name_edit.setReadOnly(False)  # Enable editing
         self.crew_name_edit.textChanged.connect(self.on_crew_name_changed)
 
+        # Update homeship selector - populate with player ships only
+        self.homeship_combo.blockSignals(True)
+        self.homeship_combo.clear()
+        for ship in self.ships:
+            # Only add player ships (not enemy/derelict ships)
+            # Player ships typically have side="Player" or are "real" ships
+            self.homeship_combo.addItem(ship.sname, ship.sid)
+
+        # Set current homeship
+        index = self.homeship_combo.findData(character.homeship_sid)
+        if index >= 0:
+            self.homeship_combo.setCurrentIndex(index)
+        else:
+            self.logger.warning(f"Homeship {character.homeship_sid} not found in ship list")
+        self.homeship_combo.blockSignals(False)
+
         # Clear existing editors
         self.clear_editor_layout(self.attributes_layout)
         self.clear_editor_layout(self.skills_layout)
         self.clear_editor_layout(self.traits_layout)
         self.clear_editor_layout(self.conditions_layout)
+        self.clear_editor_layout(self.relationships_layout)
+        self.clear_editor_layout(self.job_priorities_layout)
+        self.clear_editor_layout(self.appearance_layout)
+        self.clear_editor_layout(self.equipment_layout)
 
         self.attribute_editors.clear()
         self.skill_editors.clear()
@@ -1503,6 +1740,267 @@ class SpaceHavenEditor(QMainWindow):
             widget = ConditionWidget(condition.id, condition.name)
             widget.conditionRemoved.connect(self.on_condition_removed)
             self.conditions_layout.addWidget(widget)
+
+        # Add relationship widgets
+        self.logger.debug(f"  Creating {len(character.character_relationships)} relationship widgets")
+        for rel in character.character_relationships:
+            from PyQt6.QtWidgets import QLabel, QHBoxLayout
+            rel_widget = QWidget()
+            rel_layout = QHBoxLayout(rel_widget)
+            rel_layout.setContentsMargins(0, 2, 0, 2)
+
+            # Relationship type with color coding
+            rel_type = rel.get_relationship_type()
+            if rel_type == "Lovers":
+                color = "#ff1493"  # Deep pink
+            elif rel_type == "Best Friends":
+                color = "#00cc00"  # Green
+            elif rel_type == "Friends":
+                color = "#66cc66"  # Light green
+            elif rel_type == "Dislike":
+                color = "#ff6600"  # Orange
+            elif rel_type == "Enemies":
+                color = "#cc0000"  # Red
+            else:
+                color = "#888888"  # Gray
+
+            rel_label = QLabel(f"<b style='color: {color};'>{rel_type}</b>: {rel.target_name}")
+            rel_layout.addWidget(rel_label)
+
+            # Friendship score
+            score_label = QLabel(f"({rel.friendship})")
+            score_label.setStyleSheet("color: gray; font-size: 10px;")
+            rel_layout.addWidget(score_label)
+
+            rel_layout.addStretch()
+            self.relationships_layout.addWidget(rel_widget)
+
+        # Add job priorities display (highest priority ones first)
+        if character.job_priorities:
+            self.logger.debug(f"  Displaying {len(character.job_priorities)} job priorities")
+            # Sort by priority level (Highest first)
+            priority_order = {"Highest": 0, "High": 1, "Normal": 2, "Low": 3, "Lowest": 4, "DontDo": 5}
+            sorted_jobs = sorted(character.job_priorities.items(),
+                               key=lambda x: priority_order.get(x[1], 99))
+
+            for profession, priority in sorted_jobs:
+                from PyQt6.QtWidgets import QLabel, QHBoxLayout
+                job_widget = QWidget()
+                job_layout = QHBoxLayout(job_widget)
+                job_layout.setContentsMargins(0, 2, 0, 2)
+
+                # Color code by priority
+                if priority == "Highest":
+                    color = "#00cc00"  # Green
+                elif priority == "High":
+                    color = "#66cc66"  # Light green
+                elif priority == "Normal":
+                    color = "#888888"  # Gray
+                elif priority == "Low":
+                    color = "#ff9900"  # Orange
+                elif priority == "Lowest":
+                    color = "#ff6600"  # Dark orange
+                elif priority == "DontDo":
+                    color = "#cc0000"  # Red
+                else:
+                    color = "#888888"
+
+                job_label = QLabel(f"<b style='color: {color};'>{priority}</b>: {profession}")
+                job_layout.addWidget(job_label)
+                job_layout.addStretch()
+                self.job_priorities_layout.addWidget(job_widget)
+
+        # Populate appearance editor controls
+        if character.colors:
+            # Set skin tone
+            if character.colors.get("skinSet"):
+                index = self.skin_combo.findData(str(character.colors['skinSet']))
+                if index >= 0:
+                    self.skin_combo.setCurrentIndex(index)
+
+            # Set sleeve length
+            if character.colors.get("longSleeve"):
+                index = self.sleeve_combo.findData(character.colors['longSleeve'])
+                if index >= 0:
+                    self.sleeve_combo.setCurrentIndex(index)
+
+            # Set gloves
+            if character.colors.get("glovesOff"):
+                index = self.gloves_combo.findData(character.colors['glovesOff'])
+                if index >= 0:
+                    self.gloves_combo.setCurrentIndex(index)
+
+            # Set shirt color
+            if character.colors.get("shirtSet"):
+                self.shirt_color_input.setText(str(character.colors['shirtSet']))
+
+            # Set pants color
+            if character.colors.get("pantsSet"):
+                self.pants_color_input.setText(str(character.colors['pantsSet']))
+
+        # Add appearance display
+        if character.appearance or character.colors:
+            from PyQt6.QtWidgets import QLabel
+            self.logger.debug("  Displaying appearance data")
+
+            # Helper function to translate skin tone
+            def get_skin_tone(skin_set):
+                skin_map = {
+                    "743": "Dark skin",
+                    "744": "Light skin",
+                    "745": "Medium skin",
+                }
+                return skin_map.get(str(skin_set), f"Skin #{skin_set}")
+
+            # Helper function to translate body type
+            def get_body_type(bb):
+                return "Male" if bb == "m" else "Female" if bb == "f" else bb
+
+            # Show basic appearance attributes
+            if character.appearance:
+                appearance_items = []
+
+                # Body type (Male/Female)
+                if character.appearance.get("bb"):
+                    body_type = get_body_type(character.appearance['bb'])
+                    appearance_items.append(f"<b>Body:</b> {body_type}")
+
+                # Body style
+                if character.appearance.get("bs"):
+                    appearance_items.append(f"<b>Style:</b> {character.appearance['bs']}")
+
+                # Head style
+                if character.appearance.get("bh"):
+                    appearance_items.append(f"<b>Head:</b> {character.appearance['bh']}")
+
+                # Pants style
+                if character.appearance.get("bp"):
+                    appearance_items.append(f"<b>Pants Style:</b> {character.appearance['bp']}")
+
+                if appearance_items:
+                    appearance_text = " | ".join(appearance_items)
+                    appearance_label = QLabel(appearance_text)
+                    appearance_label.setStyleSheet("color: #888888; font-size: 10px;")
+                    self.appearance_layout.addWidget(appearance_label)
+
+            # Show color and clothing details if present
+            if character.colors:
+                color_items = []
+
+                # Skin tone
+                if character.colors.get("skinSet"):
+                    skin_tone = get_skin_tone(character.colors['skinSet'])
+                    color_items.append(f"<b>{skin_tone}</b>")
+
+                # Sleeve length
+                if character.colors.get("longSleeve"):
+                    sleeve_type = "Long sleeves" if character.colors['longSleeve'] == "true" else "Short sleeves"
+                    color_items.append(sleeve_type)
+
+                # Gloves (note: glovesOff="true" means NO gloves!)
+                if character.colors.get("glovesOff"):
+                    has_gloves = "No gloves" if character.colors['glovesOff'] == "true" else "With gloves"
+                    color_items.append(has_gloves)
+
+                if color_items:
+                    clothing_text = " | ".join(color_items)
+                    clothing_label = QLabel(clothing_text)
+                    clothing_label.setStyleSheet("color: #888888; font-size: 10px;")
+                    self.appearance_layout.addWidget(clothing_label)
+
+                # Show shirt and pants color IDs on a separate line
+                color_ids = []
+                if character.colors.get("shirtSet"):
+                    color_ids.append(f"<b>Shirt color:</b> #{character.colors['shirtSet']}")
+                if character.colors.get("pantsSet"):
+                    color_ids.append(f"<b>Pants color:</b> #{character.colors['pantsSet']}")
+
+                if color_ids:
+                    color_ids_text = " | ".join(color_ids)
+                    color_ids_label = QLabel(color_ids_text)
+                    color_ids_label.setStyleSheet("color: #666666; font-size: 9px; font-style: italic;")
+                    self.appearance_layout.addWidget(color_ids_label)
+
+        # Add equipment/loadout editor
+        from PyQt6.QtWidgets import QLabel, QGridLayout
+        self.logger.debug("  Creating equipment/loadout editor")
+
+        # Initialize loadout if not present
+        if not character.loadout:
+            character.loadout = {
+                "headgear": 0, "armor": 0, "primary": 0, "attachment": 0,
+                "secondary": 0, "pocket1": 0, "pocket2": 0, "pocket3": 0
+            }
+
+        # Create equipment editor grid
+        equip_widget = QWidget()
+        equip_grid = QGridLayout(equip_widget)
+        equip_grid.setSpacing(5)
+        equip_grid.setContentsMargins(0, 5, 0, 5)
+
+        # Store equipment combos for later access
+        self.equipment_combos = {}
+
+        row = 0
+        # Weapons section
+        equip_grid.addWidget(QLabel("<b>Primary Weapon:</b>"), row, 0)
+        primary_combo = self.create_equipment_combo("weapons", character.loadout.get("primary", 0))
+        primary_combo.currentIndexChanged.connect(lambda: self.on_equipment_changed("primary"))
+        self.equipment_combos["primary"] = primary_combo
+        equip_grid.addWidget(primary_combo, row, 1)
+        row += 1
+
+        equip_grid.addWidget(QLabel("<b>Attachment:</b>"), row, 0)
+        attachment_combo = self.create_equipment_combo("attachments", character.loadout.get("attachment", 0))
+        attachment_combo.currentIndexChanged.connect(lambda: self.on_equipment_changed("attachment"))
+        self.equipment_combos["attachment"] = attachment_combo
+        equip_grid.addWidget(attachment_combo, row, 1)
+        row += 1
+
+        equip_grid.addWidget(QLabel("<b>Secondary Weapon:</b>"), row, 0)
+        secondary_combo = self.create_equipment_combo("weapons", character.loadout.get("secondary", 0))
+        secondary_combo.currentIndexChanged.connect(lambda: self.on_equipment_changed("secondary"))
+        self.equipment_combos["secondary"] = secondary_combo
+        equip_grid.addWidget(secondary_combo, row, 1)
+        row += 1
+
+        # Armor section
+        equip_grid.addWidget(QLabel("<b>Headgear:</b>"), row, 0)
+        headgear_combo = self.create_equipment_combo("armor", character.loadout.get("headgear", 0))
+        headgear_combo.currentIndexChanged.connect(lambda: self.on_equipment_changed("headgear"))
+        self.equipment_combos["headgear"] = headgear_combo
+        equip_grid.addWidget(headgear_combo, row, 1)
+        row += 1
+
+        equip_grid.addWidget(QLabel("<b>Armor:</b>"), row, 0)
+        armor_combo = self.create_equipment_combo("armor", character.loadout.get("armor", 0))
+        armor_combo.currentIndexChanged.connect(lambda: self.on_equipment_changed("armor"))
+        self.equipment_combos["armor"] = armor_combo
+        equip_grid.addWidget(armor_combo, row, 1)
+        row += 1
+
+        # Pockets section
+        for i in range(1, 4):
+            equip_grid.addWidget(QLabel(f"<b>Pocket {i}:</b>"), row, 0)
+            pocket_combo = self.create_equipment_combo("utility", character.loadout.get(f"pocket{i}", 0))
+            pocket_combo.currentIndexChanged.connect(lambda checked, idx=i: self.on_equipment_changed(f"pocket{idx}"))
+            self.equipment_combos[f"pocket{i}"] = pocket_combo
+            equip_grid.addWidget(pocket_combo, row, 1)
+            row += 1
+
+        self.equipment_layout.addWidget(equip_widget)
+
+        # Show augmentations if present
+        if character.augmentations and (character.augmentations.get("primary", 0) > 0 or character.augmentations.get("secondary", 0) > 0):
+            aug_items = []
+            if character.augmentations.get("primary", 0) > 0:
+                aug_items.append(f"Primary Aug #{character.augmentations['primary']}")
+            if character.augmentations.get("secondary", 0) > 0:
+                aug_items.append(f"Secondary Aug #{character.augmentations['secondary']}")
+
+            aug_label = QLabel(f"<b>Augmentations:</b> {', '.join(aug_items)}")
+            aug_label.setStyleSheet("color: #9966ff; margin-top: 5px;")
+            self.equipment_layout.addWidget(aug_label)
 
         self.logger.info(f"Crew details displayed with interactive editors")
 
@@ -1562,6 +2060,249 @@ class SpaceHavenEditor(QMainWindow):
                     self.display_crew_details(self.current_character)
                     self.mark_as_modified()
                     break
+
+    def populate_trait_combo(self):
+        """Populate the trait dropdown with all available traits"""
+        self.trait_combo.clear()
+        
+        # Get all traits from IdCollection, organized by type
+        positive_traits = [
+            (191, "Hero"),
+            (1035, "Smart"),
+            (1039, "Fast Learner"),
+            (1041, "Hard Working"),
+            (1044, "Iron-willed"),
+            (1045, "Spacefarer"),
+            (1046, "Confident"),
+            (1048, "Charming"),
+            (1533, "Iron Stomach"),
+            (1534, "Nyctophilia"),
+            (1535, "Minimalist"),
+            (1560, "Talkative"),
+            (1562, "Gourmand"),
+            (2082, "Alien lover"),
+        ]
+        
+        negative_traits = [
+            (655, "Wimp"),
+            (656, "Clumsy"),
+            (1034, "Suicidal"),
+            (1037, "Antisocial"),
+            (1038, "Needy"),
+            (1040, "Lazy"),
+            (1047, "Neurotic"),
+        ]
+        
+        neutral_traits = [
+            (1036, "Bloodlust"),
+            (1042, "Psychopath"),
+            (1043, "Peace-loving"),
+        ]
+        
+        # Add positive traits
+        self.trait_combo.addItem("--- POSITIVE TRAITS ---")
+        model = self.trait_combo.model()
+        item = model.item(self.trait_combo.count() - 1)
+        item.setEnabled(False)
+        item.setBackground(QColor("#e8f5e9"))
+        
+        for trait_id, trait_name in positive_traits:
+            self.trait_combo.addItem(f"  {trait_name}", trait_id)
+        
+        # Add negative traits
+        self.trait_combo.addItem("--- NEGATIVE TRAITS ---")
+        item = model.item(self.trait_combo.count() - 1)
+        item.setEnabled(False)
+        item.setBackground(QColor("#ffebee"))
+        
+        for trait_id, trait_name in negative_traits:
+            self.trait_combo.addItem(f"  {trait_name}", trait_id)
+        
+        # Add neutral traits
+        self.trait_combo.addItem("--- NEUTRAL TRAITS ---")
+        item = model.item(self.trait_combo.count() - 1)
+        item.setEnabled(False)
+        item.setBackground(QColor("#f0f0f0"))
+        
+        for trait_id, trait_name in neutral_traits:
+            self.trait_combo.addItem(f"  {trait_name}", trait_id)
+        
+        self.logger.debug("Populated trait combo with all available traits")
+
+    def on_add_trait(self):
+        """Handle adding a new trait to the current character"""
+        if not self.current_character:
+            return
+        
+        trait_id = self.trait_combo.currentData()
+        if not trait_id:
+            return
+        
+        # Check if trait already exists
+        for trait in self.current_character.character_traits:
+            if trait.id == trait_id:
+                QMessageBox.information(
+                    self,
+                    "Trait Already Exists",
+                    f"This character already has the trait: {self.trait_combo.currentText().strip()}"
+                )
+                return
+        
+        # Add the trait
+        from models import DataProp
+        new_trait = DataProp()
+        new_trait.id = trait_id
+        new_trait.name = self.id_collection.get_trait_name(trait_id)
+        self.current_character.character_traits.append(new_trait)
+        
+        self.logger.info(f"Added trait: {new_trait.name} to {self.current_character.character_name}")
+        
+        # Refresh display
+        self.display_crew_details(self.current_character)
+        self.mark_as_modified()
+
+    def create_equipment_combo(self, category: str, current_value: int) -> QComboBox:
+        """Create a combo box for equipment selection"""
+        combo = QComboBox()
+        
+        # Add "Empty" option
+        combo.addItem("(Empty)", 0)
+        
+        # Define equipment by category
+        equipment_items = {
+            "weapons": [
+                (760, "Five-Seven Pistol"),
+                (728, "SMG"),
+                (729, "Shotgun"),
+                (725, "Assault Rifle"),
+                (3070, "Laser Pistol"),
+                (3069, "Laser Rifle"),
+                (3071, "Plasma Cuttergun"),
+                (3072, "Plasma Rifle"),
+                (3962, "Stun Pistol"),
+                (3961, "Stun Rifle"),
+            ],
+            "attachments": [
+                (3968, "Basic Scope"),
+                (3969, "Tactical Grip"),
+                (3960, "Flamethrower"),
+                (3967, "Explosive Grenade Launcher"),
+                (4076, "Incendiary Grenade Launcher"),
+            ],
+            "armor": [
+                (3384, "Armored Vest"),
+                (4065, "Space Suit Oxygen Extender"),
+            ],
+            "utility": [
+                (3386, "Remote Control"),
+                (3388, "Oxygen Tank"),
+                (4030, "Nano Wound Dressing"),
+                (4007, "Bandage"),
+                (4005, "Painkillers"),
+                (4006, "Combat Stimulant"),
+                (4040, "Small Breach Charge"),
+                (2715, "Explosive Ammunition"),
+            ],
+        }
+        
+        # Add items for this category
+        if category in equipment_items:
+            for item_id, item_name in equipment_items[category]:
+                combo.addItem(item_name, item_id)
+        
+        # Set current value
+        index = combo.findData(current_value)
+        if index >= 0:
+            combo.setCurrentIndex(index)
+        
+        return combo
+
+    def on_equipment_changed(self, slot: str):
+        """Handle equipment changes"""
+        if not self.current_character or slot not in self.equipment_combos:
+            return
+        
+        combo = self.equipment_combos[slot]
+        new_value = combo.currentData()
+        
+        if new_value is not None:
+            self.current_character.loadout[slot] = new_value
+            self.logger.info(f"Changed {slot} to item ID {new_value}")
+            self.mark_as_modified()
+
+    def on_appearance_changed(self):
+        """Handle appearance changes (skin, sleeves, gloves)"""
+        if not self.current_character:
+            return
+        
+        # Initialize colors dict if not present
+        if not self.current_character.colors:
+            self.current_character.colors = {}
+        
+        # Update skin tone
+        skin_value = self.skin_combo.currentData()
+        if skin_value:
+            self.current_character.colors["skinSet"] = skin_value
+            self.logger.info(f"Changed skin tone to {self.skin_combo.currentText()}")
+        
+        # Update sleeve length
+        sleeve_value = self.sleeve_combo.currentData()
+        if sleeve_value:
+            self.current_character.colors["longSleeve"] = sleeve_value
+            self.logger.info(f"Changed sleeves to {self.sleeve_combo.currentText()}")
+        
+        # Update gloves
+        gloves_value = self.gloves_combo.currentData()
+        if gloves_value:
+            self.current_character.colors["glovesOff"] = gloves_value
+            self.logger.info(f"Changed gloves to {self.gloves_combo.currentText()}")
+        
+        self.mark_as_modified()
+
+    def on_color_id_changed(self):
+        """Handle shirt/pants color ID changes"""
+        if not self.current_character:
+            return
+        
+        # Initialize colors dict if not present
+        if not self.current_character.colors:
+            self.current_character.colors = {}
+        
+        # Update shirt color
+        shirt_text = self.shirt_color_input.text().strip()
+        if shirt_text:
+            try:
+                shirt_id = int(shirt_text)
+                self.current_character.colors["shirtSet"] = str(shirt_id)
+                self.logger.debug(f"Changed shirt color to {shirt_id}")
+            except ValueError:
+                pass  # Invalid input, ignore
+        
+        # Update pants color
+        pants_text = self.pants_color_input.text().strip()
+        if pants_text:
+            try:
+                pants_id = int(pants_text)
+                self.current_character.colors["pantsSet"] = str(pants_id)
+                self.logger.debug(f"Changed pants color to {pants_id}")
+            except ValueError:
+                pass  # Invalid input, ignore
+        
+        self.mark_as_modified()
+
+    def on_homeship_changed(self):
+        """Handle homeship assignment changes"""
+        if not self.current_character:
+            return
+        
+        new_homeship_id = self.homeship_combo.currentData()
+        if new_homeship_id is not None:
+            old_homeship_id = self.current_character.homeship_sid
+            self.current_character.homeship_sid = new_homeship_id
+            
+            ship_name = self.homeship_combo.currentText()
+            self.logger.info(f"Changed {self.current_character.character_name}'s homeship from {old_homeship_id} to {new_homeship_id} ({ship_name})")
+            self.mark_as_modified()
 
     def on_condition_removed(self, condition_id: int):
         """Handle condition removal"""
@@ -1677,6 +2418,49 @@ class SpaceHavenEditor(QMainWindow):
                         if cond_id not in current_condition_ids:
                             conditions_elem.remove(c_elem)
 
+                # Update homeship assignment
+                ai_elem = char_elem.find("ai")
+                if ai_elem is not None and character.homeship_sid:
+                    ai_elem.set("hsid", str(character.homeship_sid))
+                    self.logger.debug(f"  Updated homeship to {character.homeship_sid}")
+
+                # Update appearance/colors data
+                if character.colors:
+                    colors_elem = char_elem.find("colors")
+                    if colors_elem is not None:
+                        # Update color attributes
+                        if "skinSet" in character.colors:
+                            colors_elem.set("skinSet", str(character.colors["skinSet"]))
+                        if "longSleeve" in character.colors:
+                            colors_elem.set("longSleeve", character.colors["longSleeve"])
+                        if "glovesOff" in character.colors:
+                            colors_elem.set("glovesOff", character.colors["glovesOff"])
+                        if "shirtSet" in character.colors:
+                            colors_elem.set("shirtSet", str(character.colors["shirtSet"]))
+                        if "pantsSet" in character.colors:
+                            colors_elem.set("pantsSet", str(character.colors["pantsSet"]))
+                        self.logger.debug(f"  Updated appearance colors")
+
+                # Update loadout/equipment
+                if character.loadout:
+                    loadout_elem = char_elem.find("loadout")
+                    if loadout_elem is not None:
+                        # Update all equipment slots
+                        for slot, value in character.loadout.items():
+                            loadout_elem.set(slot, str(value))
+                        self.logger.debug(f"  Updated equipment loadout")
+
+                # Add new traits if any
+                traits_elem = pers_elem.find("traits")
+                if traits_elem is not None:
+                    existing_trait_ids = {int(t.get("id", "0")) for t in traits_elem.findall("t")}
+                    for trait in character.character_traits:
+                        if trait.id not in existing_trait_ids:
+                            # Add new trait element
+                            new_trait = ET.SubElement(traits_elem, "t")
+                            new_trait.set("id", str(trait.id))
+                            self.logger.debug(f"  Added new trait {trait.name}")
+
                 updated_count += 1
 
         self.logger.info(f"Updated {updated_count} characters in XML")
@@ -1766,14 +2550,411 @@ class SpaceHavenEditor(QMainWindow):
         """Mark the save file as modified (needs saving)"""
         if self.current_file_path and "[Modified]" not in self.windowTitle():
             self.setWindowTitle(self.windowTitle() + " [Modified]")
+
+    def sanitize_clone_character(self, char_elem):
+        """Remove negative conditions and reset stats for a cloned character"""
+        from PyQt6.QtWidgets import QMessageBox
+        import xml.etree.ElementTree as ET
+        
+        changes_made = []
+        
+        # Reset stats in <props> element to healthy defaults
+        props_elem = char_elem.find("props")
+        if props_elem is not None:
+            # Health: set to 100
+            health_elem = props_elem.find("Health")
+            if health_elem is not None:
+                old_health = health_elem.get("v", "100")
+                health_elem.set("v", "100")
+                health_elem.set("ltv", "100")
+                if old_health != "100":
+                    changes_made.append(f"Health: {old_health} → 100")
             
+            # Food: set to 100
+            food_elem = props_elem.find("Food")
+            if food_elem is not None:
+                old_food = food_elem.get("v", "100")
+                food_elem.set("v", "100")
+                food_elem.set("ltv", "100")
+                if old_food != "100":
+                    changes_made.append(f"Food: {old_food} → 100")
+            
+            # Rest/Energy: set to 100
+            rest_elem = props_elem.find("Rest")
+            if rest_elem is not None:
+                old_rest = rest_elem.get("v", "100")
+                rest_elem.set("v", "100")
+                rest_elem.set("ltv", "100")
+                if old_rest != "100":
+                    changes_made.append(f"Energy: {old_rest} → 100")
+            
+            # Comfort: set to 100
+            comfort_elem = props_elem.find("Comfort")
+            if comfort_elem is not None:
+                old_comfort = comfort_elem.get("v", "100")
+                comfort_elem.set("v", "100")
+                comfort_elem.set("ltv", "100")
+                if old_comfort != "100":
+                    changes_made.append(f"Comfort: {old_comfort} → 100")
+            
+            # Mood: set to high positive value
+            mood_elem = props_elem.find("Mood")
+            if mood_elem is not None:
+                old_mood = mood_elem.get("v", "50")
+                mood_elem.set("v", "50")
+                mood_elem.set("ltv", "50")
+                if old_mood != "50":
+                    changes_made.append(f"Mood: {old_mood} → 50")
+        
+        # Remove all conditions (safest approach - removes negative and temporary positive conditions)
+        pers_elem = char_elem.find("pers")
+        if pers_elem is not None:
+            conditions_elem = pers_elem.find("conditions")
+            if conditions_elem is not None:
+                condition_count = len(conditions_elem.findall("c"))
+                if condition_count > 0:
+                    conditions_elem.clear()
+                    changes_made.append(f"Removed {condition_count} condition(s)")
+        
+        # Clear relationships (clone starts fresh)
+        if pers_elem is not None:
+            sociality_elem = pers_elem.find("sociality")
+            if sociality_elem is not None:
+                relationships_elem = sociality_elem.find("relationships")
+                if relationships_elem is not None:
+                    rel_count = len(relationships_elem.findall("l"))
+                    if rel_count > 0:
+                        relationships_elem.clear()
+                        changes_made.append(f"Cleared {rel_count} relationship(s)")
+        
+        return changes_made
+
     def add_crew_member(self):
-        """Add a new crew member"""
+        """Add a new crew member by cloning an existing one"""
+        from PyQt6.QtWidgets import QInputDialog, QMessageBox
+        import copy
+        
+        if not self.characters:
+            QMessageBox.warning(
+                self,
+                "No Crew Members",
+                "There are no crew members to clone. Please load a save file first."
+            )
+            return
+        
+        # Step 1: Select crew member to clone
+        crew_options = []
+        for char in self.characters:
+            ship_name = "Unknown Ship"
+            for ship in self.ships:
+                if ship.sid == char.ship_sid:
+                    ship_name = ship.sname
+                    break
+            crew_options.append(f"{char.character_name} (Ship: {ship_name})")
+        
+        clone_source_str, ok = QInputDialog.getItem(
+            self,
+            "Clone Crew Member",
+            "Select crew member to clone:",
+            crew_options,
+            0,
+            False
+        )
+        
+        if not ok:
+            return
+        
+        # Find the selected crew member
+        clone_index = crew_options.index(clone_source_str)
+        source_character = self.characters[clone_index]
+        
+        # Step 2: Ask for new crew member name
+        new_name, ok = QInputDialog.getText(
+            self,
+            "New Crew Member Name",
+            "Enter name for the new crew member:",
+            text=f"{source_character.character_name} (Clone)"
+        )
+        
+        if not ok or not new_name.strip():
+            return
+        
+        new_name = new_name.strip()
+        
+        # Step 3: Select target ship (if multiple ships)
+        if len(self.ships) > 1:
+            ship_options = [f"{ship.sname} (SID: {ship.sid})" for ship in self.ships]
+            target_ship_str, ok = QInputDialog.getItem(
+                self,
+                "Assign to Ship",
+                "Select ship to assign the new crew member:",
+                ship_options,
+                0,
+                False
+            )
+            
+            if not ok:
+                return
+            
+            target_ship_index = ship_options.index(target_ship_str)
+            target_ship = self.ships[target_ship_index]
+        else:
+            # Only one ship, use it
+            target_ship = self.ships[0]
+        
+        # Step 4: Generate unique entity ID
+        existing_entity_ids = set()
+        if self.xml_root is not None:
+            ships_elem = self.xml_root.find("ships")
+            if ships_elem is not None:
+                for ship_elem in ships_elem.findall("ship"):
+                    characters_elem = ship_elem.find("characters")
+                    if characters_elem is not None:
+                        for char_elem in characters_elem.findall("c"):
+                            entity_id = int(char_elem.get("entId", "0"))
+                            existing_entity_ids.add(entity_id)
+        
+        # Find next available entity ID
+        new_entity_id = max(existing_entity_ids) + 1 if existing_entity_ids else 1
+        
+        # Step 5: Clone the character in memory
+        new_character = Character()
+        new_character.character_name = new_name
+        new_character.character_entity_id = new_entity_id
+        new_character.ship_sid = target_ship.sid
+
+        # Copy attributes, skills, and traits (but not conditions/relationships - we'll add fresh ones)
+        new_character.character_attributes = copy.deepcopy(source_character.character_attributes)
+        new_character.character_skills = copy.deepcopy(source_character.character_skills)
+        new_character.character_traits = copy.deepcopy(source_character.character_traits)
+        # Don't copy conditions/relationships - clone starts fresh
+        new_character.character_conditions = []
+        new_character.character_relationships = []
+
+        # Step 6: Max out all skills (set current to max learning)
+        for skill in new_character.character_skills:
+            skill.value = skill.max_value
+        
+        # Step 7: Clone the XML element from source character
+        if self.xml_root is not None:
+            ships_elem = self.xml_root.find("ships")
+            if ships_elem is not None:
+                # Find source character's XML element
+                source_char_elem = None
+                for ship_elem in ships_elem.findall("ship"):
+                    if int(ship_elem.get("sid", "0")) == source_character.ship_sid:
+                        characters_elem = ship_elem.find("characters")
+                        if characters_elem is not None:
+                            for char_elem in characters_elem.findall("c"):
+                                if int(char_elem.get("entId", "0")) == source_character.character_entity_id:
+                                    source_char_elem = char_elem
+                                    break
+                            break
+                
+                if source_char_elem is not None:
+                    # Log all attributes of source character for debugging
+                    self.logger.info(f"Source character XML attributes: {dict(source_char_elem.attrib)}")
+
+                    # Find target ship's characters element
+                    for ship_elem in ships_elem.findall("ship"):
+                        if int(ship_elem.get("sid", "0")) == target_ship.sid:
+                            characters_elem = ship_elem.find("characters")
+                            if characters_elem is None:
+                                # Create characters element if it doesn't exist
+                                import xml.etree.ElementTree as ET
+                                characters_elem = ET.SubElement(ship_elem, "characters")
+                            
+                            # Clone the XML element
+                            import xml.etree.ElementTree as ET
+                            new_char_elem = ET.fromstring(ET.tostring(source_char_elem))
+
+                            # Check source character's health status and offer sanitization
+                            source_issues = []
+                            props_elem = source_char_elem.find("props")
+                            if props_elem is not None:
+                                # Check Health
+                                health_elem = props_elem.find("Health")
+                                if health_elem is not None:
+                                    health_val = float(health_elem.get("v", "100"))
+                                    if health_val < 100:
+                                        source_issues.append(f"Health: {health_val:.0f}/100")
+
+                                # Check Food
+                                food_elem = props_elem.find("Food")
+                                if food_elem is not None:
+                                    food_val = float(food_elem.get("v", "100"))
+                                    if food_val < 80:
+                                        source_issues.append(f"Food: {food_val:.0f}/100")
+
+                                # Check Rest/Energy
+                                rest_elem = props_elem.find("Rest")
+                                if rest_elem is not None:
+                                    rest_val = float(rest_elem.get("v", "100"))
+                                    if rest_val < 80:
+                                        source_issues.append(f"Energy: {rest_val:.0f}/100")
+
+                                # Check Mood
+                                mood_elem = props_elem.find("Mood")
+                                if mood_elem is not None:
+                                    mood_val = float(mood_elem.get("v", "0"))
+                                    if mood_val < 0:
+                                        source_issues.append(f"Mood: {mood_val:.0f}")
+
+                            # Check for conditions
+                            pers_elem = source_char_elem.find("pers")
+                            condition_count = 0
+                            if pers_elem is not None:
+                                conditions_elem = pers_elem.find("conditions")
+                                if conditions_elem is not None:
+                                    condition_count = len(conditions_elem.findall("c"))
+                                    if condition_count > 0:
+                                        source_issues.append(f"{condition_count} active condition(s)")
+
+                            # If issues detected, offer to sanitize
+                            should_sanitize = False
+                            if source_issues:
+                                issue_text = "\n• ".join(source_issues)
+                                reply = QMessageBox.question(
+                                    self,
+                                    "Clone Character Issues Detected",
+                                    f"The source character '{source_character.character_name}' has the following issues:\n\n• {issue_text}\n\n"
+                                    f"Would you like to reset the clone's stats to healthy defaults?\n\n"
+                                    f"YES: Reset Health/Energy/Food/Comfort/Mood to 100\n"
+                                    f"NO: Keep current stats (may be injured/tired)\n\n"
+                                    f"Note: Relationships and conditions are ALWAYS cleared for clones.",
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
+                                    QMessageBox.StandardButton.Yes
+                                )
+
+                                if reply == QMessageBox.StandardButton.Cancel:
+                                    self.logger.info("User cancelled crew addition")
+                                    return
+                                elif reply == QMessageBox.StandardButton.Yes:
+                                    should_sanitize = True
+
+                            # Update the cloned element's attributes
+                            new_char_elem.set("name", new_name)
+                            new_char_elem.set("entId", str(new_entity_id))
+
+                            # ALWAYS clear relationships and conditions (clones start fresh socially)
+                            changes = []
+                            pers_elem = new_char_elem.find("pers")
+                            if pers_elem is not None:
+                                # Clear relationships
+                                sociality_elem = pers_elem.find("sociality")
+                                if sociality_elem is not None:
+                                    relationships_elem = sociality_elem.find("relationships")
+                                    if relationships_elem is not None:
+                                        rel_count = len(relationships_elem.findall("l"))
+                                        if rel_count > 0:
+                                            relationships_elem.clear()
+                                            changes.append(f"Cleared {rel_count} relationship(s)")
+                                            self.logger.info(f"Cleared {rel_count} relationships from clone")
+
+                                # Clear conditions
+                                conditions_elem = pers_elem.find("conditions")
+                                if conditions_elem is not None:
+                                    condition_count = len(conditions_elem.findall("c"))
+                                    if condition_count > 0:
+                                        conditions_elem.clear()
+                                        changes.append(f"Removed {condition_count} condition(s)")
+                                        self.logger.info(f"Cleared {condition_count} conditions from clone")
+
+                            # Reset stats if sanitization requested or no issues detected
+                            if should_sanitize or not source_issues:
+                                # Reset stats to healthy defaults
+                                props_elem = new_char_elem.find("props")
+                                if props_elem is not None:
+                                    for stat_name, elem_name in [("Health", "Health"), ("Food", "Food"),
+                                                                   ("Energy", "Rest"), ("Comfort", "Comfort"),
+                                                                   ("Mood", "Mood")]:
+                                        stat_elem = props_elem.find(elem_name)
+                                        if stat_elem is not None:
+                                            old_val = stat_elem.get("v", "100")
+                                            target_val = "100" if elem_name != "Mood" else "50"
+                                            if old_val != target_val:
+                                                stat_elem.set("v", target_val)
+                                                stat_elem.set("ltv", target_val)
+                                                changes.append(f"{stat_name}: {old_val} → {target_val}")
+                                self.logger.info("Reset stats to healthy defaults")
+
+                            if changes:
+                                self.logger.info(f"Sanitized clone: {', '.join(changes)}")
+
+                            # Find a safe spawn position on the target ship
+                            spawn_x = None
+                            spawn_y = None
+
+                            # Try to find an existing crew member on target ship to spawn near
+                            for existing_char_elem in characters_elem.findall("c"):
+                                existing_x = existing_char_elem.get("x")
+                                existing_y = existing_char_elem.get("y")
+                                if existing_x and existing_y:
+                                    try:
+                                        # Place new crew member offset from existing one
+                                        spawn_x = float(existing_x) + 2.0
+                                        spawn_y = float(existing_y) + 2.0
+                                        self.logger.info(f"Found existing crew at ({existing_x}, {existing_y}), spawning new crew at ({spawn_x}, {spawn_y})")
+                                        break
+                                    except ValueError:
+                                        continue
+
+                            # If no crew found on target ship, use ship center as fallback
+                            if spawn_x is None:
+                                spawn_x = target_ship.sx / 2.0
+                                spawn_y = target_ship.sy / 2.0
+                                self.logger.warning(f"No existing crew on target ship, spawning at ship center ({spawn_x}, {spawn_y})")
+
+                                # Warn user
+                                reply = QMessageBox.warning(
+                                    self,
+                                    "No Crew on Target Ship",
+                                    f"There are no existing crew members on {target_ship.sname}.\n\n"
+                                    f"The new crew member will be placed at the ship center ({spawn_x:.1f}, {spawn_y:.1f}). "
+                                    f"This location may not be a valid floor tile.\n\n"
+                                    f"Do you want to continue?",
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                    QMessageBox.StandardButton.Yes
+                                )
+
+                                if reply == QMessageBox.StandardButton.No:
+                                    self.logger.info("User cancelled crew addition due to spawn location concern")
+                                    return
+
+                            # Update position coordinates
+                            new_char_elem.set("x", str(spawn_x))
+                            new_char_elem.set("y", str(spawn_y))
+                            new_char_elem.set("insx", str(int(spawn_x)))
+                            new_char_elem.set("insy", str(int(spawn_y)))
+                            self.logger.info(f"Set spawn position to x={spawn_x}, y={spawn_y}, insx={int(spawn_x)}, insy={int(spawn_y)}")
+
+                            # Update skills in XML to be maxed
+                            pers_elem = new_char_elem.find("pers")
+                            if pers_elem is not None:
+                                skills_elem = pers_elem.find("skills")
+                                if skills_elem is not None:
+                                    for s_elem in skills_elem.findall("s"):
+                                        max_learning = s_elem.get("mxn", "0")
+                                        s_elem.set("level", max_learning)
+
+                            # Add the new character element to the target ship
+                            characters_elem.append(new_char_elem)
+                            break
+        
+        # Step 8: Add to characters list
+        self.characters.append(new_character)
+        
+        # Step 9: Update UI - refresh crew list for the target ship
+        self.update_crew_list(target_ship.sid)
+        self.mark_as_modified()
+        
         QMessageBox.information(
             self,
-            "Not Implemented",
-            "Adding crew members is not yet implemented in this version"
+            "Crew Member Added",
+            f"Successfully added {new_name} to {target_ship.sname}!"
         )
+        
+        self.logger.info(f"Added new crew member: {new_name} (Entity ID: {new_entity_id}) to ship {target_ship.sname}")
         
     def update_storage_containers(self, ship: Ship):
         """Update storage container list for the selected ship"""
@@ -1856,35 +3037,130 @@ class SpaceHavenEditor(QMainWindow):
         self.storage_table.blockSignals(False)
 
     def populate_add_item_combo(self):
-        """Populate the add item dropdown with essential items"""
-        # Essential items requested by user
-        essential_items = [
-            # Blocks
-            (162, "Infrablock"),
-            (1921, "Soft Block"),
-            (930, "Techblock"),
-            (1919, "Energy Block"),
-            (1759, "Hull Block"),
-            (1920, "Superblock"),
-            # Steel
-            (1922, "Steel Plates"),
-            # Water and Ice
-            (16, "Water"),
-            (40, "Ice"),
-            # Food
-            (15, "Root vegetables"),
-            (706, "Fruits"),
-            (707, "Artificial Meat"),
-            (2657, "Nuts and Seeds"),
-            (3378, "Grain and Hops"),
-            (712, "Space Food"),
-        ]
-        
+        """Populate the add item dropdown with all items organized by category"""
         self.add_item_combo.clear()
-        for item_id, item_name in essential_items:
-            self.add_item_combo.addItem(item_name, item_id)
         
-        self.logger.info(f"Populated add item combo with {len(essential_items)} essential items")
+        # Organize items by category from IdCollection
+        categories = {
+            "--- BLOCKS ---": [
+                (162, "Infrablock"),
+                (1921, "Soft Block"),
+                (930, "Techblock"),
+                (1919, "Energy Block"),
+                (1759, "Hull Block"),
+                (1920, "Superblock"),
+            ],
+            "--- CONSTRUCTION MATERIALS ---": [
+                (1922, "Steel Plates"),
+                (173, "Electronic Component"),
+                (1924, "Optronics Component"),
+                (1925, "Quantronics Component"),
+                (175, "Plastics"),
+                (177, "Fabrics"),
+            ],
+            "--- RAW RESOURCES ---": [
+                (157, "Base Metals"),
+                (169, "Noble Metals"),
+                (170, "Carbon"),
+                (171, "Raw Chemicals"),
+                (158, "Energium"),
+                (172, "Hyperium"),
+            ],
+            "--- PROCESSED RESOURCES ---": [
+                (174, "Energy Rod"),
+                (1926, "Energy Cell"),
+                (176, "Chemicals"),
+                (178, "Hyperfuel"),
+                (1932, "Fibers"),
+            ],
+            "--- SCRAP ---": [
+                (127, "Rubble"),
+                (1873, "Infra Scrap"),
+                (1874, "Soft Scrap"),
+                (1886, "Hull Scrap"),
+                (1946, "Tech Scrap"),
+                (1947, "Energy Scrap"),
+            ],
+            "--- FOOD ---": [
+                (16, "Water"),
+                (40, "Ice"),
+                (15, "Root vegetables"),
+                (706, "Fruits"),
+                (707, "Artificial Meat"),
+                (2657, "Nuts and Seeds"),
+                (3378, "Grain and Hops"),
+                (712, "Space Food"),
+                (179, "Processed Food"),
+            ],
+            "--- WEAPONS (Ballistic) ---": [
+                (760, "Five-Seven Pistol"),
+                (728, "SMG"),
+                (729, "Shotgun"),
+                (725, "Assault Rifle"),
+            ],
+            "--- WEAPONS (Energy) ---": [
+                (3070, "Laser Pistol"),
+                (3069, "Laser Rifle"),
+                (3071, "Plasma Cuttergun"),
+                (3072, "Plasma Rifle"),
+            ],
+            "--- WEAPONS (Other) ---": [
+                (3962, "Stun Pistol"),
+                (3961, "Stun Rifle"),
+            ],
+            "--- WEAPON ATTACHMENTS ---": [
+                (3968, "Basic Scope (Weapon Attachment)"),
+                (3969, "Tactical Grip (Weapon Attachment)"),
+                (3960, "Flamethrower (Weapon Attachment)"),
+                (3967, "Explosive Grenade Launcher (Weapon Attachment)"),
+                (4076, "Incendiary Grenade Launcher (Weapon Attachment)"),
+            ],
+            "--- ARMOR & CLOTHING ---": [
+                (3384, "Armored Vest"),
+                (4065, "Space Suit Oxygen Extender"),
+            ],
+            "--- MEDICAL ---": [
+                (2053, "Medical Supplies"),
+                (2058, "IV Fluid"),
+                (4007, "Bandage"),
+                (4030, "Nano Wound Dressing"),
+                (4005, "Painkillers"),
+                (4006, "Combat Stimulant"),
+            ],
+            "--- EQUIPMENT & TOOLS ---": [
+                (3386, "Remote Control"),
+                (3388, "Oxygen Tank"),
+                (1152, "Sentry Gun X1"),
+                (3419, "Augmentation Parts"),
+                (2715, "Explosive Ammunition"),
+                (4040, "Small Breach Charge"),
+            ],
+            "--- ORGANIC MATTER ---": [
+                (71, "Bio Matter"),
+                (2475, "Fertilizer"),
+                (984, "Monster Meat"),
+                (985, "Human Meat"),
+                (1954, "Human Corpse"),
+                (1955, "Monster Corpse"),
+            ],
+        }
+        
+        # Add items organized by category
+        for category_name, items in categories.items():
+            # Add category header (non-selectable)
+            self.add_item_combo.addItem(category_name)
+            # Disable the header item
+            model = self.add_item_combo.model()
+            index = self.add_item_combo.count() - 1
+            item = model.item(index)
+            item.setEnabled(False)
+            item.setBackground(QColor("#f0f0f0"))
+            
+            # Add items in this category
+            for item_id, item_name in items:
+                self.add_item_combo.addItem(f"  {item_name}", item_id)
+        
+        self.logger.info(f"Populated add item combo with categorized items")
     
     def quick_add_item(self, quantity: int):
         """Add the selected item with the specified quantity to current storage"""
@@ -2120,6 +3396,10 @@ class SpaceHavenEditor(QMainWindow):
         self.clear_editor_layout(self.skills_layout)
         self.clear_editor_layout(self.traits_layout)
         self.clear_editor_layout(self.conditions_layout)
+        self.clear_editor_layout(self.relationships_layout)
+        self.clear_editor_layout(self.job_priorities_layout)
+        self.clear_editor_layout(self.appearance_layout)
+        self.clear_editor_layout(self.equipment_layout)
         self.crew_name_edit.clear()
         self.crew_name_edit.setPlaceholderText("Select a crew member")
         self.crew_name_edit.setReadOnly(True)
