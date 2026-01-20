@@ -191,9 +191,16 @@
             </Border>
 
             <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Margin="10,0,10,10">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="New Crew Name:" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBox x:Name="txtNewCrewName" Width="300" VerticalAlignment="Center"/>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="New Crew Name:" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox x:Name="txtNewCrewName" Width="300" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Template Character:" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox x:Name="cmbTemplateCharacter" Width="300" VerticalAlignment="Center" DisplayMemberPath="CharacterName" SelectedValuePath="CharacterEntityId"/>
+                        <TextBlock Text="(Select a character to copy structure from)" FontStyle="Italic" Foreground="Gray" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="11"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

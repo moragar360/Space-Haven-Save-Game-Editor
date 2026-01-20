@@ -74,7 +74,7 @@
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                     <TextBlock Text="Moragar's Space Haven Save Game Editor" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,15"/>
                     <TextBlock Text="Created by Moragar" FontSize="14" HorizontalAlignment="Center" Margin="0,0,0,15"/>
-                    <TextBlock Text="v.1.0.1 - Last Updated - 04/15/2025"
+                    <TextBlock Text="v.1.1 - Last Updated - 04/25/2025"
                                FontSize="11"
                                Foreground="Gray"
                                FontWeight="Bold" HorizontalAlignment="Center"

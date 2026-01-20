@@ -1,0 +1,79 @@
+================================================================================
+MORAGAR'S SPACE HAVEN SAVE EDITOR - RELEASE NOTES
+================================================================================
+
+Version 2.0
+================================================================================
+
+NEW FEATURES
+--------------------------------------------------------------------------------
+
+• Three Editors in One
+  The application now includes three separate editors:
+  - Save Game Editor
+  - Game Start Editor
+  - Blueprint Manager
+
+• Game Start Editor
+  - Accessible via the tab at the top of the editor
+  - Allows you to set difficulty settings parameters at the start of new game creation
+  - NOTE: You must go through the start game process, then click "Save Custom Game Template" 
+    in the difficulty start settings. You can then open that XML file and change the parameters.
+
+• Blueprint Manager
+  - Allows you to clone a ship blueprint to transfer between save games
+  - Options to export with items or just the blueprint itself
+  - Export the ship from your current game and import it into a new game
+  - WARNING: Be careful on import - if you have 2 big ships, you may run into space 
+    issues in the game world.
+
+• Save Game Editor - Bulk Operations
+  Added a Bulk Option to the menu that currently allows:
+  - Create X amount of crew from a template crew member
+    * All crew members created this way will be the same as the template crew, 
+      except for name and attributes
+    * Names are pulled from an AI-generated list of Sci-Fi names
+  - Set X amount of attributes for all crew on the selected ship to the same amount 
+    (under Bulk Attributes)
+  - Set X amount of skills for all crew on the selected ship to the same amount 
+    (under Bulk Skills)
+
+
+QUALITY OF LIFE IMPROVEMENTS
+--------------------------------------------------------------------------------
+
+• Default Save Location
+  - In the Settings menu, you can now specify a default "open" save location directory
+  - Each time you open the editor, it will point to that save directory
+
+• Create New Crew Member Enhancement
+  - Now allows you to pick the crew member that is being cloned (template user)
+  - NOTE: Right now, cloning a current crew member and assigning a new ID for it is 
+    the most reliable way to make this work
+
+
+BUG FIXES
+--------------------------------------------------------------------------------
+
+• Save Game Editor - Fixed "Set All Attributes/Skills to Max" behavior
+  - When you clicked "Set All Attributes, Skills to max" with a character selected, 
+    it no longer incorrectly sets the attributes for all characters
+  - This functionality has been moved to Bulk Actions
+
+• Save Game Editor - Error Resolution
+  - Attempted to resolve reported error messages from users on Nexus Mods
+  - Attempted to resolve the Exodus Fleet errors when loading save games
+
+  NOTE: The developer has not been experiencing any errors when loading heavily 
+  played saves, so it's really hard to replicate errors. It's possible that some 
+  other mod is changing game files?
+
+
+KNOWN LIMITATIONS
+--------------------------------------------------------------------------------
+
+• Save Game Editor - Station Mode
+  - The Save Game Editor has not been tested in station mode
+  - Ship mode has been tested and works fine
+  - Use caution when editing station saves
+

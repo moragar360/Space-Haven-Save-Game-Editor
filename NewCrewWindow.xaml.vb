@@ -12,10 +12,21 @@ Namespace SpaceHavenEditor2
         Public Attributes As List(Of DataProp)
         Public Skills As List(Of DataProp)
         Public Traits As ObservableCollection(Of DataProp)
+        Public Property SelectedTemplateCharacterId As Integer = -1
         Private AvailableTraits As List(Of KeyValuePair(Of Integer, String))
 
-        Public Sub New()
+        Public Sub New(availableCharacters As List(Of Character))
             InitializeComponent()
+            
+            ' Populate template character ComboBox
+            If availableCharacters IsNot Nothing AndAlso availableCharacters.Count > 0 Then
+                cmbTemplateCharacter.ItemsSource = availableCharacters
+                cmbTemplateCharacter.DisplayMemberPath = "CharacterName"
+                cmbTemplateCharacter.SelectedValuePath = "CharacterEntityId"
+                cmbTemplateCharacter.SelectedIndex = 0 ' Select first by default
+            Else
+                cmbTemplateCharacter.IsEnabled = False
+            End If
 
             Attributes = IdCollection.DefaultAttributeIDs _
                          .Select(Function(kvp) New DataProp With {.Id = kvp.Key, .Name = kvp.Value, .Value = 1}) _
@@ -93,6 +104,11 @@ Namespace SpaceHavenEditor2
                 MessageBox.Show("Please enter a name.", "Name Required", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
             End If
 
+            ' Validate template character is selected
+            If cmbTemplateCharacter.SelectedItem Is Nothing Then
+                MessageBox.Show("Please select a template character to copy structure from.", "Template Required", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+            End If
+
             ' Basic validation for numeric values in grids (more robust validation could be added)
             Try
                 For Each item In DirectCast(dgvNewAttributes.ItemsSource, List(Of DataProp))
@@ -107,6 +123,7 @@ Namespace SpaceHavenEditor2
             End Try
 
             NewCrewName = txtNewCrewName.Text
+            SelectedTemplateCharacterId = CInt(cmbTemplateCharacter.SelectedValue)
             ' Attributes/Skills/Traits lists are already updated via the UI/buttons
             Me.DialogResult = True
         End Sub
