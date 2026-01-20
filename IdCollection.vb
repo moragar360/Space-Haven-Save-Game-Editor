@@ -20,7 +20,8 @@
         {13, "Maintenance"},
         {14, "Navigation"},
         {16, "Research"},
-        {1, "Piloting"}
+        {1, "Piloting"},
+        {22, "Piloting"}
     }
 
 
@@ -383,6 +384,524 @@
 
 
     'Public Shared ReadOnly KnownStorageObjIds As New List(Of String) From {"1740"} ' Example: Basic Storage
+
+    ' Color Sets for uniforms (shirtSet and pantsSet values)
+    ' These are the color palettes available in Space Haven
+    ' Extracted from haven_annotated.xml CharacterSet definitions
+    ' 
+    ' Structure:
+    ' - ColorSetIDs: Maps set ID -> friendly set name
+    ' - ColorSetItems: Maps set ID -> list of color names (in order, index 0-based)
+    ' - GetColorName: Helper function to get actual color name from set ID + index
+    Public Shared ReadOnly ColorSetIDs As New Dictionary(Of Integer, String) From {
+        {142, "Shirt Set: Standard Colors"},
+        {143, "Pants Set: 2 Variants"},
+        {372, "Shirt Set: Standard Colors"},
+        {373, "Pants Set: Variant 4"},
+        {375, "Pants Set: Variant 6"},
+        {376, "Shirt Set: Color 5"},
+        {477, "Pirate Shirts: 5 Variants"},
+        {479, "Android Shirts"},
+        {484, "Shirt Set: Color 8"},
+        {485, "Pants Set: Red"},
+        {487, "Android Pants"},
+        {491, "Pants Set: Black Variants"},
+        {492, "Shirt Set: Black"},
+        {493, "Shirt Set: Standard Colors"},
+        {730, "Pants Set: Yellow and Yellow Gray"},
+        {731, "Shirt Set: Standard Colors"},
+        {732, "Pants Set: Variant 5"},
+        {733, "Military Shirts: Brown and Green"},
+        {734, "Military Shirts: Brown and Green Variants"},
+        {735, "Military Pants: Brown and Green"},
+        {738, "Pants Set: Brown Variants"},
+        {739, "Shirt Set: Brown and Red Variants"},
+        {748, "Test Pants: 2 Variants"},
+        {749, "Test Shirts"},
+        {1851, "Pants Set: 14 Color Variants"},
+        {1852, "Shirt Set: 20 Color Variants"},
+        {1854, "Pants Set: 8 Color Variants"},
+        {1855, "Shirt Set: 9 Color Variants"},
+        {2360, "Shirt Set: Multiple Colors and Brown/Blue Gray"},
+        {2362, "Shirt Set: 6 Variants"},
+        {2363, "Shirt Set: 2 Variants"},
+        {2364, "Pants Set: 20 Color Variants"},
+        {4351, "Cultist Shirts: 2 Variants"},
+        {4352, "Cultist Pants: 2 Variants"}
+    }
+
+    ' Maps set ID -> list of color names (in order, 0-based index)
+    ' Use GetColorName(setId, index) to get the actual color name
+    Private Shared _colorSetItems As New Dictionary(Of Integer, List(Of String))
+    Public Shared ReadOnly Property ColorSetItems As Dictionary(Of Integer, List(Of String))
+        Get
+            Return _colorSetItems
+        End Get
+    End Property
+
+    ' Maps set ID -> list of original instance names (for texture number extraction)
+    Private Shared _colorSetInstanceNames As New Dictionary(Of Integer, List(Of String))
+    Public Shared ReadOnly Property ColorSetInstanceNames As Dictionary(Of Integer, List(Of String))
+        Get
+            Return _colorSetInstanceNames
+        End Get
+    End Property
+
+    ''' <summary>
+    ''' Extracts texture number from an instance name (e.g., "shirt32s1" -> 32, "pants03s1" -> 3)
+    ''' </summary>
+    Public Shared Function ExtractTextureNumberFromInstance(instanceName As String) As Integer?
+        If String.IsNullOrEmpty(instanceName) Then Return Nothing
+
+        ' Pattern: shirt##s# or pants##s# where ## is the texture number
+        Dim match = System.Text.RegularExpressions.Regex.Match(instanceName, "(?:shirt|pants)(\d{2})s", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+        If match.Success Then
+            Dim num As Integer
+            If Integer.TryParse(match.Groups(1).Value, num) Then
+                Return num
+            End If
+        End If
+
+        ' Pattern: ShirtColor# or PantsColor# where # is the texture number
+        Dim colorMatch = System.Text.RegularExpressions.Regex.Match(instanceName, "(?:shirt|pants)color(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+        If colorMatch.Success Then
+            Dim num As Integer
+            If Integer.TryParse(colorMatch.Groups(1).Value, num) Then
+                Return num
+            End If
+        End If
+
+        ' Pattern: pants# or shirt# (single digit, no 's' suffix)
+        Dim simpleMatch = System.Text.RegularExpressions.Regex.Match(instanceName, "(?:shirt|pants)(\d+)(?!s)", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+        If simpleMatch.Success Then
+            Dim num As Integer
+            If Integer.TryParse(simpleMatch.Groups(1).Value, num) Then
+                Return num
+            End If
+        End If
+
+        Return Nothing
+    End Function
+
+    Shared Sub New()
+        ' Initialize ColorSetItems with all color names for each set
+        ' This allows looking up the actual color name from set ID + index (sp/sl values)
+
+        ' Shirt Set 142: Standard Colors
+        Dim shirt142Instances = New List(Of String) From {
+            "104_ShirtColors_shirtColor1", "104_ShirtColors_shirtColor2", "104_ShirtColors_shirtColor3", "104_ShirtColors_shirtcolor5"
+        }
+        _colorSetItems(142) = shirt142Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 143: 2 Variants
+        Dim pants143Instances = New List(Of String) From {
+            "106_PantsColors_pants3", "106_PantsColors_pants2"
+        }
+        _colorSetItems(143) = pants143Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 372: Standard Colors
+        Dim shirt372Instances = New List(Of String) From {
+            "104_ShirtColors_shirtColor4", "104_ShirtColors_shirtColor1"
+        }
+        _colorSetItems(372) = shirt372Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 373: Variant 4
+        Dim pants373Instances = New List(Of String) From {"106_PantsColors_pants4"}
+        _colorSetItems(373) = pants373Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 375: Variant 6
+        Dim pants375Instances = New List(Of String) From {"106_PantsColors_pants6"}
+        _colorSetItems(375) = pants375Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 376: Color 5
+        Dim shirt376Instances = New List(Of String) From {"104_ShirtColors_shirtcolor5"}
+        _colorSetItems(376) = shirt376Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 477: Pirate Shirts
+        Dim shirt477Instances = New List(Of String) From {
+            "104_ShirtColors_pirateShirt1", "104_ShirtColors_pirateShirt5", "104_ShirtColors_pirateShirt2",
+            "104_ShirtColors_pirateShirt3", "104_ShirtColors_pirateShirt4"
+        }
+        _colorSetItems(477) = shirt477Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 479: Android
+        Dim shirt479Instances = New List(Of String) From {"2984_ShirtColors1_android01s1"}
+        _colorSetItems(479) = shirt479Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 484: Color 8
+        Dim shirt484Instances = New List(Of String) From {"104_ShirtColors_shirtcolor8"}
+        _colorSetItems(484) = shirt484Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 485: Red
+        Dim pants485Instances = New List(Of String) From {"106_PantsColors_redPants1"}
+        _colorSetItems(485) = pants485Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 487: Android
+        Dim pants487Instances = New List(Of String) From {"2985_PantsColors1_androidPants01s1"}
+        _colorSetItems(487) = pants487Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 491: Black
+        Dim pants491Instances = New List(Of String) From {"106_PantsColors_blackPants", "106_PantsColors_blackPants2"}
+        _colorSetItems(491) = pants491Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 492: Black
+        Dim shirt492Instances = New List(Of String) From {"104_ShirtColors_blackShirt1"}
+        _colorSetItems(492) = shirt492Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 493: Standard Colors
+        Dim shirt493Instances = New List(Of String) From {
+            "104_ShirtColors_shirtColor1", "104_ShirtColors_shirtColor2", "104_ShirtColors_shirtColor3", "104_ShirtColors_shirtcolor5"
+        }
+        _colorSetItems(493) = shirt493Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 730: Yellow and Yellow Gray
+        Dim pants730Instances = New List(Of String) From {
+            "106_PantsColors_yellowPants", "106_PantsColors_yellowGrayPants", "106_PantsColors_yellowGrayPants2"
+        }
+        _colorSetItems(730) = pants730Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 731: Standard Colors
+        Dim shirt731Instances = New List(Of String) From {
+            "104_ShirtColors_shirtColor1", "104_ShirtColors_shirtColor2"
+        }
+        _colorSetItems(731) = shirt731Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 732: Variant 5
+        Dim pants732Instances = New List(Of String) From {"106_PantsColors_pants5"}
+        _colorSetItems(732) = pants732Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 733: Military Brown and Green
+        Dim shirt733Instances = New List(Of String) From {
+            "104_ShirtColors_milBrownShirt1", "104_ShirtColors_milBrownShirt2", "104_ShirtColors_milBrownShirt4", "104_ShirtColors_milBrownShirt5",
+            "104_ShirtColors_milGreenShirt1", "104_ShirtColors_milGreenShirt2", "104_ShirtColors_milGreenShirt3", "104_ShirtColors_milGreenShirt4", "104_ShirtColors_milGreenShirt5"
+        }
+        _colorSetItems(733) = shirt733Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 734: Military Brown and Green Variants
+        Dim shirt734Instances = New List(Of String) From {
+            "104_ShirtColors_milBrownShirt1", "104_ShirtColors_milBrownShirt2", "104_ShirtColors_milBrownShirt3",
+            "104_ShirtColors_milGreenShirt1", "104_ShirtColors_milGreenShirt2"
+        }
+        _colorSetItems(734) = shirt734Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 735: Military Brown and Green
+        Dim pants735Instances = New List(Of String) From {
+            "106_PantsColors_milBrown1", "106_PantsColors_milBrown2", "106_PantsColors_milBrown3Pants",
+            "106_PantsColors_milGreenPants1", "106_PantsColors_milGreenPants2", "106_PantsColors_milGreenPants3"
+        }
+        _colorSetItems(735) = pants735Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 738: Brown Variants
+        Dim pants738Instances = New List(Of String) From {
+            "106_PantsColors_brwnPants1", "106_PantsColors_brwnPants2", "106_PantsColors_brwnPants3", "106_PantsColors_brwnPants4",
+            "106_PantsColors_brwnPants5", "106_PantsColors_brwnPants6", "106_PantsColors_brwnPants7", "106_PantsColors_brwnPants8", "106_PantsColors_brwnPants9"
+        }
+        _colorSetItems(738) = pants738Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 739: Brown and Red Variants
+        Dim shirt739Instances = New List(Of String) From {
+            "104_ShirtColors_brwnShirt1", "104_ShirtColors_brwnShirt2", "104_ShirtColors_brwnShirt3", "104_ShirtColors_brwnShirt4",
+            "104_ShirtColors_brwnShirt5", "104_ShirtColors_brwnShirt6",
+            "104_ShirtColors_redShirt1", "104_ShirtColors_redShirt2", "104_ShirtColors_redShirt3", "104_ShirtColors_redShirt4",
+            "104_ShirtColors_redShirt5", "104_ShirtColors_redShirt6", "104_ShirtColors_redShirt7", "104_ShirtColors_redShirt8",
+            "2984_ShirtColors1_shirtBrown01s1", "2984_ShirtColors1_shirtBrown01s2", "2984_ShirtColors1_shirtBrown01s3", "2984_ShirtColors1_shirtBrown01s4"
+        }
+        _colorSetItems(739) = shirt739Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 748: Test
+        Dim pants748Instances = New List(Of String) From {
+            "106_PantsColors_test1", "106_PantsColors_test2"
+        }
+        _colorSetItems(748) = pants748Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 749: Test
+        Dim shirt749Instances = New List(Of String) From {"104_ShirtColors_test1"}
+        _colorSetItems(749) = shirt749Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 1851: 14 Color Variants
+        Dim pants1851Instances = New List(Of String) From {
+            "106_PantsColors_PantsColor1s1", "106_PantsColors_PantsColor2s1", "106_PantsColors_PantsColor3s1", "106_PantsColors_PantsColor3s2",
+            "106_PantsColors_PantsColor4s1", "106_PantsColors_PantsColors4s2", "106_PantsColors_PantsColor1s2", "106_PantsColors_PantsColor2s2",
+            "106_PantsColors_PantsColor3s3", "106_PantsColors_PantsColor4s3", "106_PantsColors_PantsColor5s1", "106_PantsColors_PantsColor5s2",
+            "106_PantsColors_PantsColor6s1", "106_PantsColors_PantsColor6s2"
+        }
+        _colorSetItems(1851) = pants1851Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 1852: 20 Color Variants
+        Dim shirt1852Instances = New List(Of String) From {
+            "104_ShirtColors_ShirtColor1s1", "104_ShirtColors_ShirtColor1s2", "104_ShirtColors_ShirtColor2s1", "104_ShirtColors_ShirtColor2s2",
+            "104_ShirtColors_ShirtColor2s3", "104_ShirtColors_ShirtColor3s1", "104_ShirtColors_ShirtColor3s2", "104_ShirtColors_ShirtColor3s3",
+            "104_ShirtColors_ShirtColor4s1", "104_ShirtColors_ShirtColor4s2", "104_ShirtColors_ShirtColor4s3", "104_ShirtColors_ShirtColor5s1",
+            "104_ShirtColors_ShirtColor5s2", "104_ShirtColors_ShirtColor6s1", "104_ShirtColors_ShirtColor6s2", "104_ShirtColors_ShirtColor6s3",
+            "104_ShirtColors_ShirtColor7s1", "104_ShirtColors_ShirtColor7s2", "104_ShirtColors_ShirtColor7s3", "104_ShirtColors_ShirtColor1s3",
+            "104_ShirtColors_ShirtColor2s3", "104_ShirtColors_ShirtColor3s3"
+        }
+        _colorSetItems(1852) = shirt1852Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 1854: 8 Color Variants
+        Dim pants1854Instances = New List(Of String) From {
+            "106_PantsColors_PantsColor1s1", "106_PantsColors_PantsColor1s2", "106_PantsColors_PantsColor1s3", "106_PantsColors_PantsColor2s1",
+            "106_PantsColors_PantsColor2s2", "106_PantsColors_PantsColor3s1", "106_PantsColors_PantsColor3s2", "106_PantsColors_PantsColor4s1",
+            "106_PantsColors_PantsColor4s3"
+        }
+        _colorSetItems(1854) = pants1854Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 1855: 9 Color Variants
+        Dim shirt1855Instances = New List(Of String) From {
+            "104_ShirtColors_ShirtColor5s3", "104_ShirtColors_ShirtColor5s2", "104_ShirtColors_ShirtColor5s1", "104_ShirtColors_ShirtColor4s3",
+            "104_ShirtColors_ShirtColor4s2", "104_ShirtColors_ShirtColor3s1", "104_ShirtColors_ShirtColor3s2", "104_ShirtColors_ShirtColor3s3",
+            "104_ShirtColors_ShirtColor4s1"
+        }
+        _colorSetItems(1855) = shirt1855Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 2360: Multiple Colors (most common set)
+        ' Store actual instance names and parse them for better color names
+        Dim shirt2360Instances = New List(Of String) From {
+            "2984_ShirtColors1_shirt32s1", "2984_ShirtColors1_shirt32s2", "2984_ShirtColors1_shirt34s1", "2984_ShirtColors1_shirt34s2",
+            "2984_ShirtColors1_shirt00s1", "2984_ShirtColors1_shirt00s2", "2984_ShirtColors1_shirt01s1", "2984_ShirtColors1_shirt01s2",
+            "2984_ShirtColors1_shirt02s1", "2984_ShirtColors1_shirt02s2", "2984_ShirtColors1_shirt03s1", "2984_ShirtColors1_shirt03s2",
+            "2984_ShirtColors1_shirt04s1", "2984_ShirtColors1_shirt04s2", "2984_ShirtColors1_shirt07s1", "2984_ShirtColors1_shirt07s2",
+            "2984_ShirtColors1_shirt12s1", "2984_ShirtColors1_shirt12s2", "2984_ShirtColors1_shirt17s1", "2984_ShirtColors1_shirt17s2",
+            "2984_ShirtColors1_shirt20s1", "2984_ShirtColors1_shirt20s2", "2984_ShirtColors1_shirt22s1", "2984_ShirtColors1_shirt22s2",
+            "2984_ShirtColors1_shirt24s1", "2984_ShirtColors1_shirt24s2", "2984_ShirtColors1_shirt27s1", "2984_ShirtColors1_shirt27s2",
+            "2984_ShirtColors1_shirt30s1", "2984_ShirtColors1_shirt30s2",
+            "2984_ShirtColors1_shirtBrown01s1", "2984_ShirtColors1_shirtBrown01s2", "2984_ShirtColors1_shirtBrown01s3",
+            "2984_ShirtColors1_shirtBrown01s4", "2984_ShirtColors1_shirtBrown01s5", "2984_ShirtColors1_shirtBrown01s6",
+            "2984_ShirtColors1_shirtBlueGray01s1", "2984_ShirtColors1_shirtBlueGray01s2", "2984_ShirtColors1_shirtBlueGray01s3",
+            "2984_ShirtColors1_shirtBlueGray01s4", "2984_ShirtColors1_shirtBlueGray01s5", "2984_ShirtColors1_shirtBlueGray01s6"
+        }
+        _colorSetItems(2360) = shirt2360Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+        _colorSetInstanceNames(2360) = shirt2360Instances
+
+        ' Shirt Set 2362: 6 Variants
+        Dim shirt2362Instances = New List(Of String) From {
+            "2984_ShirtColors1_shirt01-1", "2984_ShirtColors1_shirt02-1", "2984_ShirtColors1_shirt03-1",
+            "2984_ShirtColors1_shirt04-1", "2984_ShirtColors1_shirt05-1", "2984_ShirtColors1_shirt06-1"
+        }
+        _colorSetItems(2362) = shirt2362Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Shirt Set 2363: 2 Variants
+        Dim shirt2363Instances = New List(Of String) From {
+            "2984_ShirtColors1_shirt00", "2984_ShirtColors1_shirt00", "2984_ShirtColors1_shirt01"
+        }
+        _colorSetItems(2363) = shirt2363Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 2364: 20 Color Variants (most common set)
+        Dim pants2364Instances = New List(Of String) From {
+            "2985_PantsColors1_pants32s1", "2985_PantsColors1_pants32s2", "2985_PantsColors1_pants34s1", "2985_PantsColors1_pants34s2",
+            "2985_PantsColors1_pants00s1", "2985_PantsColors1_pants00s2", "2985_PantsColors1_pants01s1", "2985_PantsColors1_pants01s2",
+            "2985_PantsColors1_pants02s1", "2985_PantsColors1_pants02s2", "2985_PantsColors1_pants03s1", "2985_PantsColors1_pants03s2",
+            "2985_PantsColors1_pants04s1", "2985_PantsColors1_pants04s2", "2985_PantsColors1_pants07s1", "2985_PantsColors1_pants07s2",
+            "2985_PantsColors1_pants12s1", "2985_PantsColors1_pants12s2", "2985_PantsColors1_pants17s1", "2985_PantsColors1_pants17s2",
+            "2985_PantsColors1_pants20s1", "2985_PantsColors1_pants20s2", "2985_PantsColors1_pants22s1", "2985_PantsColors1_pants22s2",
+            "2985_PantsColors1_pants24s1", "2985_PantsColors1_pants24s2", "2985_PantsColors1_pants27s1", "2985_PantsColors1_pants27s2",
+            "2985_PantsColors1_pants30s1", "2985_PantsColors1_pants30s2"
+        }
+        _colorSetItems(2364) = pants2364Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+        _colorSetInstanceNames(2364) = pants2364Instances
+
+        ' Shirt Set 4351: Cultist
+        Dim shirt4351Instances = New List(Of String) From {
+            "2984_ShirtColors1_cultistShirt05s1", "2984_ShirtColors1_cultistShirt05s2"
+        }
+        _colorSetItems(4351) = shirt4351Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+
+        ' Pants Set 4352: Cultist
+        Dim pants4352Instances = New List(Of String) From {
+            "2985_PantsColors1_cultistPants04s1", "2985_PantsColors1_cultistPants04s2"
+        }
+        _colorSetItems(4352) = pants4352Instances.Select(Function(inst) ParseInstanceNameToColor(inst)).ToList()
+    End Sub
+
+    ''' <summary>
+    ''' Maps texture number to actual color name based on Space Haven's color palette
+    ''' </summary>
+    Public Shared Function GetColorNameFromTexture(textureNumber As Integer) As String
+        ' Color mapping from Space Haven's texture system
+        ' These correspond to the texture files (0.png, 1.png, etc.) and match the in-game color palette
+        Dim colorMap As New Dictionary(Of Integer, String) From {
+            {0, "White"}, {1, "Light Gray"}, {2, "Gray"}, {3, "Dark Gray"}, {4, "Black"},
+            {5, "Light Blue"}, {6, "Blue"}, {7, "Dark Blue"}, {8, "Light Green"}, {9, "Green"},
+            {10, "Dark Green"}, {11, "Light Red"}, {12, "Red"}, {13, "Dark Red"}, {14, "Light Yellow"},
+            {15, "Yellow"}, {16, "Orange"}, {17, "Light Purple"}, {18, "Purple"}, {19, "Dark Purple"},
+            {20, "Light Brown"}, {21, "Brown"}, {22, "Dark Brown"}, {23, "Pink"}, {24, "Cyan"},
+            {25, "Teal"}, {26, "Maroon"}, {27, "Navy"}, {28, "Olive"}, {29, "Lime"},
+            {30, "Coral"}, {31, "Gold"}, {32, "Silver"}, {33, "Bronze"}, {34, "Copper"},
+            {35, "Beige"}, {36, "Tan"}, {37, "Khaki"}, {38, "Cream"}, {39, "Ivory"},
+            {40, "Mint"}, {41, "Lavender"}
+        }
+
+        If colorMap.ContainsKey(textureNumber) Then
+            Return colorMap(textureNumber)
+        End If
+
+        Return Nothing
+    End Function
+
+    ''' <summary>
+    ''' Parses an instance name to extract a friendly color description
+    ''' </summary>
+    Private Shared Function ParseInstanceNameToColor(instanceName As String) As String
+        If String.IsNullOrEmpty(instanceName) Then Return "Unknown"
+
+        ' Extract variant suffix first (before processing)
+        Dim variantMatch = System.Text.RegularExpressions.Regex.Match(instanceName, "s(\d+)$")
+        Dim variantText = ""
+        If variantMatch.Success Then
+            variantText = $" Variant {variantMatch.Groups(1).Value}"
+        End If
+
+        ' Remove common prefixes
+        Dim name = instanceName
+        If name.Contains("_") Then
+            Dim parts = name.Split("_"c)
+            ' Get the last meaningful part
+            name = parts(parts.Length - 1)
+        End If
+
+        ' Store original for variant checking
+        Dim originalName = name
+
+        ' Remove common suffixes like s1, s2, etc. for processing
+        name = System.Text.RegularExpressions.Regex.Replace(name, "s\d+$", "")
+
+        ' Extract color keywords
+        Dim colorKeywords As New Dictionary(Of String, String) From {
+            {"brown", "Brown"}, {"brwn", "Brown"}, {"brwnShirt", "Brown"}, {"brwnPants", "Brown"},
+            {"red", "Red"}, {"redShirt", "Red"}, {"redPants", "Red"},
+            {"yellow", "Yellow"}, {"yellowPants", "Yellow"}, {"yellowGray", "Yellow Gray"},
+            {"blue", "Blue"}, {"blueGray", "Blue Gray"},
+            {"green", "Green"}, {"milGreen", "Military Green"},
+            {"black", "Black"}, {"blackShirt", "Black"}, {"blackPants", "Black"},
+            {"gray", "Gray"}, {"grey", "Gray"},
+            {"white", "White"},
+            {"orange", "Orange"},
+            {"purple", "Purple"},
+            {"pink", "Pink"},
+            {"pirate", "Pirate"},
+            {"android", "Android"},
+            {"cultist", "Cultist"},
+            {"milBrown", "Military Brown"},
+            {"test", "Test"}
+        }
+
+        Dim nameLower = name.ToLower()
+        For Each kvp In colorKeywords
+            If nameLower.Contains(kvp.Key.ToLower()) Then
+                ' Found a color keyword
+                If nameLower.Contains("shirt") Then
+                    Return $"{kvp.Value} Shirt"
+                ElseIf nameLower.Contains("pants") Then
+                    Return $"{kvp.Value} Pants"
+                Else
+                    Return kvp.Value
+                End If
+            End If
+        Next
+
+        ' For numbered items (shirt00, shirt01, pants32, ShirtColor1, PantsColor1, etc.), extract the number
+        ' These are color shades/variants without explicit color names
+        ' Handle patterns like "ShirtColor1s1" or "shirt03s1" or "PantsColor2s2"
+        Dim colorNumberMatch = System.Text.RegularExpressions.Regex.Match(originalName, "(?:shirt|pants)?color(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+        If colorNumberMatch.Success Then
+            Dim textureNumber As Integer
+            If Integer.TryParse(colorNumberMatch.Groups(1).Value, textureNumber) Then
+                ' Map texture number to actual color name
+                Dim colorName = GetColorNameFromTexture(textureNumber)
+                If Not String.IsNullOrEmpty(colorName) Then
+                    Return $"{colorName}{variantText}"
+                End If
+            End If
+
+            ' Fallback if texture number not found
+            Dim number = colorNumberMatch.Groups(1).Value
+            If nameLower.Contains("shirt") Then
+                Return $"Color #{number}{variantText}"
+            ElseIf nameLower.Contains("pants") Then
+                Return $"Color #{number}{variantText}"
+            Else
+                Return $"Color #{number}{variantText}"
+            End If
+        End If
+
+        ' Handle simple numbered patterns (shirt03, pants32, etc.)
+        ' Extract number from the original name (before removing suffix)
+        ' These numbers correspond to texture IDs which map to actual colors
+        Dim numberMatch = System.Text.RegularExpressions.Regex.Match(originalName, "(\d+)")
+        If numberMatch.Success Then
+            Dim textureNumber As Integer
+            If Integer.TryParse(numberMatch.Groups(1).Value, textureNumber) Then
+                ' Map texture number to actual color name
+                Dim colorName = GetColorNameFromTexture(textureNumber)
+                If Not String.IsNullOrEmpty(colorName) Then
+                    Return $"{colorName}{variantText}"
+                End If
+            End If
+
+            ' Fallback if texture number not found
+            Dim number = numberMatch.Groups(1).Value
+            If nameLower.Contains("shirt") Then
+                Return $"Shade #{number}{variantText}"
+            ElseIf nameLower.Contains("pants") Then
+                Return $"Shade #{number}{variantText}"
+            Else
+                Return $"Color #{number}{variantText}"
+            End If
+        End If
+        
+        ' Fallback: clean up the name
+        name = name.Replace("Shirt", "").Replace("Pants", "").Replace("shirt", "").Replace("pants", "")
+        If Not String.IsNullOrEmpty(name) Then
+            Return name.Substring(0, Math.Min(name.Length, 30))
+        End If
+        
+        Return "Unknown Color"
+    End Function
+
+    ''' <summary>
+    ''' Gets the actual color name from a set ID and index (sp/sl value from game.xml)
+    ''' </summary>
+    ''' <param name="setId">The shirtSet or pantsSet ID</param>
+    ''' <param name="index">The sp (shirt) or sl (pants) index value (0-based)</param>
+    ''' <returns>The friendly color name, or "Unknown" if not found</returns>
+    Public Shared Function GetColorName(setId As Integer, index As Integer) As String
+        If ColorSetItems.ContainsKey(setId) Then
+            Dim colors = ColorSetItems(setId)
+            If index >= 0 AndAlso index < colors.Count Then
+                ' The stored name might be generic, try to parse it better
+                Dim storedName = colors(index)
+                ' If it's a generic name, try to improve it
+                If storedName.Contains("Variant") OrElse storedName.Contains("Color") AndAlso Not storedName.Contains("Brown") AndAlso Not storedName.Contains("Red") Then
+                    ' This is a generic name, return as-is for now
+                    Return storedName
+                End If
+                Return storedName
+            End If
+        End If
+        Return "Unknown"
+    End Function
+
+    ''' <summary>
+    ''' Gets a display string showing both the set name and the actual color name
+    ''' Example: "Shirt Set: Multiple Colors and Brown/Blue Gray - Brown Shirt 01 Variant 1"
+    ''' </summary>
+    ''' <param name="setId">The shirtSet or pantsSet ID</param>
+    ''' <param name="index">The sp (shirt) or sl (pants) index value (0-based)</param>
+    ''' <returns>A friendly display string</returns>
+    Public Shared Function GetColorDisplayString(setId As Integer, index As Integer) As String
+        Dim setName As String = "Unknown Set"
+        If ColorSetIDs.ContainsKey(setId) Then
+            setName = ColorSetIDs(setId)
+        End If
+
+        Dim colorName As String = GetColorName(setId, index)
+
+        If colorName <> "Unknown" Then
+            Return $"{setName} - {colorName}"
+        Else
+            Return $"{setName} (Index {index})"
+        End If
+    End Function
 
 
 End Class

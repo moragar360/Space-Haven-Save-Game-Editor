@@ -5,9 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SpaceHavenEditor2"
         mc:Ignorable="d"
-        Title="Moragar's Space Haven Save Game Editor" Height="1050" Width="1200"
+        Title="Moragar's Space Haven Save Game Editor" Height="1300" Width="1400"
         DataContext="{Binding RelativeSource={RelativeSource Self}}" Icon="/b1a65345-8f16-4e38-87d8-0066a0f6d95c.png" FontFamily="Segoe UI">
-
 
     <Window.Resources>
         <Style x:Key="CardBorderStyle" TargetType="Border">
@@ -61,6 +60,74 @@
         <Style x:Key="ModernTabControlStyle" TargetType="{x:Type TabControl}">
             <Setter Property="Padding" Value="0"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabControl}">
+                        <Grid KeyboardNavigation.TabNavigation="Local">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Background="#F0F0F0" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Margin="0,0,0,0">
+                                <TabPanel x:Name="HeaderPanel" Panel.ZIndex="1" Margin="5,5,5,0" IsItemsHost="True" KeyboardNavigation.TabIndex="1"/>
+                            </Border>
+                            <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1" Margin="0,5,0,0"
+                                              Content="{TemplateBinding SelectedContent}"
+                                              ContentTemplate="{TemplateBinding SelectedContentTemplate}"
+                                              ContentStringFormat="{TemplateBinding SelectedContentStringFormat}"
+                                              ContentTemplateSelector="{TemplateBinding SelectedContentTemplateSelector}"
+                                              KeyboardNavigation.TabIndex="2"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="{x:Type TabItem}">
+                        <Setter Property="Padding" Value="12,6"/>
+                        <Setter Property="Margin" Value="2,0,2,0"/>
+                        <Setter Property="Foreground" Value="#666666"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="0,0,0,3"/>
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                        <Setter Property="FontSize" Value="13"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="{x:Type TabItem}">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            Padding="{TemplateBinding Padding}"
+                                            Margin="{TemplateBinding Margin}"
+                                            CornerRadius="3,3,0,0">
+                                        <ContentPresenter ContentSource="Header"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"
+                                                          RecognizesAccessKey="True"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="#FF007ACC"/>
+                                <Setter Property="BorderBrush" Value="#FF007ACC"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Background" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#E8E8E8"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NestedTabControlStyle" TargetType="{x:Type TabControl}">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -111,11 +178,6 @@
                                 <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
                                 <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
                                 <Setter Property="FontWeight" Value="SemiBold"/>
-                               
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#1A000000"/>
-                                
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -180,8 +242,8 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
     </Window.Resources>
+
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="File">
@@ -190,24 +252,21 @@
                 <Separator />
                 <MenuItem Header="Exit" Click="ExitMenu_Click" />
                 <Separator />
-                
             </MenuItem>
-
             <MenuItem Header="_Edit">
                 <MenuItem Header="_Settings" Click="SettingsMenu_Click" />
             </MenuItem>
-
             <MenuItem Header="_Help">
                 <MenuItem Header="_Help / Instructions" Click="HelpMenu_Click" />
                 <Separator/>
                 <MenuItem Header="_About" Click="AboutMenu_Click"/>
             </MenuItem>
-
         </Menu>
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-
-            <Grid Margin="10">
+        <TabControl Style="{StaticResource ModernTabControlStyle}">
+            <TabItem Header="Save Game Editor">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="51*"/>
                     <ColumnDefinition Width="8*"/>
@@ -216,10 +275,11 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" CornerRadius="5" Margin="0,0,0,10" Grid.ColumnSpan="2">
+                <Border Grid.Row="0" CornerRadius="5" Margin="0,0,0,5" Grid.ColumnSpan="2">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                             <GradientStop Color="#FF4A5A6A" Offset="0"/>
@@ -232,12 +292,35 @@
                     <TextBlock Text="Moragar's Space Haven Save Game Editor"
                            FontSize="24"
                            FontWeight="Bold"
-                           Foreground="White"  VerticalAlignment="Center"
+                           Foreground="White" VerticalAlignment="Center"
                            HorizontalAlignment="Center"
                            Margin="0,10"/>
                 </Border>
 
-                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Grid.ColumnSpan="2">
+                <Grid Grid.Row="1" Grid.ColumnSpan="2" Height="30" Margin="0,0,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="txtUnsavedIndicator" 
+                           Text="⚠ Unsaved Changes" 
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="#FFFF0000" 
+                           Background="#FFFFE4B5"
+                           Padding="8,4"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
+                           Margin="0,0,15,0"
+                           Grid.Column="1"
+                           Visibility="Collapsed">
+                        <TextBlock.Effect>
+                            <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.5" BlurRadius="3"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
+                </Grid>
+
+                <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" Grid.ColumnSpan="2" Margin="0,0,0,5">
                     <StackPanel>
                         <TextBlock Text="Global Save Settings" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
                         <WrapPanel Orientation="Horizontal">
@@ -245,30 +328,23 @@
                                 <TextBlock Text="Player Credits:" VerticalAlignment="Center" Margin="0,0,5,0" FontSize="12"/>
                                 <TextBox x:Name="txtPlayerCredits" Width="100" VerticalAlignment="Center" Style="{StaticResource ModernTextBoxStyle}"/>
                             </StackPanel>
-
                             <StackPanel Orientation="Horizontal" Margin="0,0,20,5">
                                 <TextBlock Text="Prestige Points:" VerticalAlignment="Center" Margin="0,0,5,0" FontSize="12"/>
                                 <TextBox x:Name="txtPrestigePoints" Width="60" VerticalAlignment="Center" Style="{StaticResource ModernTextBoxStyle}"/>
                             </StackPanel>
-
                             <CheckBox x:Name="chkSandbox" Content="Sandbox Mode" VerticalAlignment="Center" Margin="0,0,20,5" Style="{StaticResource ModernCheckBoxStyle}" FontSize="12"/>
-
                             <Button x:Name="btnUpdateGlobalSettings"
-                                 Content="Update Global Settings"
-                                 ToolTip="Updates the global values in memory. Use File->Save to make permanent."
-                                 Width="180"
-                                 VerticalAlignment="Center"
-                                 Click="btnUpdateGlobalSettings_Click"
-                                 Style="{StaticResource ModernButtonStyle}"/>
-
+                                    Content="Update Global Settings"
+                                    ToolTip="Updates the global values in memory. Use File->Save to make permanent."
+                                    Width="180"
+                                    VerticalAlignment="Center"
+                                    Click="btnUpdateGlobalSettings_Click"
+                                    Style="{StaticResource ModernButtonStyle}"/>
                         </WrapPanel>
                     </StackPanel>
                 </Border>
 
-
-
-
-                <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" Grid.ColumnSpan="2">
+                <Border Grid.Row="3" Style="{StaticResource CardBorderStyle}" Grid.ColumnSpan="2" Margin="0,0,0,5">
                     <StackPanel Orientation="Vertical">
                         <TextBlock Text="Selected Ship" FontSize="16" FontWeight="Bold" Margin="0,0,0,5" />
                         <ComboBox x:Name="cmb_ships" Width="300" Height="30" SelectionChanged="cmb_ships_SelectionChanged" HorizontalAlignment="Left" />
@@ -279,7 +355,7 @@
                     </StackPanel>
                 </Border>
 
-                <TabControl Grid.Row="3" Style="{StaticResource ModernTabControlStyle}" Grid.ColumnSpan="2">
+                <TabControl Grid.Row="4" Style="{StaticResource ModernTabControlStyle}" Grid.ColumnSpan="2">
                     <TabItem Header="Crew">
                         <Grid Margin="5">
                             <Grid.ColumnDefinitions>
@@ -298,8 +374,12 @@
                                 <TabItem Header="Attributes">
                                     <Border Style="{StaticResource CardBorderStyle}">
                                         <StackPanel>
-                                            <Button x:Name="btnSetAllAttributes" Content="Set All Attributes to 5" Width="170" HorizontalAlignment="Left" Click="btnSetAllAttributes_Click" Style="{StaticResource ModernButtonStyle}"/>
-                                            <DataGrid x:Name="dgvAttributes" AutoGenerateColumns="False" IsReadOnly="False" CanUserAddRows="False" CanUserDeleteRows="False" Style="{StaticResource ModernDataGridStyle}" ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                <TextBlock Text="Set Attributes for Current Character:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                                                <TextBox x:Name="txtAttributeValue" Width="50" VerticalAlignment="Center" Text="5" Style="{StaticResource ModernTextBoxStyle}"/>
+                                                <Button x:Name="btnSetCharacterAttributes" Content="Set All Attributes" Width="150" HorizontalAlignment="Left" Click="btnSetCharacterAttributes_Click" Style="{StaticResource ModernButtonStyle}" Margin="10,0,0,0"/>
+                                            </StackPanel>
+                                            <DataGrid x:Name="dgvAttributes" AutoGenerateColumns="False" IsReadOnly="False" CanUserAddRows="False" CanUserDeleteRows="False" Style="{StaticResource ModernDataGridStyle}" ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}" RowEditEnding="dgvAttributes_RowEditEnding">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="Attr ID" Binding="{Binding Id}" IsReadOnly="True" Width="Auto"/>
                                                     <DataGridTextColumn Header="Attr Name" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
@@ -312,12 +392,22 @@
                                 <TabItem Header="Skills">
                                     <Border Style="{StaticResource CardBorderStyle}">
                                         <StackPanel>
-                                            <Button x:Name="btnSetAllSkills" Content="Set All Skills to 8" Width="150" HorizontalAlignment="Left" Click="btnSetAllSkills_Click" Style="{StaticResource ModernButtonStyle}"/>
-                                            <DataGrid x:Name="dgvSkills" AutoGenerateColumns="False" IsReadOnly="False" CanUserAddRows="False" CanUserDeleteRows="False" Style="{StaticResource ModernDataGridStyle}" ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                <TextBlock Text="Set Current Skill Level:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                                                <TextBox x:Name="txtSkillValue" Width="50" VerticalAlignment="Center" Text="5" Style="{StaticResource ModernTextBoxStyle}"/>
+                                                <Button x:Name="btnSetCharacterSkills" Content="Set All Current Skills" Width="160" HorizontalAlignment="Left" Click="btnSetCharacterSkills_Click" Style="{StaticResource ModernButtonStyle}" Margin="10,0,0,0"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                <TextBlock Text="Set Max Skill Level:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                                                <TextBox x:Name="txtSkillMaxValue" Width="50" VerticalAlignment="Center" Text="10" Style="{StaticResource ModernTextBoxStyle}"/>
+                                                <Button x:Name="btnSetCharacterMaxSkills" Content="Set All Max Skills" Width="160" HorizontalAlignment="Left" Click="btnSetCharacterMaxSkills_Click" Style="{StaticResource ModernButtonStyle}" Margin="10,0,0,0"/>
+                                            </StackPanel>
+                                            <DataGrid x:Name="dgvSkills" AutoGenerateColumns="False" IsReadOnly="False" CanUserAddRows="False" CanUserDeleteRows="False" Style="{StaticResource ModernDataGridStyle}" ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}" ToolTip="Current Level: The character's current skill level. Max Level: The maximum skill level the character can achieve. Characters must train to reach their max level." RowEditEnding="dgvSkills_RowEditEnding">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="Skill ID" Binding="{Binding Id}" IsReadOnly="True" Width="Auto"/>
                                                     <DataGridTextColumn Header="Skill Name" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
-                                                    <DataGridTextColumn Header="Level" Binding="{Binding Value}" IsReadOnly="False" Width="Auto"/>
+                                                    <DataGridTextColumn Header="Current Level" Binding="{Binding Value}" IsReadOnly="False" Width="Auto"/>
+                                                    <DataGridTextColumn Header="Max Level" Binding="{Binding MaxValue}" IsReadOnly="False" Width="Auto"/>
                                                 </DataGrid.Columns>
                                             </DataGrid>
                                         </StackPanel>
@@ -359,9 +449,7 @@
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
-
                                             <TextBlock Grid.Row="0" Text="Current Relationships:" FontWeight="SemiBold" Margin="0,0,0,5"/>
-
                                             <DataGrid Grid.Row="1" x:Name="dgvRelationships" Style="{StaticResource ModernDataGridStyle}" ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}" RowEditEnding="dgvRelationships_RowEditEnding" IsReadOnly="False">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="Target" Binding="{Binding TargetName}" Width="300" IsReadOnly="True" />
@@ -370,9 +458,8 @@
                                                     <DataGridTextColumn Header="Compatability" Binding="{Binding Compatibility}" Width="Auto" IsReadOnly="False"/>
                                                 </DataGrid.Columns>
                                             </DataGrid>
-
                                             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
-                                                <Button x:Name="btnRelPrev" Content="&lt; Previous" Width="100" Style="{StaticResource ModernButtonStyle}" Click="btnRelPrev_Click" IsEnabled="False"/>
+                                                <Button x:Name="btnRelPrev" Content="Previous" Width="100" Style="{StaticResource ModernButtonStyle}" Click="btnRelPrev_Click" IsEnabled="False"/>
                                                 <TextBlock x:Name="txtRelationshipPageInfo" Text="Page 0 of 0" Margin="15,0" VerticalAlignment="Center"/>
                                                 <Button x:Name="btnRelNext" Content="Next >" Width="100" Style="{StaticResource ModernButtonStyle}" Click="btnRelNext_Click" IsEnabled="False"/>
                                             </StackPanel>
@@ -431,9 +518,438 @@
                             </Grid>
                         </Border>
                     </TabItem>
-                </TabControl>
 
-            </Grid>
-        </ScrollViewer>
+                    <TabItem Header="Bulk">
+                        <Grid Margin="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <!-- Nested TabControl as header -->
+                                <RowDefinition Height="*"/>
+                                <!-- Sub-tab content -->
+                            </Grid.RowDefinitions>
+
+                            <!-- Nested TabControl as Header -->
+                            <TabControl Grid.Row="0" Style="{StaticResource NestedTabControlStyle}" Margin="0,0,0,10" SelectionChanged="BulkTabControl_SelectionChanged">
+                                <TabItem Header="Add Bulk Crew"/>
+                                <TabItem Header="Bulk Character Stats"/>
+                            </TabControl>
+
+                            <!-- Sub-Tab Content in Detached Card -->
+                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel Margin="5">
+                                    <!-- Bulk Crew Content -->
+                                    <StackPanel x:Name="bulkCrewPanel">
+                                        <TextBlock Text="Add Multiple Crew Members" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                            <Label Content="Template Crew:" VerticalAlignment="Center" FontSize="12"/>
+                                            <ComboBox x:Name="cmbTemplateCrew" Width="200" VerticalAlignment="Center"
+                                                      DisplayMemberPath="CharacterName" SelectedValuePath="CharacterEntityId"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                            <Label Content="Number to Add:" VerticalAlignment="Center" FontSize="12"/>
+                                            <TextBox x:Name="txtBulkCrewAmount" Width="50" VerticalAlignment="Center" Text="10" Style="{StaticResource ModernTextBoxStyle}"/>
+                                            <Button x:Name="btnBulkAddCrew" Content="Add Crew" Margin="10,0,0,0" Click="BtnBulkAddCrew_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="lblBulkStatus" Text="" Margin="0,5,0,0" FontSize="12"/>
+                                    </StackPanel>
+                                    
+                                    <!-- Bulk Character Stats Content (Combined Attributes and Skills) -->
+                                    <StackPanel x:Name="bulkStatsPanel" Visibility="Collapsed">
+                                        <!-- Attributes Section -->
+                                        <TextBlock Text="Set Attributes for All Characters" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                            <Label Content="Attribute Value (1-10):" VerticalAlignment="Center" FontSize="12"/>
+                                            <TextBox x:Name="txtBulkAttributeValue" Width="50" VerticalAlignment="Center" Text="5" Style="{StaticResource ModernTextBoxStyle}"/>
+                                            <Button x:Name="btnBulkSetAttributes" Content="Set All Attributes" Margin="10,0,0,0" Click="btnBulkSetAttributes_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="lblBulkAttributeStatus" Text="" Margin="0,5,0,0" FontSize="12"/>
+                                        
+                                        <!-- Separator -->
+                                        <Separator Margin="0,20,0,20" Background="LightGray"/>
+                                        
+                                        <!-- Skills Section -->
+                                        <TextBlock Text="Set Skills for All Characters" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                            <Label Content="Current Skill Level (1-10):" VerticalAlignment="Center" FontSize="12"/>
+                                            <TextBox x:Name="txtBulkSkillValue" Width="50" VerticalAlignment="Center" Text="5" Style="{StaticResource ModernTextBoxStyle}"/>
+                                            <Button x:Name="btnBulkSetSkills" Content="Set All Current Skills" Margin="10,0,0,0" Click="btnBulkSetSkills_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                            <Label Content="Max Skill Level (1-10):" VerticalAlignment="Center" FontSize="12"/>
+                                            <TextBox x:Name="txtBulkSkillMaxValue" Width="50" VerticalAlignment="Center" Text="10" Style="{StaticResource ModernTextBoxStyle}"/>
+                                            <Button x:Name="btnBulkSetMaxSkills" Content="Set All Max Skills" Margin="10,0,0,0" Click="btnBulkSetMaxSkills_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                            <Button x:Name="btnBulkSetSkillsMax" Content="Set All Current Skills to Their Max Level" Width="280" HorizontalAlignment="Left" Click="btnBulkSetSkillsMax_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="lblBulkSkillStatus" Text="" Margin="0,5,0,0" FontSize="12"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Game Start Editor">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Title Banner -->
+                        <Border Grid.Row="0" CornerRadius="5" Margin="0,0,0,10">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#FF4A5A6A" Offset="0"/>
+                                    <GradientStop Color="#FF607080" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.4" BlurRadius="5"/>
+                            </Border.Effect>
+                            <TextBlock Text="Game Start &amp; Difficulty Editor"
+                                   FontSize="24"
+                                   FontWeight="Bold"
+                                   Foreground="White" VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,10"/>
+                        </Border>
+
+                        <!-- Instructions Card (Collapsible) -->
+                        <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Background="#E8F4FD" BorderBrush="#B0D8F0" Margin="0,0,0,10">
+                            <Expander Header="Instructions" IsExpanded="False">
+                                <StackPanel Margin="0,10,0,0">
+                                    <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="18">
+                                        <Run Text="1. In Space Haven: Start Game, pick Game Mode, pick Difficulty, then save the difficulty file as a custom one"/>
+                                        <LineBreak/>
+                                        <Run Text="2. Click 'Load File' to open your custom Game Start XML file from the scenario directory"/>
+                                        <LineBreak/>
+                                        <Run Text="3. Modify game settings, crew limits, and resource/item quantities as needed"/>
+                                        <LineBreak/>
+                                        <Run Text="4. Use the Resources and Items tabs to add, edit, or delete resources and items"/>
+                                        <LineBreak/>
+                                        <Run Text="5. Click 'Save Changes' to save your modifications to the file"/>
+                                        <LineBreak/>
+                                        <Run Text="Note: Remember to click 'Save Changes' after making any modifications!" FontWeight="SemiBold" Foreground="#CC0000"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Expander>
+                        </Border>
+                        
+                        <!-- File Load Section -->
+                        <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="File" FontSize="16" FontWeight="Bold" Grid.Column="0"/>
+                                    <TextBlock x:Name="txtGameStartUnsavedIndicator" 
+                                           Text="⚠ Unsaved Changes - Click 'Save Changes' to save!" 
+                                           FontSize="14"
+                                           FontWeight="Bold"
+                                           Foreground="#FFFF0000" 
+                                           Background="#FFFFE4B5"
+                                           Padding="10,5"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           Grid.Column="1"
+                                           Visibility="Collapsed">
+                                        <TextBlock.Effect>
+                                            <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.5" BlurRadius="3"/>
+                                        </TextBlock.Effect>
+                                    </TextBlock>
+                                </Grid>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Button x:Name="btnGameStartLoadFile" Content="Load File" Width="100" Height="30" 
+                                            Click="btnGameStartLoadFile_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                    <Button x:Name="btnGameStartSetScenarioFolder" Content="Set Scenario Folder" Width="140" Height="30" 
+                                            Click="btnGameStartSetScenarioFolder_Click" Style="{StaticResource ModernButtonStyle}" Margin="10,0,0,0"/>
+                                    <TextBlock x:Name="txtGameStartFilePath" Text="No file loaded" Margin="10,0,0,0" 
+                                               VerticalAlignment="Center" FontSize="12" Foreground="Gray"/>
+                                </StackPanel>
+                                <TextBlock x:Name="txtGameStartScenarioFolder" Text="" FontSize="11" Foreground="DarkGray" FontStyle="Italic" Margin="0,5,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Settings Section -->
+                        <Border Grid.Row="3" Style="{StaticResource CardBorderStyle}" x:Name="gameStartSettingsCard" IsEnabled="False">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="Game Settings" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                                    <GroupBox Header="Relationships" Margin="0,0,0,10">
+                                        <StackPanel>
+                                            <CheckBox x:Name="chkGameStartEnemiesEnabled" Content="Enemies Enabled" Margin="0,5"
+                                                      Checked="chkGameStartEnemiesEnabled_Checked" Unchecked="chkGameStartEnemiesEnabled_Unchecked"/>
+                                            <CheckBox x:Name="chkGameStartFriendsEnabled" Content="Friends Enabled" Margin="0,5"
+                                                      Checked="chkGameStartFriendsEnabled_Checked" Unchecked="chkGameStartFriendsEnabled_Unchecked"/>
+                                            <CheckBox x:Name="chkGameStartLoversEnabled" Content="Lovers Enabled" Margin="0,5"
+                                                      Checked="chkGameStartLoversEnabled_Checked" Unchecked="chkGameStartLoversEnabled_Unchecked"/>
+                                        </StackPanel>
+                                    </GroupBox>
+                                    <CheckBox x:Name="chkGameStartSandbox" Content="Sandbox Mode" Margin="0,5"
+                                              Checked="chkGameStartSandbox_Checked" Unchecked="chkGameStartSandbox_Unchecked"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Crew &amp; Resource Limits" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                                    <GroupBox Header="Crew Settings" Margin="0,0,0,10">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                                <TextBlock Text="Crew Count:" Width="120" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="txtGameStartCrew" Width="100" Height="25" TextChanged="txtGameStartCrew_TextChanged"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                                <TextBlock Text="Max Crew:" Width="120" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="txtGameStartMaxCrew" Width="100" Height="25" TextChanged="txtGameStartMaxCrew_TextChanged"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </GroupBox>
+                                    <GroupBox Header="Resource Limits">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                                <TextBlock Text="Max Resources:" Width="120" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="txtGameStartMaxResources" Width="100" Height="25" TextChanged="txtGameStartMaxResources_TextChanged"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                                                <TextBlock Text="Max Items:" Width="120" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="txtGameStartMaxItems" Width="100" Height="25" TextChanged="txtGameStartMaxItems_TextChanged"/>
+                                            </StackPanel>
+                                            <CheckBox x:Name="chkGameStartHangarsPopulated" Content="Hangars Populated" Margin="0,10,0,0"
+                                                      Checked="chkGameStartHangarsPopulated_Checked" Unchecked="chkGameStartHangarsPopulated_Unchecked"/>
+                                        </StackPanel>
+                                    </GroupBox>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        
+                        <!-- Resources and Items Tabs -->
+                        <TabControl Grid.Row="5" Margin="0,0,0,10" Style="{StaticResource NestedTabControlStyle}">
+                            <TabItem Header="Resources">
+                                <Border Style="{StaticResource CardBorderStyle}" Margin="0">
+                                    <StackPanel>
+                                        <TextBlock Text="Resources" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <DataGrid x:Name="dgGameStartResources" Style="{StaticResource ModernDataGridStyle}" 
+                                                  ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}"
+                                                  Height="300" SelectionChanged="dgGameStartResources_SelectionChanged"
+                                                  SelectionMode="Extended" CanUserDeleteRows="False" CanUserAddRows="False"
+                                                  CellEditEnding="dgGameStartResources_CellEditEnding" 
+                                                  PreviewMouseDown="dgGameStartResources_PreviewMouseDown"
+                                                  Margin="0,0,0,10">
+                                            <DataGrid.Columns>
+                                                <DataGridTemplateColumn Header="" Width="40">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                                      Checked="GameStartCheckBox_Checked"
+                                                                      Unchecked="GameStartCheckBox_Unchecked"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                                <DataGridTextColumn Header="Item Name" Binding="{Binding Name}" Width="*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="Auto" IsReadOnly="False"/>
+                                                <DataGridTextColumn Header="Item ID" Binding="{Binding ElementId}" Width="Auto" IsReadOnly="True"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <TextBlock Text="Add Item:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                            <ComboBox x:Name="cmbGameStartAddResource" Width="300" Height="30" 
+                                                      SelectedValuePath="ItemId" Margin="5,0,10,0">
+                                                <ComboBox.GroupStyle>
+                                                    <GroupStyle>
+                                                        <GroupStyle.HeaderTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12" 
+                                                                           Foreground="#FF007ACC" Margin="5,0,0,0"/>
+                                                            </DataTemplate>
+                                                        </GroupStyle.HeaderTemplate>
+                                                    </GroupStyle>
+                                                </ComboBox.GroupStyle>
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding ItemName}" Margin="10,0,0,0"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                            <TextBlock Text="Quantity:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                                            <TextBox x:Name="txtGameStartAddResourceQuantity" Width="60" Height="30" Text="1" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="btnGameStartAddResource" Content="Add" Width="100" Height="30" 
+                                                    Click="btnGameStartAddResource_Click" Style="{StaticResource ModernButtonStyle}" Margin="10,0,10,0"/>
+                                            <Button x:Name="btnGameStartDeleteSelectedResources" Content="Delete Selected" Width="130" Height="30" 
+                                                    Click="btnGameStartDeleteSelectedResources_Click" Style="{StaticResource ModernButtonStyle}" 
+                                                    Background="IndianRed"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </TabItem>
+                            <TabItem Header="Items">
+                                <Border Style="{StaticResource CardBorderStyle}" Margin="0">
+                                    <StackPanel>
+                                        <TextBlock Text="Items (Weapons, Armor, Medical, etc.)" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <DataGrid x:Name="dgGameStartItems" Style="{StaticResource ModernDataGridStyle}" 
+                                                  ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}"
+                                                  Height="300" SelectionChanged="dgGameStartItems_SelectionChanged"
+                                                  SelectionMode="Extended" CanUserDeleteRows="False" CanUserAddRows="False"
+                                                  CellEditEnding="dgGameStartItems_CellEditEnding"
+                                                  PreviewMouseDown="dgGameStartItems_PreviewMouseDown"
+                                                  Margin="0,0,0,10">
+                                            <DataGrid.Columns>
+                                                <DataGridTemplateColumn Header="" Width="40">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                                      Checked="GameStartCheckBox_Checked"
+                                                                      Unchecked="GameStartCheckBox_Unchecked"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                                <DataGridTextColumn Header="Item Name" Binding="{Binding Name}" Width="*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="Auto" IsReadOnly="False"/>
+                                                <DataGridTextColumn Header="Item ID" Binding="{Binding ElementId}" Width="Auto" IsReadOnly="True"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <TextBlock Text="Add Item:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                            <ComboBox x:Name="cmbGameStartAddItem" Width="300" Height="30" 
+                                                      SelectedValuePath="ItemId" Margin="5,0,10,0">
+                                                <ComboBox.GroupStyle>
+                                                    <GroupStyle>
+                                                        <GroupStyle.HeaderTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12" 
+                                                                           Foreground="#FF007ACC" Margin="5,0,0,0"/>
+                                                            </DataTemplate>
+                                                        </GroupStyle.HeaderTemplate>
+                                                    </GroupStyle>
+                                                </ComboBox.GroupStyle>
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding ItemName}" Margin="10,0,0,0"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                            <TextBlock Text="Quantity:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                                            <TextBox x:Name="txtGameStartAddItemQuantity" Width="60" Height="30" Text="1" VerticalContentAlignment="Center"/>
+                                            <Button x:Name="btnGameStartAddItem" Content="Add" Width="100" Height="30" 
+                                                    Click="btnGameStartAddItem_Click" Style="{StaticResource ModernButtonStyle}" Margin="10,0,10,0"/>
+                                            <Button x:Name="btnGameStartDeleteSelectedItems" Content="Delete Selected" Width="130" Height="30" 
+                                                    Click="btnGameStartDeleteSelectedItems_Click" Style="{StaticResource ModernButtonStyle}" 
+                                                    Background="IndianRed"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </TabItem>
+                        </TabControl>
+                        
+                        <!-- Save Button -->
+                        <Border Grid.Row="7" Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <Button x:Name="btnGameStartSaveChanges" Content="Save Changes" Width="150" Height="35" 
+                                        Click="btnGameStartSaveChanges_Click" Style="{StaticResource ModernButtonStyle}"
+                                        HorizontalAlignment="Right" IsEnabled="False"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Blueprint Manager">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" CornerRadius="5" Margin="0,0,0,10">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#FF4A5A6A" Offset="0"/>
+                                    <GradientStop Color="#FF607080" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.4" BlurRadius="5"/>
+                            </Border.Effect>
+                            <TextBlock Text="Ship Blueprint Manager"
+                                   FontSize="24"
+                                   FontWeight="Bold"
+                                   Foreground="White" VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,10"/>
+                        </Border>
+
+                        <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Export Ship Blueprint" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="btnSelectSourceSave" Content="Select Source Save ('game')..." Width="200" Style="{StaticResource ModernButtonStyle}"/>
+                                    <TextBlock Grid.Column="1" x:Name="txtSourceSavePath" Text="(No source save selected)" FontStyle="Italic" Foreground="Gray" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                </Grid>
+                                <TextBlock Text="Select Ship to Export:" Margin="0,5,0,5"/>
+                                <ComboBox x:Name="cmbShipsToExport" Height="25" Margin="0,0,0,10" DisplayMemberPath="Sname" SelectedValuePath="Sid" IsEnabled="False"/>
+                                <Button x:Name="btnExportBlueprint" Content="Export Selected Ship Blueprint" HorizontalAlignment="Center" Width="220" Style="{StaticResource ModernButtonStyle}" IsEnabled="False"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Import Ship Blueprint" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="btnSelectBlueprintFile" Content="Select Blueprint File (.xml)..." Width="200" Style="{StaticResource ModernButtonStyle}"/>
+                                    <TextBlock Grid.Column="1" x:Name="txtBlueprintFilePath" Text="(No blueprint selected)" FontStyle="Italic" Foreground="Gray" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="btnSelectTargetSave" Content="Select Target Save ('game')..." Width="200" Style="{StaticResource ModernButtonStyle}"/>
+                                    <TextBlock Grid.Column="1" x:Name="txtTargetSavePath" Text="(No target save selected)" FontStyle="Italic" Foreground="Gray" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                </Grid>
+                                <CheckBox x:Name="chkImportAsBlueprint" Margin="0,0,0,10" Content="Import as Blueprint (excludes crew, inventory, and built structures - keeps planning sketch)" IsChecked="False"/>
+                                <Button x:Name="btnImportBlueprint" Content="Import Blueprint to Target Save" HorizontalAlignment="Center" Width="220" Style="{StaticResource ModernButtonStyle}" IsEnabled="False"/>
+                            </StackPanel>
+                        </Border>
+
+                        <StatusBar Grid.Row="4" VerticalAlignment="Bottom" Background="#FFE0E0E0">
+                            <StatusBarItem>
+                                <TextBlock x:Name="txtBlueprintStatus" Text="Ready"/>
+                            </StatusBarItem>
+                        </StatusBar>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
     </DockPanel>
 </Window>

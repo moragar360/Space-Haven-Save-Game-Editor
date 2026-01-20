@@ -5,16 +5,17 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SpaceHavenEditor2"
         mc:Ignorable="d"
-        Title="Editor Settings" Height="200" Width="450"
+        Title="Editor Settings" Height="250" Width="650"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ResizeMode="NoResize"
-        Background="WhiteSmoke" WindowStyle="None">
+        Background="WhiteSmoke" WindowStyle="None"
+        Loaded="Window_Loaded">
 
     <Window.Resources>
         <Style x:Key="CardBorderStyle" TargetType="Border">
             <Setter Property="Background" Value="WhiteSmoke"/>
             <Setter Property="CornerRadius" Value="5"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="10"/>
             <Setter Property="BorderBrush" Value="LightGray"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Effect">
@@ -27,10 +28,12 @@
         <Style x:Key="ModernButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="#FF007ACC"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Margin" Value="5"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Visibility" Value="Visible"/>
+            <Setter Property="MinWidth" Value="80"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -58,113 +61,55 @@
             </Setter>
         </Style>
 
-        <Style x:Key="ModernTabControlStyle" TargetType="{x:Type TabControl}">
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="BorderThickness" Value="0"/>
+        <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Padding" Value="5,3"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="Gray"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type TabControl}">
-                        <Grid KeyboardNavigation.TabNavigation="Local">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <TabPanel x:Name="HeaderPanel" Grid.Row="0" Panel.ZIndex="1" Margin="0,0,0,0" IsItemsHost="True" KeyboardNavigation.TabIndex="1" Background="Transparent"/>
-                            <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1" Margin="0,5,0,0"
-                                              Content="{TemplateBinding SelectedContent}"
-                                              ContentTemplate="{TemplateBinding SelectedContentTemplate}"
-                                              ContentStringFormat="{TemplateBinding SelectedContentStringFormat}"
-                                              ContentTemplateSelector="{TemplateBinding SelectedContentTemplateSelector}"
-                                              KeyboardNavigation.TabIndex="2"/>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="ItemContainerStyle">
-                <Setter.Value>
-                    <Style TargetType="{x:Type TabItem}">
-                        <Setter Property="Padding" Value="12,6"/>
-                        <Setter Property="Margin" Value="0,0,2,0"/>
-                        <Setter Property="Foreground" Value="Gray"/>
-                        <Setter Property="Background" Value="Transparent"/>
-                        <Setter Property="BorderThickness" Value="0,0,0,2"/>
-                        <Setter Property="BorderBrush" Value="Transparent"/>
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="{x:Type TabItem}">
-                                    <Border Background="{TemplateBinding Background}"
-                                            BorderBrush="{TemplateBinding BorderBrush}"
-                                            BorderThickness="{TemplateBinding BorderThickness}"
-                                            Padding="{TemplateBinding Padding}"
-                                            Margin="{TemplateBinding Margin}">
-                                        <ContentPresenter ContentSource="Header"
-                                                          HorizontalAlignment="Center"
-                                                          VerticalAlignment="Center"
-                                                          RecognizesAccessKey="True"/>
-                                    </Border>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#1A000000"/>
-
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="Black"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
-
-        <Style x:Key="ModernDataGridStyle" TargetType="DataGrid">
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="LightGray"/>
-            <Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
-            <Setter Property="AlternatingRowBackground" Value="#F9F9F9"/>
-            <Setter Property="RowHeaderWidth" Value="0"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="LightGray"/>
-            <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="CanUserResizeRows" Value="False"/>
-            <Setter Property="AutoGenerateColumns" Value="False"/>
-            <Setter Property="CanUserAddRows" Value="False"/>
-            <Setter Property="CanUserDeleteRows" Value="False"/>
-        </Style>
-
-        <Style x:Key="ModernDataGridColumnHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="WhiteSmoke"/>
-            <Setter Property="Foreground" Value="#FF444444"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="8,5"/>
-            <Setter Property="BorderThickness" Value="0,0,1,1"/>
-            <Setter Property="BorderBrush" Value="LightGray"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-        </Style>
-
     </Window.Resources>
-    <Border Style="{StaticResource CardBorderStyle}" Margin="10">
+
+    <Border Style="{StaticResource CardBorderStyle}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
+                <!-- Backup checkbox -->
                 <RowDefinition Height="Auto"/>
+                <!-- Default directory + Browse -->
+                <RowDefinition Height="Auto"/>
+                <!-- OK/Cancel buttons -->
             </Grid.RowDefinitions>
 
-            <CheckBox x:Name="chkBackup" Grid.Row="0" VerticalAlignment="Center" Margin="5">
+            <!-- Row 0: Backup Checkbox -->
+            <CheckBox x:Name="chkBackup" Grid.Row="0" VerticalAlignment="Center" Margin="5,5,5,10">
                 <TextBlock Text="Create timestamped backup when opening save file" FontWeight="Bold"/>
             </CheckBox>
 
-            <Grid Grid.Row="2" HorizontalAlignment="Right">
+            <!-- Row 1: Default Directory + Browse -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5,10,5,15">
+                <TextBlock Text="Default Save Directory:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,15,0"/>
+                <TextBox x:Name="txtDefaultDirectory" Width="300" VerticalAlignment="Center" IsReadOnly="True" 
+                         Style="{StaticResource ModernTextBoxStyle}"/>
+                <Button x:Name="btnBrowseDirectory" Content="Browse…" Margin="10,0,0,0" Background="Red" 
+                        Style="{StaticResource ModernButtonStyle}" Click="btnBrowseDirectory_Click"/>
+            </StackPanel>
+
+            <!-- Row 2: OK/Cancel Buttons -->
+            <Grid Grid.Row="2" HorizontalAlignment="Right" Margin="0,10,0,0">
                 <UniformGrid Rows="1" Columns="2">
-                    <Button Content="OK" IsDefault="True" Click="btnOK_Click" Style="{StaticResource ModernButtonStyle}" Margin="0,0,5,0"/>
-                    <Button Content="Cancel" IsCancel="True" Style="{StaticResource ModernButtonStyle}" Background="#FFAAAAAA" Margin="5,0,0,0"/>
+                    <Button x:Name="btnOK" Content="OK" IsDefault="True" Click="btnOK_Click" 
+                            Style="{StaticResource ModernButtonStyle}" Margin="0,0,5,0"/>
+                    <Button x:Name="btnCancel" Content="Cancel" IsCancel="True" Click="btnCancel_Click" 
+                            Style="{StaticResource ModernButtonStyle}" Background="#FFAAAAAA" Margin="5,0,0,0"/>
                 </UniformGrid>
             </Grid>
         </Grid>
