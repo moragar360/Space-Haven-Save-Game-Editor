@@ -1,92 +1,67 @@
-# 🚀 Space Haven Save Editor
+# 🚀 Space Haven Save Editor v2.0
 
-Take full control of your Space Haven adventure!
-
-This save editor lets you modify important aspects of your Space Haven save files, including credits, prestige points, ship sizes, crew members, and storage items. Built fresh from scratch to support Space Haven Alpha 20 — no outdated tools here.
+Take full control of your Space Haven adventure! This suite of tools lets you modify almost every aspect of your Space Haven experience, from starting a new game to managing complex save files and ship blueprints. Built fresh to support **Space Haven Alpha 20**.
 
 ---
 
 ## 📋 Features
 
-- 💰 **Global Save Settings**
-  - Edit in-game credits.
-  - Adjust Exodus Fleet prestige points.
-  - Enable or disable Sandbox Mode.
+### 🛠️ Three Editors in One
+* **Save Game Editor:** Modify existing save files mid-game.
+* **Game Start Editor:** Set difficulty parameters for new game creation by editing custom game templates.
+* **Blueprint Manager:** Clone and transfer ship blueprints between different save games.
 
-- 🚀 **Ship Management**
-  - View and select ships from your save file.
-  - Edit ship dimensions (Width x Height grid squares).
-  - Safely expand or resize ships (up to 8x8 recommended).
+### 💰 Global Save Settings
+* Edit in-game credits and Exodus Fleet prestige points.
+* Enable or disable Sandbox Mode.
+* **New:** Set a **Default Save Location** in settings to jump straight to your save folder every time.
 
-- 👨‍🚀 **Detailed Crew Editing**
-  - Add new crew members based on existing templates.
-  - Modify attributes (Bravery, Zest, etc.).
-  - Adjust skill levels (Mining, Botany, Piloting, etc.).
-  - Add or remove traits.
-  - Remove conditions (injuries, status effects).
-  - Edit crew relationships (Friendship, Attraction, Compatibility).
-  - Quick set all attributes or skills with one click.
+### 🚀 Ship Management & Blueprints
+* View and select ships from your save file.
+* Edit ship dimensions (Width x Height grid squares).
+* **New:** Export ships from one game and import them into another, with or without items.
 
-- 📦 **Storage Management**
-  - View and manage storage containers on ships.
-  - Add, edit, or remove items inside storage units.
-  - Adjust item quantities or delete entire item stacks.
+### 👨‍🚀 Advanced Crew Editing
+* **Bulk Operations:** Create multiple crew members at once from a template or set attributes/skills for everyone on a ship simultaneously.
+* **Detailed Editing:** Modify Bravery, Zest, skills, traits, and conditions (injuries/status effects).
+* **Enhanced Cloning:** Pick a specific crew member to use as a template for new recruits.
+* **Relationships:** Edit Friendship, Attraction, and Compatibility.
+* **Sci-Fi Names:** New crew members automatically get names from an AI-generated sci-fi list.
 
-- 💾 **Automatic Backups (Optional)**
-  - Automatically create timestamped backup folders when opening saves.
-  - Manual backup still strongly recommended.
+### 📦 Storage Management
+* View and manage storage containers on ships.
+* Add, edit, or remove items and adjust quantities.
 
-- 🎮 **Simple and Clear Interface**
-  - Organized tabs for Ships, Crew, and Storage.
-  - Easy-to-use editing with dropdowns and quick entry.
+### 💾 Automatic Backups
+* Automatically creates timestamped backup folders when opening saves.
+* Manual backup is still strongly recommended.
 
-- 🔧 **Built for Space Haven Alpha 20**
 ---
 
 ## 📦 Installation
 
 1. Go to the [Latest Release](https://github.com/moragar360/Space-Haven-Save-Game-Editor/releases/latest).
-2. Download the latest `.zip` file.
+2. Download the `v2.0` `.zip` file.
 3. Extract the ZIP contents to a folder of your choice.
 4. Run `SpaceHavenEditor.exe` to launch the application.
-
-> ⚡ No installation needed — it's a standalone executable!
 
 ---
 
 ## 🛠️ Usage
 
-1. Launch the `SpaceHavenEditor.exe` application.
-2. Go to **File** -> **Open**.
-3. Navigate to your save game directory: typically Steam\steamapps\common\SpaceHaven\savegames[YourSaveGameName]\save\
-4. Select the `game` file (no extension).
-5. Choose a ship from the "Selected Ship" dropdown.
-6. Click on **Crew** or **Storage** tabs to begin editing.
-7. Modify values as needed:
-- Press **Enter** or change rows to commit grid edits.
-- Use the "Update Globals (Memory)" button to apply changes to global values.
-8. After making changes, go to **File** -> **Save**.
-9. Launch Space Haven and load your save to see your edits!
-
-> 🔥 Tip: Always make manual backups in addition to using the automatic backup feature.
+1. **Save Editing:** Open the **Save Game Editor** tab, go to **File -> Open**, and select your `game` file.
+2. **Game Start:** Use the **Game Start Editor** tab to open an XML file saved from the "Custom Game Template" menu in-game.
+3. **Blueprints:** Use the **Blueprint Manager** tab to export your favorite ships for future playthroughs.
 
 ---
 
-## 📜 License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-## 🧩 Changelog
-
-### v1.0.1 (Current Release)
-- Initial public release.
-- Fixed CTD (Crash to Desktop) issue when loading certain save files.
-- Improved save file handling.
-- Added automatic backup option.
-- Stable support for Space Haven Alpha 20 saves.
+## 🧩 Changelog (v2.0)
+* Added **Game Start Editor** and **Blueprint Manager**.
+* Added **Bulk Actions** menu for mass crew editing.
+* Added **Default Save Location** setting.
+* Fixed "Set All to Max" bug; it now correctly applies only to the selected character.
+* Resolved various loading errors for Exodus Fleet and large save files.
 
 ---
 
-Mad by [Moragar](https://github.com/moragar360)
+Made by [Moragar](https://github.com/moragar360)
