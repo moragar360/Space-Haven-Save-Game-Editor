@@ -1,6 +1,6 @@
 # 🚀 Space Haven Save Editor v2.0
 
-Take full control of your Space Haven adventure! This suite of tools lets you modify almost every aspect of your Space Haven experience, from starting a new game to managing complex save files and ship blueprints. Built fresh to support **Space Haven Alpha 20**.
+Take full control of your Space Haven adventure! This suite of tools lets you modify almost every aspect of your Space Haven experience, from starting a new game to managing complex save files and ship blueprints. Built fresh to support **Space Haven Beta 2**.
 
 ---
 
