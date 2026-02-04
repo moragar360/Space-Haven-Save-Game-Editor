@@ -22,6 +22,8 @@ Namespace SpaceHavenEditor2
         Private resourceItems As ObservableCollection(Of ResourceItem)
         Private itemItems As ObservableCollection(Of ResourceItem) ' Separate collection for items
         Private _hasUnsavedChanges As Boolean = False
+        Private isStationMode As Boolean = False ' True for playerCrafts (station), False for playerShips (ship)
+        Private currentContainerElement As XElement = Nothing ' The current <l> element we're editing
 
         Public Sub New()
             InitializeComponent()
@@ -168,7 +170,7 @@ Namespace SpaceHavenEditor2
                 resourceItems.Clear()
                 itemItems.Clear()
 
-                ' Game Start files have a <diff> root element, then <playerShips>
+                ' Game Start files have a <diff> root element, then <playerShips> or <playerCrafts>
                 Dim diffElement As XElement = Nothing
                 If xmlDoc.Root IsNot Nothing Then
                     If xmlDoc.Root.Name = "diff" Then
@@ -181,17 +183,55 @@ Namespace SpaceHavenEditor2
                     End If
                 End If
 
-                ' Find the playerShips element
+                ' Check for both playerShips (ship mode) and playerCrafts (station mode)
                 Dim playerShipsElement = diffElement?.Element("playerShips")
-                If playerShipsElement Is Nothing Then
-                    MessageBox.Show("Invalid XML structure: 'playerShips' element not found. This may not be a valid Game Start file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
-                    Return
-                End If
+                Dim playerCraftsElement = diffElement?.Element("playerCrafts")
+                Dim shipElement As XElement = Nothing
+                isStationMode = False
+                currentContainerElement = Nothing
 
-                ' Get the first ship (l element)
-                Dim shipElement = playerShipsElement.Element("l")
-                If shipElement Is Nothing Then
-                    MessageBox.Show("Invalid XML structure: No ship found in 'playerShips'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                ' Check if playerShips exists AND has child elements (not empty)
+                Dim hasPlayerShips = playerShipsElement IsNot Nothing AndAlso playerShipsElement.Elements("l").Any()
+
+                If hasPlayerShips Then
+                    ' Ship mode - get the first ship (l element)
+                    shipElement = playerShipsElement.Element("l")
+                    If shipElement Is Nothing Then
+                        MessageBox.Show("Invalid XML structure: No ship found in 'playerShips'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                        Return
+                    End If
+                    currentContainerElement = shipElement
+                ElseIf playerCraftsElement IsNot Nothing Then
+                    ' Station mode - find the craft/container with resources or items
+                    isStationMode = True
+                    ' Look for the <l> element that has resources or items, or has maxResources/maxItems > 0
+                    For Each craftElement In playerCraftsElement.Elements("l")
+                        Dim hasResources = craftElement.Element("resources") IsNot Nothing AndAlso craftElement.Element("resources").Elements("l").Any()
+                        Dim hasItems = craftElement.Element("items") IsNot Nothing AndAlso craftElement.Element("items").Elements("l").Any()
+                        Dim craftMaxResourcesAttr = craftElement.Attribute("maxResources")
+                        Dim craftMaxItemsAttr = craftElement.Attribute("maxItems")
+                        Dim maxResources As Integer = 0
+                        Dim maxItems As Integer = 0
+                        If craftMaxResourcesAttr IsNot Nothing Then Integer.TryParse(craftMaxResourcesAttr.Value, maxResources)
+                        If craftMaxItemsAttr IsNot Nothing Then Integer.TryParse(craftMaxItemsAttr.Value, maxItems)
+
+                        If hasResources OrElse hasItems OrElse (maxResources > 0 AndAlso maxItems > 0) Then
+                            shipElement = craftElement
+                            currentContainerElement = craftElement
+                            Exit For
+                        End If
+                    Next
+                    ' If no craft with resources/items found, use the first one
+                    If shipElement Is Nothing Then
+                        shipElement = playerCraftsElement.Element("l")
+                        If shipElement Is Nothing Then
+                            MessageBox.Show("Invalid XML structure: No craft found in 'playerCrafts'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                            Return
+                        End If
+                        currentContainerElement = shipElement
+                    End If
+                Else
+                    MessageBox.Show("Invalid XML structure: Neither 'playerShips' nor 'playerCrafts' element found. This may not be a valid Game Start file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
                     Return
                 End If
 
@@ -239,9 +279,15 @@ Namespace SpaceHavenEditor2
                     txtMaxItems.Text = maxItemsAttr.Value
                 End If
 
-                Dim hangarsPopulatedAttr = shipElement.Attribute("hangarsPopulated")
-                If hangarsPopulatedAttr IsNot Nothing Then
-                    chkHangarsPopulated.IsChecked = Boolean.Parse(hangarsPopulatedAttr.Value)
+                ' hangarsPopulated only exists for ship mode, not station mode
+                If Not isStationMode Then
+                    Dim hangarsPopulatedAttr = shipElement.Attribute("hangarsPopulated")
+                    If hangarsPopulatedAttr IsNot Nothing Then
+                        chkHangarsPopulated.IsChecked = Boolean.Parse(hangarsPopulatedAttr.Value)
+                    End If
+                Else
+                    ' Station mode doesn't have hangarsPopulated, so disable/hide the checkbox
+                    chkHangarsPopulated.IsChecked = False
                 End If
 
                 ' Load resources
@@ -554,7 +600,7 @@ Namespace SpaceHavenEditor2
             End If
 
             Try
-                ' Game Start files have a <diff> root element, then <playerShips>
+                ' Game Start files have a <diff> root element, then <playerShips> or <playerCrafts>
                 Dim diffElement As XElement = Nothing
                 If xmlDoc.Root IsNot Nothing Then
                     If xmlDoc.Root.Name = "diff" Then
@@ -567,17 +613,53 @@ Namespace SpaceHavenEditor2
                     End If
                 End If
 
-                ' Find the playerShips element
+                ' Check for both playerShips (ship mode) and playerCrafts (station mode)
                 Dim playerShipsElement = diffElement?.Element("playerShips")
-                If playerShipsElement Is Nothing Then
-                    MessageBox.Show("Invalid XML structure: 'playerShips' element not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
-                    Return
-                End If
+                Dim playerCraftsElement = diffElement?.Element("playerCrafts")
+                Dim shipElement As XElement = Nothing
 
-                ' Get the first ship (l element)
-                Dim shipElement = playerShipsElement.Element("l")
-                If shipElement Is Nothing Then
-                    MessageBox.Show("Invalid XML structure: No ship found in 'playerShips'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                ' Check if playerShips exists AND has child elements (not empty)
+                Dim hasPlayerShips = playerShipsElement IsNot Nothing AndAlso playerShipsElement.Elements("l").Any()
+
+                If hasPlayerShips Then
+                    ' Ship mode - get the first ship (l element)
+                    shipElement = playerShipsElement.Element("l")
+                    If shipElement Is Nothing Then
+                        MessageBox.Show("Invalid XML structure: No ship found in 'playerShips'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                        Return
+                    End If
+                ElseIf playerCraftsElement IsNot Nothing Then
+                    ' Station mode - use the stored container element
+                    If currentContainerElement IsNot Nothing Then
+                        shipElement = currentContainerElement
+                    Else
+                        ' Fallback: find the craft/container with resources or items
+                        For Each craftElement In playerCraftsElement.Elements("l")
+                            Dim hasResources = craftElement.Element("resources") IsNot Nothing AndAlso craftElement.Element("resources").Elements("l").Any()
+                            Dim hasItems = craftElement.Element("items") IsNot Nothing AndAlso craftElement.Element("items").Elements("l").Any()
+                            Dim craftMaxResourcesAttr = craftElement.Attribute("maxResources")
+                            Dim craftMaxItemsAttr = craftElement.Attribute("maxItems")
+                            Dim maxResources As Integer = 0
+                            Dim maxItems As Integer = 0
+                            If craftMaxResourcesAttr IsNot Nothing Then Integer.TryParse(craftMaxResourcesAttr.Value, maxResources)
+                            If craftMaxItemsAttr IsNot Nothing Then Integer.TryParse(craftMaxItemsAttr.Value, maxItems)
+
+                            If hasResources OrElse hasItems OrElse (maxResources > 0 AndAlso maxItems > 0) Then
+                                shipElement = craftElement
+                                Exit For
+                            End If
+                        Next
+                        ' If no craft with resources/items found, use the first one
+                        If shipElement Is Nothing Then
+                            shipElement = playerCraftsElement.Element("l")
+                            If shipElement Is Nothing Then
+                                MessageBox.Show("Invalid XML structure: No craft found in 'playerCrafts'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                                Return
+                            End If
+                        End If
+                    End If
+                Else
+                    MessageBox.Show("Invalid XML structure: Neither 'playerShips' nor 'playerCrafts' element found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
                     Return
                 End If
 
@@ -589,12 +671,15 @@ Namespace SpaceHavenEditor2
                     diffElement.SetAttributeValue("sandbox", chkSandbox.IsChecked.ToString().ToLower())
                 End If
 
-                ' Save crew and resource settings to ship element
+                ' Save crew and resource settings to ship/craft element
                 shipElement.SetAttributeValue("crew", txtCrew.Text)
                 shipElement.SetAttributeValue("maxCrew", txtMaxCrew.Text)
                 shipElement.SetAttributeValue("maxResources", txtMaxResources.Text)
                 shipElement.SetAttributeValue("maxItems", txtMaxItems.Text)
-                shipElement.SetAttributeValue("hangarsPopulated", chkHangarsPopulated.IsChecked.ToString().ToLower())
+                ' hangarsPopulated only exists for ship mode, not station mode
+                If Not isStationMode Then
+                    shipElement.SetAttributeValue("hangarsPopulated", chkHangarsPopulated.IsChecked.ToString().ToLower())
+                End If
 
                 ' Clear and save resources
                 Dim resourcesElement = shipElement.Element("resources")

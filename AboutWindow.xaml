@@ -74,12 +74,12 @@
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                     <TextBlock Text="Moragar's Space Haven Save Game Editor" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,15"/>
                     <TextBlock Text="Created by Moragar" FontSize="14" HorizontalAlignment="Center" Margin="0,0,0,15"/>
-                    <TextBlock Text="v.1.1 - Last Updated - 04/25/2025"
+                    <TextBlock Text="v.2.01 - Last Updated - 02/03/2026"
                                FontSize="11"
                                Foreground="Gray"
                                FontWeight="Bold" HorizontalAlignment="Center"
                                Margin="0,0,0,10"/>
-                    <TextBlock Text="Works with SpaceHaven Alpha 20"
+                    <TextBlock Text="Works with Beta 2"
                                FontSize="12"
                                FontWeight="SemiBold"
                                Foreground="#FF005A9E"

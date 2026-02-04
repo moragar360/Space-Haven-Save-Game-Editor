@@ -41,22 +41,22 @@ Namespace SpaceHavenEditor2
             End If
         End Sub
 
-        ' Handler for the Update button - VALIDATES SQUARES (1-8) and CALCULATES Sx/Sy
+        ' Handler for the Update button - VALIDATES SQUARES (1-10) and CALCULATES Sx/Sy
         Private Sub Update_Click(sender As Object, e As RoutedEventArgs)
             Dim squaresWidth As Integer
             Dim squaresHeight As Integer
 
             ' Validate Width (Squares)
-            If Not Integer.TryParse(txtWidth.Text, squaresWidth) OrElse squaresWidth < 1 OrElse squaresWidth > 8 Then
-                MessageBox.Show("Please enter a whole number between 1 and 8 for Width (Squares).", "Invalid Width", MessageBoxButton.OK, MessageBoxImage.Warning)
+            If Not Integer.TryParse(txtWidth.Text, squaresWidth) OrElse squaresWidth < 1 OrElse squaresWidth > 10 Then
+                MessageBox.Show("Please enter a whole number between 1 and 10 for Width (Squares).", "Invalid Width", MessageBoxButton.OK, MessageBoxImage.Warning)
                 txtWidth.Focus()
                 txtWidth.SelectAll()
                 Return ' Stop processing if invalid
             End If
 
             ' Validate Height (Squares)
-            If Not Integer.TryParse(txtHeight.Text, squaresHeight) OrElse squaresHeight < 1 OrElse squaresHeight > 8 Then
-                MessageBox.Show("Please enter a whole number between 1 and 8 for Height (Squares).", "Invalid Height", MessageBoxButton.OK, MessageBoxImage.Warning)
+            If Not Integer.TryParse(txtHeight.Text, squaresHeight) OrElse squaresHeight < 1 OrElse squaresHeight > 10 Then
+                MessageBox.Show("Please enter a whole number between 1 and 10 for Height (Squares).", "Invalid Height", MessageBoxButton.OK, MessageBoxImage.Warning)
                 txtHeight.Focus()
                 txtHeight.SelectAll()
                 Return ' Stop processing if invalid

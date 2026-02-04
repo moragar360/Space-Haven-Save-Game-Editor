@@ -87,7 +87,7 @@
 
             <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Margin="10,0,10,10">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Enter new ship size in grid squares (1-8):" HorizontalAlignment="Center" Margin="0,0,0,15" FontWeight="SemiBold"/>
+                    <TextBlock Text="Enter new ship size in grid squares (1-10):" HorizontalAlignment="Center" Margin="0,0,0,15" FontWeight="SemiBold"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
                         <TextBlock Text="Width (Squares):" Width="110" TextAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
                         <TextBox x:Name="txtWidth" Width="50" Style="{StaticResource ModernTextBoxStyle}"/>
@@ -96,7 +96,7 @@
                         <TextBlock Text="Height (Squares):" Width="110" TextAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
                         <TextBox x:Name="txtHeight" Width="50" Style="{StaticResource ModernTextBoxStyle}"/>
                     </StackPanel>
-                    <TextBlock Text="Enter values between 1 and 8. Larger sizes may cause issues."
+                    <TextBlock Text="Enter values between 1 and 10. Larger sizes may cause issues."
                                 FontSize="10" FontStyle="Italic" Foreground="Gray" TextWrapping="Wrap" HorizontalAlignment="Center" Margin="0,15,0,0"/>
                 </StackPanel>
             </Border>
