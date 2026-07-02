@@ -104,7 +104,10 @@
                         <RadioButton x:Name="chkExportAsBlueprint" Content="Export as Blueprint (unbuilt)" IsChecked="True" Margin="0,0,15,0" GroupName="ExportMode"/>
                         <RadioButton x:Name="chkExportAsBuilt" Content="Export as Built Ship" IsChecked="False" GroupName="ExportMode"/>
                     </StackPanel>
-                    <Button x:Name="btnExportBlueprint" Content="Export Selected Ship Blueprint" HorizontalAlignment="Center" Width="220" Style="{StaticResource ModernButtonStyle}" Click="btnExportBlueprint_Click" IsEnabled="False"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button x:Name="btnExportBlueprint" Content="Export Selected Ship Blueprint" Width="220" Style="{StaticResource ModernButtonStyle}" Click="btnExportBlueprint_Click" IsEnabled="False"/>
+                        <Button x:Name="btnDeleteSourceShip" Content="Delete Selected Ship" Width="170" Style="{StaticResource ModernButtonStyle}" Background="IndianRed" Click="btnDeleteSourceShip_Click" IsEnabled="False"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -127,7 +130,7 @@
                         <Button x:Name="btnSelectTargetSave" Content="Select Target Save ('game')..." Width="200" Style="{StaticResource ModernButtonStyle}" Click="btnSelectTargetSave_Click"/>
                         <TextBlock Grid.Column="1" x:Name="txtTargetSavePath" Text="(No target save selected)" Style="{StaticResource FilePathTextStyle}"/>
                     </Grid>
-                    <CheckBox x:Name="chkImportAsBlueprint" Margin="0,0,0,10" Content="Import as Blueprint (excludes crew, inventory, and built structures - keeps planning sketch)" IsChecked="False"/>
+                    <CheckBox x:Name="chkImportAsBlueprint" Margin="0,0,0,10" Content="Import as Blueprint (keeps the hull plan; excludes facilities, crew, robots, and items)" IsChecked="False"/>
                     <Button x:Name="btnImportBlueprint" Content="Import Blueprint to Target Save" HorizontalAlignment="Center" Width="220" Style="{StaticResource ModernButtonStyle}" Click="btnImportBlueprint_Click" IsEnabled="False"/>
                 </StackPanel>
             </Border>

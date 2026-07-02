@@ -139,7 +139,7 @@ Namespace SpaceHavenEditor2
 
             ' Set initial directory from settings, or use default Space Haven path
             Try
-                Dim initialDir As String = My.Settings.DefaultSaveDirectory
+                Dim initialDir As String = Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory
                 If String.IsNullOrEmpty(initialDir) OrElse Not Directory.Exists(initialDir) Then
                     ' Try to find the game directory (typically one level up from saves)
                     Dim localAppData As String = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)

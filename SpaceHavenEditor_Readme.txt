@@ -1,12 +1,12 @@
-# Moragar's Space Haven Save Editor (Alpha 20)
+# Moragar's Space Haven Save Editor
 
-**Version:** 1.0 (As of 2025-04-15)
+**Version:** 2.1 (As of 2026-07-02)
 **Author:** Moragar
-**Compatibility:** Space Haven Alpha 20
+**Compatibility:** Space Haven Beta 2
 
 ## Overview
 
-Take control of your Space Haven adventure! This editor allows you to modify various aspects of your save game file (`game`) for Space Haven. Whether you need a few extra credits, want to fine-tune your crew, manage inventory, or experiment with ship sizes, this tool provides a user-friendly interface to do so.
+Take control of your Space Haven adventure! This editor lets you modify existing save game files, tune new-game templates, and move ship blueprints between saves. Whether you need credits, crew changes, inventory edits, research adjustments, faction reputation tweaks, or blueprint transfers, the tool provides a focused interface for common save-editing tasks.
 
 ---
 
@@ -51,10 +51,20 @@ Perform extensive modifications on your crew members for the selected ship:
     * **Traits:** View current traits. Add new traits from a dropdown or remove existing traits by selecting them in the grid.
     * **Conditions:** View active conditions (injuries, buffs, debuffs). Select a condition and click "Delete Selected Condition" to remove it.
     * **Relationships:** View and edit the selected character's relationship values (Friendship, Attraction, Compatibility) towards other known characters. Edit values directly in the grid. Paging controls appear if the relationship list is long.
+    * **Schedules, Recovery, and Loadouts:** Assign schedules, restore crew vitals, clear conditions, and manage equipment/loadout templates where available.
 * **Quick Set Buttons:** Use the "Set All Attributes to 5" and "Set All Skills to 8" buttons within the respective tabs to quickly apply these values to the selected character
 * *(Note: Adding crew, editing grids (Attributes, Skills, Relationships), and managing traits/conditions require `File -> Save` to be permanent. The "Set All..." buttons update memory immediately but still need a `File -> Save`.)*
 
-### 4. Storage Management
+### 4. Bulk Operations
+Use the Bulk menu to apply repeated crew changes safely:
+* **Bulk Crew:** Create multiple crew members from a selected template crew member.
+* **Bulk Attributes / Skills:** Apply the same stat or skill values to crew on the selected ship.
+* **Bulk Schedules:** Assign global schedule definitions to selected crew.
+* **Bulk Recovery:** Restore crew vitals and optionally clear conditions.
+* **Bulk Traits:** Add selected traits to crew or clear traits in bulk.
+* **Bulk Loadouts:** Build named equipment templates and apply them to selected crew.
+
+### 5. Storage Management
 Easily manage the contents of storage containers on the selected ship:
 * **Container Selection:** Choose a storage container (standard storage, lockers, specific production facilities that hold items) from the dropdown. The editor identifies these based on specific XML attributes (`eatAllowed="true"`).
 * **View Contents:** Displays items in the selected container with name, quantity, and internal ID. The total quantity of all items in the selected container is also shown.
@@ -63,7 +73,23 @@ Easily manage the contents of storage containers on the selected ship:
 * **Delete Item Stack:** Select an item row in the grid and click "Delete Selected" to remove the entire stack.
 * *(Note: All storage modifications require `File -> Save`.)*
 
-### 5. Automatic Backups (Optional)
+### 6. Research, Datalogs, Reputation, and Integrity
+Additional save-wide tools are available in the main editor:
+* **Research:** Unlock technologies and manage research queue/state data.
+* **Datalogs:** Unlock or review datalog entries saved in the game file.
+* **Faction Reputation:** View and edit known faction relationship values.
+* **Save Integrity:** Scan for common structural issues after heavy edits or blueprint imports.
+
+### 7. Game Start Editor
+Open a custom game template XML created from Space Haven's start-game flow and adjust its scenario/difficulty parameters. In Space Haven, go through new-game setup, use "Save Custom Game Template", then open that XML in the Game Start Editor tab.
+
+### 8. Blueprint Manager
+Clone a ship blueprint from one save and import it into another:
+* Export the selected ship with items or as blueprint only.
+* Open the target save, switch back to Blueprint Manager, and import the exported file.
+* Use caution when importing large ships into crowded saves; the game world still needs room for them.
+
+### 9. Automatic Backups (Optional)
 * **Configuration:** Enable or disable via the "Edit" -> "Settings" menu. The setting is saved and remembered between sessions.
 * **Functionality:** When enabled, opening a save file (`File -> Open`) automatically creates a timestamped copy of the *entire folder* containing the save (e.g., if you open `...\savegames\MySave\save\game`, it backs up the `...\savegames\MySave\save` folder) into the parent `savegames` directory (e.g., `...\savegames\MySave_backup_YYYYMMDDHHMMSS`).
 * **Purpose:** Provides a safety net against accidental corruption, but manual backups are still strongly advised.
@@ -98,7 +124,7 @@ Easily manage the contents of storage containers on the selected ship:
 3.  **Select Ship:** Use the "Selected Ship" dropdown to choose the ship you want to edit.
 4.  **Edit Data:**
     * Use the "Global Save Settings" section for credits, prestige, and sandbox mode. Click "Update Globals (Memory)" after changing these.
-    * Use the "Crew" or "Storage" tabs for ship-specific edits.
+    * Use the Crew Editor, Storage, Research, Datalogs, Faction Reputation, and Save Integrity sections for save-specific edits.
     * Use the inner tabs (Attributes, Skills, etc.) within the Crew tab for character details.
     * Make edits by double-clicking grid cells, using dropdowns, or clicking Add/Delete buttons as described in the Features section.
 5.  **Save Changes:**
@@ -110,9 +136,9 @@ Easily manage the contents of storage containers on the selected ship:
 
 ## Known Issues / Limitations
 
-* Currently assumes specific XML structures found in Alpha 20 saves. Future game updates might break compatibility.
+* Currently assumes specific XML structures found in Space Haven Beta 2 saves. Future game updates might break compatibility.
 * Editing relationships requires understanding character IDs, although names are displayed for convenience.
-* Does not edit all possible save game values (e.g., ship layout, research progress, faction relations). - Working on expanding this later
+* Does not edit every possible save game value. Keep backups before experimenting with unfamiliar XML data.
 
 ---
 

@@ -11,21 +11,21 @@
 
     <Window.Resources>
         <Style x:Key="CardBorderStyle" TargetType="Border">
-            <Setter Property="Background" Value="WhiteSmoke"/>
+            <Setter Property="Background" Value="#302E2B"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="15"/>
             <Setter Property="Margin" Value="10"/>
-            <Setter Property="BorderBrush" Value="#FFE0E0E0"/>
+            <Setter Property="BorderBrush" Value="#4D4943"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect ShadowDepth="2" Direction="270" Color="#CCCCCC" Opacity="0.2" BlurRadius="10"/>
+                    <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.4" BlurRadius="10"/>
                 </Setter.Value>
             </Setter>
         </Style>
 
         <Style x:Key="ModernButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF007ACC"/>
+            <Setter Property="Background" Value="#9B663B"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Padding" Value="10,5"/>
             <Setter Property="Margin" Value="5"/>
@@ -39,10 +39,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF009AFF"/>
+                                <Setter Property="Background" Value="#B77B48"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#FF005A9E"/>
+                                <Setter Property="Background" Value="#784B2B"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Background" Value="Gray"/>
@@ -55,7 +55,7 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="WhiteSmoke" CornerRadius="8" BorderBrush="#FFABADB3" BorderThickness="1">
+    <Border Background="#1C1B19" CornerRadius="8" BorderBrush="#575149" BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -63,16 +63,18 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Height="30" Background="Transparent"
+            <Border Grid.Row="0" Height="34" Background="#292825"
                      MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
                             VerticalAlignment="Center" HorizontalAlignment="Center"
-                            Foreground="Gray" FontWeight="SemiBold"/>
+                            Foreground="#E9E4DC" FontWeight="SemiBold"/>
             </Border>
 
             <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Margin="10,0,10,10" Padding="5">
                 <FlowDocumentScrollViewer x:Name="fdViewer"
                                            VerticalScrollBarVisibility="Auto"
+                                           Background="#262522"
+                                           Foreground="#E9E4DC"
                                            Padding="10"
                                            IsToolBarVisible="False">
                     <FlowDocumentScrollViewer.Resources>

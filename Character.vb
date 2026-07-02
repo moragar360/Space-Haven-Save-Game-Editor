@@ -22,6 +22,9 @@ Public Class Character
     Public Property CharacterConditions As New List(Of DataProp)
 
     Public Property CharacterRelationships As New List(Of RelationshipInfo)
+    Public Property CharacterSchedule As New List(Of CrewScheduleSlot)
+    Public Property UsesGlobalSchedule As Boolean
+    Public Property GlobalScheduleId As Integer
     
     ' Uniform properties with change notifications
     Public Property ShirtColorIndex As String  ' shirtSet value
@@ -111,6 +114,7 @@ Public Class Character
         CharacterTraits = New List(Of DataProp)
         CharacterConditions = New List(Of DataProp)
         CharacterRelationships = New List(Of RelationshipInfo)
+        CharacterSchedule = New List(Of CrewScheduleSlot)
 
     End Sub
 

@@ -20,6 +20,7 @@ Namespace SpaceHavenEditor2
             Dim flowDoc As New FlowDocument()
             flowDoc.FontFamily = New FontFamily("Segoe UI")
             flowDoc.FontSize = 13
+            flowDoc.Foreground = New SolidColorBrush(Color.FromRgb(&HE9, &HE4, &HDC))
             ' Removed fixed LineHeight, let Paragraph/List spacing handle it
 
             Dim lines = helpText.Split({Environment.NewLine}, StringSplitOptions.None)

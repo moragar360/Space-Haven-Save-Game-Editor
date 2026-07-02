@@ -27,8 +27,10 @@ Namespace SpaceHavenEditor2
         Public Class ShipInfo
             Public Property Sid As Integer
             Public Property Sname As String
+            Public Property IsStation As Boolean
+            Public Property IsPlayerOwned As Boolean
             Public Overrides Function ToString() As String
-                Return Sname ' Default display
+                Return $"{If(IsStation, "[Station]", If(IsPlayerOwned, "[Player Ship]", "[NPC Ship]"))} {Sname}"
             End Function
         End Class
 
@@ -58,7 +60,7 @@ Namespace SpaceHavenEditor2
         ' Helper function to get default save directory from settings
         Private Function GetDefaultSaveDirectory() As String
             Try
-                Dim defaultDir As String = My.Settings.DefaultSaveDirectory
+                Dim defaultDir As String = Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory
                 If Not String.IsNullOrEmpty(defaultDir) AndAlso Directory.Exists(defaultDir) Then
                     Return defaultDir
                 End If
@@ -173,9 +175,22 @@ Namespace SpaceHavenEditor2
                     Dim currentSnameStr = If(snameAttr IsNot Nothing, snameAttr.Value, "NULL")
 
                     If sidAttr IsNot Nothing AndAlso Integer.TryParse(sidAttr.Value, sid) Then
+                        Dim createdRef = sourceXmlDoc.Descendants("createdShips").
+                            Elements("l").
+                            FirstOrDefault(Function(instance)
+                                               Return instance.Attribute("slid")?.Value = sid.ToString() OrElse
+                                                      instance.Attribute("createdShipId")?.Value = sid.ToString()
+                                           End Function)
+                        Dim isStation = shipElement.Attribute("sta")?.Value = "1" OrElse
+                                        shipElement.Element("station") IsNot Nothing OrElse
+                                        String.Equals(createdRef?.Attribute("station")?.Value, "true", StringComparison.OrdinalIgnoreCase)
+                        Dim isPlayerOwned = String.Equals(shipElement.Element("settings")?.Attribute("owner")?.Value, "Player", StringComparison.OrdinalIgnoreCase) OrElse
+                                            String.Equals(createdRef?.Parent?.Parent?.Attribute("isPlayer")?.Value, "true", StringComparison.OrdinalIgnoreCase)
                         ships.Add(New ShipInfo With {
                             .Sid = sid,
-                            .Sname = If(snameAttr IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(snameAttr.Value), snameAttr.Value, $"Unnamed Ship (SID: {sid})")
+                            .Sname = If(snameAttr IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(snameAttr.Value), snameAttr.Value, $"Unnamed Ship (SID: {sid})"),
+                            .IsStation = isStation,
+                            .IsPlayerOwned = isPlayerOwned
                         })
                         shipsAdded += 1
                     Else
@@ -206,17 +221,51 @@ Namespace SpaceHavenEditor2
         End Sub
 
         Private Sub CheckExportButtonState()
-            btnExportBlueprint.IsEnabled = (sourceXmlDoc IsNot Nothing AndAlso cmbShipsToExport.SelectedItem IsNot Nothing)
+            Dim selectedShip = TryCast(cmbShipsToExport.SelectedItem, ShipInfo)
+            Dim hasSelectedShip = sourceXmlDoc IsNot Nothing AndAlso selectedShip IsNot Nothing
+            btnExportBlueprint.IsEnabled = hasSelectedShip AndAlso Not selectedShip.IsStation
+            btnDeleteSourceShip.IsEnabled = hasSelectedShip
+            If hasSelectedShip AndAlso selectedShip.IsStation Then
+                UpdateStatus("Cannot export station.")
+            End If
         End Sub
 
         Private Sub cmbShipsToExport_SelectionChanged(sender As Object, e As System.Windows.Controls.SelectionChangedEventArgs) Handles cmbShipsToExport.SelectionChanged
             CheckExportButtonState()
         End Sub
 
+        Private Sub btnDeleteSourceShip_Click(sender As Object, e As RoutedEventArgs) Handles btnDeleteSourceShip.Click
+            Dim selectedShip = TryCast(cmbShipsToExport.SelectedItem, ShipInfo)
+            If selectedShip Is Nothing OrElse String.IsNullOrWhiteSpace(sourceSavePath) Then Return
+
+            Dim confirmation = MessageBox.Show(
+                $"Delete '{selectedShip.Sname}' (SID {selectedShip.Sid}) from this save?{vbCrLf}{vbCrLf}" &
+                "A .bak backup will be created first. This cannot be undone inside the editor.",
+                "Delete Ship", MessageBoxButton.YesNo, MessageBoxImage.Warning)
+            If confirmation <> MessageBoxResult.Yes Then Return
+
+            Try
+                Dim deletedName = ShipDeletionService.DeleteShip(sourceSavePath, selectedShip.Sid)
+                UpdateStatus($"Deleted '{deletedName}'. Backup saved as {Path.GetFileName(sourceSavePath)}.bak.")
+                LoadShipsFromSource()
+                MessageBox.Show($"'{deletedName}' was deleted successfully.", "Ship Deleted",
+                                MessageBoxButton.OK, MessageBoxImage.Information)
+            Catch ex As Exception
+                MessageBox.Show($"Unable to delete ship:{vbCrLf}{ex.Message}", "Delete Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+                UpdateStatus($"Delete failed: {ex.Message}")
+            End Try
+        End Sub
+
         Private Sub btnExportBlueprint_Click(sender As Object, e As RoutedEventArgs) Handles btnExportBlueprint.Click
             Dim selectedShipInfo = TryCast(cmbShipsToExport.SelectedItem, ShipInfo)
             If selectedShipInfo Is Nothing Then
                 MessageBox.Show("Please select a ship from the list.", "No Ship Selected", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+            End If
+            If selectedShipInfo.IsStation Then
+                MessageBox.Show("Stations use additional map and generation data and cannot be exported as ordinary ship blueprints.",
+                                "Station Export Not Supported", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
             End If
             If sourceXmlDoc Is Nothing OrElse sourceXmlDoc.Root Is Nothing Then
                 MessageBox.Show("Source save file is not loaded or is invalid.", "Error", MessageBoxButton.OK, MessageBoxImage.Error) : Return
@@ -230,20 +279,12 @@ Namespace SpaceHavenEditor2
                 Dim originalShipElement = sourceXmlDoc.Root.Descendants("ship").FirstOrDefault(Function(s) s.Attribute("sid")?.Value = selectedShipInfo.Sid.ToString())
                 If originalShipElement Is Nothing Then Throw New Exception($"Ship node with SID {selectedShipInfo.Sid} not found in source XML.")
 
-                Dim blueprintNodeToSave As New XElement(originalShipElement)
-
-                ' Always remove crew data on export
-                blueprintNodeToSave.Element("characters")?.Remove()
-                
-                ' Keep inventory data in export - import will handle removing it if needed
-                
-                ' Set 'real' attribute based on export mode
+                Dim blueprintNodeToSave As XElement
                 If exportAsBlueprint Then
-                    ' Export as blueprint (unbuilt) - set real="0"
-                    blueprintNodeToSave.SetAttributeValue("real", "0")
+                    blueprintNodeToSave = BlueprintConverter.CreateUnbuiltBlueprint(originalShipElement)
                 Else
-                    ' Export as built ship - preserve the original real attribute value
-                    ' If it doesn't exist, set it to "1" (built)
+                    blueprintNodeToSave = New XElement(originalShipElement)
+                    blueprintNodeToSave.Element("characters")?.Remove()
                     If blueprintNodeToSave.Attribute("real") Is Nothing Then
                         blueprintNodeToSave.SetAttributeValue("real", "1")
                     End If
@@ -312,41 +353,14 @@ Namespace SpaceHavenEditor2
                 Dim bpDoc = XDocument.Load(blueprintFilePath)
                 Dim loadedShip = bpDoc.Descendants("ship").FirstOrDefault()
                 If loadedShip Is Nothing Then Throw New Exception("Blueprint has no <ship>.")
+                If loadedShip.Attribute("sta")?.Value = "1" OrElse loadedShip.Element("station") IsNot Nothing Then
+                    Throw New InvalidDataException("Station imports are not supported by the ship blueprint importer.")
+                End If
                 blueprintNode = New XElement(loadedShip)  ' clone
+                Dim importAsBlueprint = chkImportAsBlueprint.IsChecked = True
 
-                ' --- 2a) If importing as blueprint, remove crew, inventory, and built structures (but keep planning grid) ---
-                If chkImportAsBlueprint.IsChecked = True Then
-                    ' Remove crew
-                    blueprintNode.Element("characters")?.Remove()
-                    For Each n In blueprintNode.Descendants().Where(Function(x)
-                                                                        Return {"crew", "persons", "prePersons"}.Contains(x.Name.LocalName)
-                                                                    End Function).ToList()
-                        n.Remove()
-                    Next
-                    blueprintNode.SetAttributeValue("crew", "0")
-                    blueprintNode.SetAttributeValue("cryoCrew", "0")
-                    
-                    ' Remove inventory/items
-                    For Each n In blueprintNode.Descendants().Where(Function(x)
-                                                                        Return {"inventory", "item"}.Contains(x.Name.LocalName)
-                                                                    End Function).ToList()
-                        n.Remove()
-                    Next
-                    ' Remove inventory from feat elements
-                    For Each featNode In blueprintNode.Descendants("feat")
-                        featNode.Element("inv")?.Remove()
-                    Next
-                    
-                    ' Remove built structures (but keep planning grid - <e> elements without id)
-                    ' Remove all built structure elements (<e> elements with id attribute - walls, floors, etc.)
-                    ' NOTE: Keep <e> elements WITHOUT id (these are planning grid markers like <e m="-2">)
-                    For Each eElement In blueprintNode.Descendants("e").Where(Function(elem) elem.Attribute("id") IsNot Nothing).ToList()
-                        eElement.Remove()
-                    Next
-                    ' Remove feat elements (features/structures that are built)
-                    For Each featElement In blueprintNode.Descendants("feat").ToList()
-                        featElement.Remove()
-                    Next
+                If importAsBlueprint Then
+                    blueprintNode = BlueprintConverter.CreateUnbuiltBlueprint(blueprintNode)
                 End If
 
                 ' --- 3) Assign new blueprint SID via <game idCounter> ---
@@ -383,15 +397,12 @@ Namespace SpaceHavenEditor2
                 Dim baseName = blueprintNode.Attribute("sname")?.Value
                 blueprintNode.SetAttributeValue("sname", $"{baseName} (Imported)")
                 
-                ' Set real attribute and idCnt based on import as blueprint checkbox
-                ' If checked, import as blueprint (unbuilt) - real="0", idCnt="0"
-                ' If NOT checked, import as built ship - real="1", preserve idCnt
-                If chkImportAsBlueprint.IsChecked = True Then
+                ' Native blueprints have no runtime object IDs.
+                If importAsBlueprint Then
                     blueprintNode.SetAttributeValue("real", "0")
-                    blueprintNode.SetAttributeValue("idCnt", "0") ' No built structures in blueprint
+                    blueprintNode.SetAttributeValue("idCnt", "0")
                 Else
                     blueprintNode.SetAttributeValue("real", "1")
-                    ' Preserve idCnt if it exists, otherwise set to 0
                     If blueprintNode.Attribute("idCnt") Is Nothing Then
                         blueprintNode.SetAttributeValue("idCnt", "0")
                     End If
@@ -404,6 +415,24 @@ Namespace SpaceHavenEditor2
                     gameRoot.Add(shipsEl)
                 End If
                 shipsEl.Add(blueprintNode)
+
+                ' Native unbuilt ships are stored directly under <ships>. Unlike a built ship,
+                ' they do not have a starmap createdShips instance or a root <blueprints> copy.
+                If importAsBlueprint Then
+                    Try
+                        Dim bak = targetSavePath & ".bak"
+                        File.Copy(targetSavePath, bak, True)
+                        UpdateStatus($"Backup created: {Path.GetFileName(bak)}")
+                    Catch ex As Exception
+                        UpdateStatus($"Warning: backup failed - {ex.Message}")
+                    End Try
+
+                    targetXmlDoc.Save(targetSavePath)
+                    UpdateStatus($"Blueprint import complete: SID {newBlueprintSid}.")
+                    MessageBox.Show("Ship blueprint imported successfully!", "Done",
+                                    MessageBoxButton.OK, MessageBoxImage.Information)
+                    Return
+                End If
 
                 ' --- 5) Insert under <blueprints> for future imports ---
                 Dim bpContainer = gameRoot.Element("blueprints")
@@ -530,8 +559,8 @@ Namespace SpaceHavenEditor2
             New XAttribute("created", "true"),
             New XAttribute("station", "false"),
             New XAttribute("shipDamagedNoFTL", "false"),
-            New XAttribute("crew", If(chkImportAsBlueprint.IsChecked, "0", "0")),
-            New XAttribute("cryoCrew", If(chkImportAsBlueprint.IsChecked, "0", "0")),
+            New XAttribute("crew", "0"),
+            New XAttribute("cryoCrew", "0"),
             New XAttribute("monsters", "0"),
             New XAttribute("bigMonsters", "0"),
             New XAttribute("hives", "0"),

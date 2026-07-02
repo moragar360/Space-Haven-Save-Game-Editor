@@ -209,7 +209,7 @@
                     <TabItem Header="Attributes">
                         <Border Background="White" CornerRadius="4" Padding="10" BorderThickness="1" BorderBrush="#FFE0E0E0">
                             <StackPanel>
-                                <Button x:Name="btnSetNewAttributes" Content="Set All Attributes to 5" Width="170" HorizontalAlignment="Left" Margin="0,0,0,10" Click="btnSetNewAttributes_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                <Button x:Name="btnSetNewAttributes" Content="Set All Attributes to 10" Width="180" HorizontalAlignment="Left" Margin="0,0,0,10" Click="btnSetNewAttributes_Click" Style="{StaticResource ModernButtonStyle}"/>
                                 <DataGrid x:Name="dgvNewAttributes" Style="{StaticResource ModernDataGridStyle}">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="ID" Binding="{Binding Id}" IsReadOnly="True" Width="Auto" />

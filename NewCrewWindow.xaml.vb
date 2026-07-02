@@ -53,7 +53,7 @@ Namespace SpaceHavenEditor2
         ' --- ADDED: Set All Attributes Handler ---
         Private Sub btnSetNewAttributes_Click(sender As Object, e As RoutedEventArgs)
             For Each attr In Attributes
-                attr.Value = 5
+                attr.Value = 10
             Next
             ' Refresh the grid to show changes
             dgvNewAttributes.ItemsSource = Nothing

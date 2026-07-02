@@ -47,6 +47,25 @@ Namespace SpaceHavenEditor2
 
         Private currentShipStorageContainers As New List(Of StorageContainer)()
         Private CurrentContainerItems As ObservableCollection(Of StorageItem)
+        Private consolidatedInventory As New List(Of ConsolidatedInventoryItem)
+        Private bulkScheduleCrew As New ObservableCollection(Of BulkScheduleCrewItem)
+        Private bulkLoadoutCrew As New ObservableCollection(Of BulkLoadoutCrewItem)
+        Private loadoutTemplates As New ObservableCollection(Of LoadoutTemplate)
+        Private loadoutHeadgearItems As New List(Of LoadoutItemOption)
+        Private loadoutArmorItems As New List(Of LoadoutItemOption)
+        Private loadoutWeaponItems As New List(Of LoadoutItemOption)
+        Private loadoutAttachmentItems As New List(Of LoadoutItemOption)
+        Private loadoutPocketItems As New List(Of LoadoutItemOption)
+        Private globalScheduleDefinitions As New ObservableCollection(Of GlobalScheduleDefinition)
+        Private researchTechnologies As New ObservableCollection(Of ResearchTechnologyItem)
+        Private researchQueue As New ObservableCollection(Of ResearchQueueItem)
+        Private datalogUnlocks As New ObservableCollection(Of DatalogUnlockItem)
+        Private factionReputations As New ObservableCollection(Of FactionReputationInfo)
+        Private integrityFindings As New ObservableCollection(Of SaveIntegrityFinding)
+        Private ReadOnly integrityScanner As New SaveIntegrityScanner()
+        Private embeddedNewCrewAttributes As New List(Of DataProp)
+        Private embeddedNewCrewSkills As New List(Of DataProp)
+        Private embeddedNewCrewTraits As New ObservableCollection(Of DataProp)
         Private _relationshipsCurrentPage As Integer = 1
         Private ReadOnly _relationshipsPageSize As Integer = 15
 
@@ -133,20 +152,33 @@ Namespace SpaceHavenEditor2
         Public Class ShipInfo
             Public Property Sid As Integer
             Public Property Sname As String
+            Public Property IsStation As Boolean
+            Public Property IsPlayerOwned As Boolean
             Public Overrides Function ToString() As String
-                Return Sname ' Default display
+                Return $"{If(IsStation, "[Station]", If(IsPlayerOwned, "[Player Ship]", "[NPC Ship]"))} {Sname}"
             End Function
         End Class
 
         Public Property CrewMembers As ObservableCollection(Of CrewMember)
         Public Property Resources As ObservableCollection(Of Resource)
+        Public ReadOnly Property ScheduleActivities As New List(Of KeyValuePair(Of Integer, String)) From {
+            New KeyValuePair(Of Integer, String)(0, "Work"),
+            New KeyValuePair(Of Integer, String)(1, "Leisure"),
+            New KeyValuePair(Of Integer, String)(2, "Sleep")
+        }
+        Public ReadOnly Property FactionStances As New List(Of String) From {
+            "Enemies", "Neutral", "Friendly"
+        }
 
 
 
         Public Sub New()
             InitializeComponent()
+            InitializeLoadoutManager()
+            ArrangeMainNavigation()
+            InitializeEmbeddedNewCrewEditor()
             Try
-                _backupEnabled = My.Settings.BackupOnOpen
+                _backupEnabled = Global.SpaceHavenEditor2.My.Settings.Default.BackupOnOpen
             Catch ex As Exception
                 ' Handle potential error reading settings file
                 MessageBox.Show($"Error loading settings: {ex.Message}{vbCrLf}Backup on open defaulted to True.", "Settings Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
@@ -156,6 +188,7 @@ Namespace SpaceHavenEditor2
             CrewMembers = New ObservableCollection(Of CrewMember)()
             PrepareGroupedStorageItems()
             InitializeGameStartEditor()
+            dgvIntegrityFindings.ItemsSource = integrityFindings
             DataContext = Me
             AddHandler Me.Closing, AddressOf MainWindow_Closing
         End Sub
@@ -174,7 +207,7 @@ Namespace SpaceHavenEditor2
         Private Sub UpdateGameStartScenarioFolderDisplay()
             Try
                 ' Check if scenario directory is set in settings
-                Dim scenarioDir As String = My.Settings.DefaultScenarioDirectory
+                Dim scenarioDir As String = Global.SpaceHavenEditor2.My.Settings.Default.DefaultScenarioDirectory
                 If Not String.IsNullOrEmpty(scenarioDir) AndAlso Directory.Exists(scenarioDir) Then
                     txtGameStartScenarioFolder.Text = $"Scenario Folder: {scenarioDir}"
                 Else
@@ -205,8 +238,8 @@ Namespace SpaceHavenEditor2
 
         Private Sub MainWindow_Closing(sender As Object, e As CancelEventArgs)
             Try
-                My.Settings.BackupOnOpen = _backupEnabled ' Store current value
-                My.Settings.Save() ' Persist settings
+                Global.SpaceHavenEditor2.My.Settings.Default.BackupOnOpen = _backupEnabled ' Store current value
+                Global.SpaceHavenEditor2.My.Settings.Default.Save() ' Persist settings
             Catch ex As Exception
                 MessageBox.Show($"Error saving settings: {ex.Message}", "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error)
                 ' Don't cancel closing, just report error
@@ -225,9 +258,29 @@ Namespace SpaceHavenEditor2
             ' Clear UI Elements - Add Try/Catch around UI access in case window isn't fully loaded/ready
             Try
                 ClearGlobalSettingsUI()
+                ClearDifficultyWorldRulesUI()
                 cmb_ships.ItemsSource = Nothing
+                cmbCrewShip.ItemsSource = Nothing
+                cmbStorageShip.ItemsSource = Nothing
                 ClearUI() ' Clears ship details, crew list, grids
                 ClearStorageDisplay() ' Clears storage combo and grid
+                ClearFactionReputations()
+                globalScheduleDefinitions.Clear()
+                lstGlobalScheduleDesigner.ItemsSource = Nothing
+                dgvGlobalScheduleDesigner.ItemsSource = Nothing
+                txtGlobalScheduleName.Text = ""
+                lblGlobalScheduleDesignerStatus.Text = ""
+                researchTechnologies.Clear()
+                researchQueue.Clear()
+                dgvResearchTechnologies.ItemsSource = Nothing
+                lstResearchQueue.ItemsSource = Nothing
+                lblResearchStatus.Text = ""
+                datalogUnlocks.Clear()
+                dgvDatalogUnlocks.ItemsSource = Nothing
+                lblDatalogStatus.Text = ""
+                integrityFindings.Clear()
+                lblIntegritySummary.Text = "Load a save to run the scanner."
+                lblIntegrityStatus.Text = ""
                 ' Clear other UI elements if needed (e.g., status bar text)
                 ' txtStatus.Text = "Ready"
             Catch uiEx As Exception
@@ -261,7 +314,8 @@ Namespace SpaceHavenEditor2
                 Catch pathEx As Exception
                     Console.WriteLine($"Error parsing path for title: {pathEx.Message}")
                 End Try
-                Me.Title = $"{baseTitle} - [{fileNameOnly}]{If(hasUnsavedChanges, " *", "")}"
+                Dim saveType = If(IsStationSave(), " - Station Save", "")
+                Me.Title = $"{baseTitle} - [{fileNameOnly}]{saveType}{If(hasUnsavedChanges, " *", "")}"
             End If
         End Sub
 
@@ -307,11 +361,11 @@ Namespace SpaceHavenEditor2
 
 
             ' Set the initial directory to the saved default or a fallback
-            Dim defaultDirectory As String = My.Settings.DefaultSaveDirectory
+            Dim defaultDirectory As String = Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory
             If String.IsNullOrEmpty(defaultDirectory) OrElse Not Directory.Exists(defaultDirectory) Then
                 defaultDirectory = GetDefaultSpaceHavenDirectory()
-                My.Settings.DefaultSaveDirectory = defaultDirectory
-                My.Settings.Save()
+                Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory = defaultDirectory
+                Global.SpaceHavenEditor2.My.Settings.Default.Save()
             End If
             openFileDialog.InitialDirectory = defaultDirectory
 
@@ -427,8 +481,13 @@ Namespace SpaceHavenEditor2
 
                     ' --- Enhanced Error Reporting in Catch Blocks ---
                     Try : LoadGlobalSettings() : Catch ex As Exception : loadErrors.AppendLine($"- Error loading Global Settings: [{ex.GetType().Name}] {ex.Message}") : ClearGlobalSettingsUI() : End Try
+                    Try : LoadDifficultyWorldRules() : Catch ex As Exception : loadErrors.AppendLine($"- Error loading Difficulty and World Rules: [{ex.GetType().Name}] {ex.Message}") : ClearDifficultyWorldRulesUI() : End Try
+                    Try : LoadFactionReputations() : Catch ex As Exception : loadErrors.AppendLine($"- Error loading Faction Reputation: [{ex.GetType().Name}] {ex.Message}") : ClearFactionReputations() : End Try
                     Try : LoadShips() : Catch ex As Exception : loadErrors.AppendLine($"- Error loading Ships: [{ex.GetType().Name}] {ex.Message}") : cmb_ships.ItemsSource = Nothing : ClearUI() : ClearStorageDisplay() : End Try
                     Try : LoadCharacters() : Catch ex As Exception : loadErrors.AppendLine($"- Error loading Characters: [{ex.GetType().Name}] {ex.Message}") : lstCharacters.ItemsSource = Nothing : ClearDataGrids() : End Try
+                    Try : LoadGlobalScheduleDefinitions() : Catch ex As Exception : loadErrors.AppendLine($"- Error loading Global Schedules: [{ex.GetType().Name}] {ex.Message}") : End Try
+                    Try : LoadResearchEditor() : Catch ex As Exception : loadErrors.AppendLine($"- Error loading Research: [{ex.GetType().Name}] {ex.Message}") : End Try
+                    Try : LoadDatalogUnlocks() : Catch ex As Exception : loadErrors.AppendLine($"- Error loading Datalogs: [{ex.GetType().Name}] {ex.Message}") : End Try
 
                     ' Step 4: Populate UI based on loaded data (if ships were loaded)
                     If ships IsNot Nothing AndAlso ships.Any() Then
@@ -448,11 +507,24 @@ Namespace SpaceHavenEditor2
                         loadErrors.AppendLine("- No ships found in the save file.")
                     End If
 
-                    ' Step 5: Report results
+                    ' Step 5: Run the save-wide integrity scan and report results
+                    Dim integritySummary As String = "Integrity scan unavailable."
+                    Try
+                        integritySummary = RunIntegrityScan(False)
+                    Catch ex As Exception
+                        loadErrors.AppendLine($"- Error running Save Integrity scan: [{ex.GetType().Name}] {ex.Message}")
+                    End Try
+
                     If loadErrors.Length > 0 Then
-                        MessageBox.Show("Save file loaded, but some issues occurred during data reading:" & Environment.NewLine & loadErrors.ToString(), "Load Complete with Issues", MessageBoxButton.OK, MessageBoxImage.Warning)
+                        MessageBox.Show(
+                            "Save file loaded, but some issues occurred during data reading:" &
+                            Environment.NewLine & loadErrors.ToString() &
+                            Environment.NewLine & integritySummary,
+                            "Load Complete with Issues", MessageBoxButton.OK, MessageBoxImage.Warning)
                     Else
-                        MessageBox.Show("Save game loaded successfully!", "Load Complete", MessageBoxButton.OK, MessageBoxImage.Information)
+                        MessageBox.Show(
+                            $"Save game loaded successfully!{Environment.NewLine}{integritySummary}",
+                            "Load Complete", MessageBoxButton.OK, MessageBoxImage.Information)
                     End If
 
                     SetWindowTitle(currentFilePath) ' Update window title
@@ -531,6 +603,142 @@ Namespace SpaceHavenEditor2
                 txtPrestigePoints.Text = "0"
             End Try
         End Sub
+
+        Private Sub InitializeEmbeddedNewCrewEditor()
+            embeddedNewCrewAttributes = IdCollection.DefaultAttributeIDs.
+                Select(Function(kvp) New DataProp With {.Id = kvp.Key, .Name = kvp.Value, .Value = 1}).
+                OrderBy(Function(item) item.Name).
+                ToList()
+            embeddedNewCrewSkills = IdCollection.DefaultSkillIDs.
+                Select(Function(kvp) New DataProp With {.Id = kvp.Key, .Name = kvp.Value, .Value = 0}).
+                OrderBy(Function(item) item.Id).
+                ToList()
+            embeddedNewCrewTraits = New ObservableCollection(Of DataProp)()
+
+            dgvEmbeddedNewAttributes.ItemsSource = embeddedNewCrewAttributes
+            dgvEmbeddedNewSkills.ItemsSource = embeddedNewCrewSkills
+            lstEmbeddedNewTraits.ItemsSource = embeddedNewCrewTraits
+            cmbEmbeddedAvailableTraits.ItemsSource = IdCollection.DefaultTraitIDs.OrderBy(Function(kvp) kvp.Value).ToList()
+            If cmbEmbeddedAvailableTraits.Items.Count > 0 Then cmbEmbeddedAvailableTraits.SelectedIndex = 0
+        End Sub
+
+        Private Sub LoadDifficultyWorldRules()
+            Dim diffElement = xmlDoc?.Root?.Element("settings")?.Element("diff")
+            If diffElement Is Nothing Then
+                ClearDifficultyWorldRulesUI()
+                Return
+            End If
+
+            Dim modeElement = diffElement.Element("modeSettings")
+
+            SetDifficultyComboOptions(cmbMoodDifficulty, CStr(diffElement.Attribute("moodDifficulty")), "Easy", "Normal", "Hard")
+            SetDifficultyComboOptions(cmbNpcTargeting, CStr(diffElement.Attribute("npcTargeting")), "Easy", "Normal", "Hard")
+            SetDifficultyComboOptions(cmbQuestDifficulty, CStr(diffElement.Attribute("questDifficulty")), "Easy", "Normal", "Hard")
+
+            chkRulesEnemiesEnabled.IsChecked = ReadBooleanAttribute(diffElement, "enemiesEnabled", True)
+            chkRulesFriendsEnabled.IsChecked = ReadBooleanAttribute(diffElement, "friendsEnabled", True)
+            chkRulesLoversEnabled.IsChecked = ReadBooleanAttribute(diffElement, "loversEnabled", True)
+
+            SetDifficultyComboOptions(cmbWearAndTear, CStr(modeElement?.Attribute("wearAndTear")), "None", "Reduced", "Full")
+            chkRebuildingCosts.IsChecked = ReadBooleanAttribute(modeElement, "rebuildingCosts", True)
+            SetDifficultyComboOptions(cmbMonsterFrequency, CStr(modeElement?.Attribute("monsters")), "None", "VeryRare", "Rare", "Normal", "Common", "VeryCommon")
+            SetDifficultyComboOptions(cmbRobotFrequency, CStr(modeElement?.Attribute("robots")), "None", "VeryRare", "Rare", "Normal", "Common", "VeryCommon")
+            SetDifficultyComboOptions(cmbSolarFlareFrequency, CStr(modeElement?.Attribute("solarFlares")), "None", "VeryRare", "Rare", "Normal", "Common", "VeryCommon")
+            SetDifficultyComboOptions(cmbMeteorFrequency, CStr(modeElement?.Attribute("microMeteoroids")), "None", "VeryRare", "Rare", "Normal", "Common", "VeryCommon")
+            SetDifficultyComboOptions(cmbDerelictFrequency, CStr(modeElement?.Attribute("derelicts")), "None", "VeryRare", "Rare", "Normal", "Common", "VeryCommon")
+            SetDifficultyComboOptions(cmbDerelictLoot, CStr(modeElement?.Attribute("derelictLoot")), "VeryLow", "Low", "Normal", "High", "VeryHigh")
+            SetDifficultyComboOptions(cmbAsteroidAbundance, CStr(modeElement?.Attribute("asteroids")), "None", "MinorThreat", "ModerateThreat", "SeriousThreat", "SubstantialThreat")
+            SetDifficultyComboOptions(cmbTravelThreat, CStr(modeElement?.Attribute("interTravelThreat")), "None", "MinorThreat", "ModerateThreat", "SeriousThreat", "SubstantialThreat")
+
+            btnUpdateDifficultyRules.IsEnabled = modeElement IsNot Nothing
+        End Sub
+
+        Private Sub SetDifficultyComboOptions(combo As ComboBox, currentValue As String, ParamArray standardValues As String())
+            Dim values = standardValues.
+                Where(Function(value) Not String.IsNullOrWhiteSpace(value)).
+                Distinct(StringComparer.OrdinalIgnoreCase).
+                ToList()
+
+            If Not String.IsNullOrWhiteSpace(currentValue) AndAlso
+               Not values.Any(Function(value) String.Equals(value, currentValue, StringComparison.OrdinalIgnoreCase)) Then
+                values.Insert(0, currentValue)
+            End If
+
+            combo.ItemsSource = values
+            combo.SelectedItem = values.FirstOrDefault(Function(value) String.Equals(value, currentValue, StringComparison.OrdinalIgnoreCase))
+            If combo.SelectedItem Is Nothing AndAlso values.Count > 0 Then combo.SelectedIndex = 0
+        End Sub
+
+        Private Function ReadBooleanAttribute(element As XElement, attributeName As String, defaultValue As Boolean) As Boolean
+            If element Is Nothing Then Return defaultValue
+            Dim parsedValue As Boolean
+            If Boolean.TryParse(CStr(element.Attribute(attributeName)), parsedValue) Then Return parsedValue
+            Return defaultValue
+        End Function
+
+        Private Sub ClearDifficultyWorldRulesUI()
+            For Each combo In {
+                cmbMoodDifficulty, cmbNpcTargeting, cmbQuestDifficulty, cmbWearAndTear,
+                cmbMonsterFrequency, cmbRobotFrequency, cmbSolarFlareFrequency,
+                cmbMeteorFrequency, cmbDerelictFrequency, cmbDerelictLoot,
+                cmbAsteroidAbundance, cmbTravelThreat
+            }
+                combo.ItemsSource = Nothing
+                combo.SelectedIndex = -1
+            Next
+
+            chkRulesEnemiesEnabled.IsChecked = False
+            chkRulesFriendsEnabled.IsChecked = False
+            chkRulesLoversEnabled.IsChecked = False
+            chkRebuildingCosts.IsChecked = False
+            btnUpdateDifficultyRules.IsEnabled = False
+        End Sub
+
+        Private Function UpdateRuleAttribute(element As XElement, attributeName As String, value As String) As Boolean
+            If element Is Nothing OrElse String.IsNullOrWhiteSpace(value) Then Return False
+            If String.Equals(CStr(element.Attribute(attributeName)), value, StringComparison.Ordinal) Then Return False
+            element.SetAttributeValue(attributeName, value)
+            Return True
+        End Function
+
+        Private Sub btnUpdateDifficultyRules_Click(sender As Object, e As RoutedEventArgs)
+            Dim diffElement = xmlDoc?.Root?.Element("settings")?.Element("diff")
+            Dim modeElement = diffElement?.Element("modeSettings")
+            If diffElement Is Nothing OrElse modeElement Is Nothing Then
+                MessageBox.Show("The loaded save does not contain the expected difficulty settings.",
+                                "Difficulty Settings Missing", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Dim changed As Boolean = False
+            changed = UpdateRuleAttribute(diffElement, "moodDifficulty", TryCast(cmbMoodDifficulty.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(diffElement, "npcTargeting", TryCast(cmbNpcTargeting.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(diffElement, "questDifficulty", TryCast(cmbQuestDifficulty.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(diffElement, "enemiesEnabled", chkRulesEnemiesEnabled.IsChecked.GetValueOrDefault().ToString().ToLowerInvariant()) OrElse changed
+            changed = UpdateRuleAttribute(diffElement, "friendsEnabled", chkRulesFriendsEnabled.IsChecked.GetValueOrDefault().ToString().ToLowerInvariant()) OrElse changed
+            changed = UpdateRuleAttribute(diffElement, "loversEnabled", chkRulesLoversEnabled.IsChecked.GetValueOrDefault().ToString().ToLowerInvariant()) OrElse changed
+
+            changed = UpdateRuleAttribute(modeElement, "wearAndTear", TryCast(cmbWearAndTear.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "rebuildingCosts", chkRebuildingCosts.IsChecked.GetValueOrDefault().ToString().ToLowerInvariant()) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "monsters", TryCast(cmbMonsterFrequency.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "robots", TryCast(cmbRobotFrequency.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "solarFlares", TryCast(cmbSolarFlareFrequency.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "microMeteoroids", TryCast(cmbMeteorFrequency.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "derelicts", TryCast(cmbDerelictFrequency.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "derelictLoot", TryCast(cmbDerelictLoot.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "asteroids", TryCast(cmbAsteroidAbundance.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "interTravelThreat", TryCast(cmbTravelThreat.SelectedItem, String)) OrElse changed
+
+            If changed Then
+                MarkUnsavedChanges()
+                MessageBox.Show("Difficulty and world rules updated in memory. Use File > Save to make them permanent.",
+                                "Rules Updated", MessageBoxButton.OK, MessageBoxImage.Information)
+            Else
+                MessageBox.Show("No difficulty or world-rule changes were detected.",
+                                "No Changes", MessageBoxButton.OK, MessageBoxImage.Information)
+            End If
+        End Sub
+
         ' --- Click Handler for Update Global Settings Button ---
         Private Sub btnUpdateGlobalSettings_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc Is Nothing OrElse xmlDoc.Root Is Nothing Then ' Added Root check
@@ -677,19 +885,19 @@ Namespace SpaceHavenEditor2
             Dim settingsWin As New SettingsWindow()
             settingsWin.Owner = Me
             settingsWin.SetInitialValue(_backupEnabled) ' Pass current backup setting
-            settingsWin.SetInitialDirectory(My.Settings.DefaultSaveDirectory) ' Pass current directory setting
+            settingsWin.SetInitialDirectory(Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory) ' Pass current directory setting
             Dim result = settingsWin.ShowDialog()
 
             If result.HasValue AndAlso result.Value = True Then
                 ' User clicked OK, update the settings from the dialog
                 _backupEnabled = settingsWin.BackupSetting
-                My.Settings.DefaultSaveDirectory = settingsWin.DefaultDirectory
-                My.Settings.Save() ' Save the settings immediately
+                Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory = settingsWin.DefaultDirectory
+                Global.SpaceHavenEditor2.My.Settings.Default.Save() ' Save the settings immediately
 
                 ' Notify the user of the changes
                 MessageBox.Show(
             $"Backup on Open setting is now: {_backupEnabled}. " & vbCrLf &
-            $"Default Save Directory is now: {My.Settings.DefaultSaveDirectory}. " & vbCrLf &
+            $"Default Save Directory is now: {Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory}. " & vbCrLf &
             "Changes take effect next time you open a file.",
             "Settings Updated",
             MessageBoxButton.OK,
@@ -703,7 +911,7 @@ Namespace SpaceHavenEditor2
         ' Helper function to get default save directory from settings for blueprint dialogs
         Private Function GetBlueprintDefaultDirectory() As String
             Try
-                Dim defaultDir As String = My.Settings.DefaultSaveDirectory
+                Dim defaultDir As String = Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory
                 If Not String.IsNullOrEmpty(defaultDir) AndAlso Directory.Exists(defaultDir) Then
                     Return defaultDir
                 End If
@@ -801,9 +1009,22 @@ Namespace SpaceHavenEditor2
                     Dim currentSnameStr = If(snameAttr IsNot Nothing, snameAttr.Value, "NULL")
 
                     If sidAttr IsNot Nothing AndAlso Integer.TryParse(sidAttr.Value, sid) Then
+                        Dim createdRef = sourceXmlDoc.Descendants("createdShips").
+                            Elements("l").
+                            FirstOrDefault(Function(instance)
+                                               Return instance.Attribute("slid")?.Value = sid.ToString() OrElse
+                                                      instance.Attribute("createdShipId")?.Value = sid.ToString()
+                                           End Function)
+                        Dim isStation = shipElement.Attribute("sta")?.Value = "1" OrElse
+                                        shipElement.Element("station") IsNot Nothing OrElse
+                                        String.Equals(createdRef?.Attribute("station")?.Value, "true", StringComparison.OrdinalIgnoreCase)
+                        Dim isPlayerOwned = String.Equals(shipElement.Element("settings")?.Attribute("owner")?.Value, "Player", StringComparison.OrdinalIgnoreCase) OrElse
+                                            String.Equals(createdRef?.Parent?.Parent?.Attribute("isPlayer")?.Value, "true", StringComparison.OrdinalIgnoreCase)
                         ships.Add(New ShipInfo With {
                             .Sid = sid,
-                            .Sname = If(snameAttr IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(snameAttr.Value), snameAttr.Value, $"Unnamed Ship (SID: {sid})")
+                            .Sname = If(snameAttr IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(snameAttr.Value), snameAttr.Value, $"Unnamed Ship (SID: {sid})"),
+                            .IsStation = isStation,
+                            .IsPlayerOwned = isPlayerOwned
                         })
                         shipsAdded += 1
                     Else
@@ -834,17 +1055,203 @@ Namespace SpaceHavenEditor2
         End Sub
 
         Private Sub CheckExportButtonState()
-            btnExportBlueprint.IsEnabled = (sourceXmlDoc IsNot Nothing AndAlso cmbShipsToExport.SelectedItem IsNot Nothing)
+            Dim selectedShip = TryCast(cmbShipsToExport.SelectedItem, ShipInfo)
+            Dim hasSelectedShip = sourceXmlDoc IsNot Nothing AndAlso selectedShip IsNot Nothing
+            btnExportBlueprint.IsEnabled = hasSelectedShip AndAlso Not selectedShip.IsStation
+            btnDeleteSourceShip.IsEnabled = hasSelectedShip
+            If hasSelectedShip AndAlso selectedShip.IsStation Then
+                UpdateBlueprintStatus("Cannot export station.")
+            End If
         End Sub
 
         Private Sub cmbShipsToExport_SelectionChanged(sender As Object, e As System.Windows.Controls.SelectionChangedEventArgs) Handles cmbShipsToExport.SelectionChanged
             CheckExportButtonState()
         End Sub
 
+        Private Sub btnDeleteSourceShip_Click(sender As Object, e As RoutedEventArgs) Handles btnDeleteSourceShip.Click
+            Dim selectedShip = TryCast(cmbShipsToExport.SelectedItem, ShipInfo)
+            If selectedShip Is Nothing OrElse String.IsNullOrWhiteSpace(sourceSavePath) Then Return
+
+            Dim confirmation = MessageBox.Show(
+                $"Delete '{selectedShip.Sname}' (SID {selectedShip.Sid}) from this save?{vbCrLf}{vbCrLf}" &
+                "A .bak backup will be created first. This cannot be undone inside the editor.",
+                "Delete Ship", MessageBoxButton.YesNo, MessageBoxImage.Warning)
+            If confirmation <> MessageBoxResult.Yes Then Return
+
+            Try
+                Dim deletedName = ShipDeletionService.DeleteShip(sourceSavePath, selectedShip.Sid)
+                UpdateBlueprintStatus($"Deleted '{deletedName}'. Backup saved as {Path.GetFileName(sourceSavePath)}.bak.")
+                LoadShipsFromSource()
+                MessageBox.Show($"'{deletedName}' was deleted successfully.", "Ship Deleted",
+                                MessageBoxButton.OK, MessageBoxImage.Information)
+            Catch ex As Exception
+                MessageBox.Show($"Unable to delete ship:{vbCrLf}{ex.Message}", "Delete Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+                UpdateBlueprintStatus($"Delete failed: {ex.Message}")
+            End Try
+        End Sub
+
+        Private Sub LoadFactionReputations()
+            ClearFactionReputations()
+            If xmlDoc?.Root Is Nothing Then Return
+
+            Dim excludedFactions As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
+                "Player", "Monster", "Robot", "Environment", "NotSet"
+            }
+            Dim relationshipRows = xmlDoc.Root.Element("hostmap")?.
+                Element("map")?.
+                Elements("l").
+                Where(Function(row)
+                          Return row.Attribute("relationship") IsNot Nothing AndAlso
+                                 (String.Equals(row.Attribute("s1")?.Value, "Player", StringComparison.OrdinalIgnoreCase) OrElse
+                                  String.Equals(row.Attribute("s2")?.Value, "Player", StringComparison.OrdinalIgnoreCase))
+                      End Function)
+
+            If relationshipRows Is Nothing Then
+                lblFactionStatus.Text = "No faction reputation records were found in this save."
+                Return
+            End If
+
+            For Each row In relationshipRows
+                Dim factionName = If(String.Equals(row.Attribute("s1")?.Value, "Player", StringComparison.OrdinalIgnoreCase),
+                                     row.Attribute("s2")?.Value,
+                                     row.Attribute("s1")?.Value)
+                If String.IsNullOrWhiteSpace(factionName) OrElse excludedFactions.Contains(factionName) Then Continue For
+
+                factionReputations.Add(New FactionReputationInfo With {
+                    .FactionName = factionName,
+                    .Relationship = ReadIntegerAttribute(row, "relationship"),
+                    .Stance = If(row.Attribute("stance")?.Value, "Neutral"),
+                    .Patience = ReadIntegerAttribute(row, "patience", 100),
+                    .AccessTrade = ReadBooleanAttribute(row, "accessTrade"),
+                    .AccessShip = ReadBooleanAttribute(row, "accessShip"),
+                    .AccessVision = ReadBooleanAttribute(row, "accessVision"),
+                    .AccessServices = ReadBooleanAttribute(row, "accessServices"),
+                    .AccessHire = ReadBooleanAttribute(row, "accessHire"),
+                    .SettlementDebt = ReadIntegerAttribute(row, "playerOwesSettlement"),
+                    .SourceElement = row
+                })
+            Next
+
+            dgvFactionReputation.ItemsSource = factionReputations.OrderBy(Function(faction) faction.FactionName).ToList()
+            Dim stanceColumn = TryCast(dgvFactionReputation.Columns.FirstOrDefault(Function(column) column.Header?.ToString() = "Stance"),
+                                       DataGridComboBoxColumn)
+            If stanceColumn IsNot Nothing Then stanceColumn.ItemsSource = FactionStances
+            lblFactionStatus.Text = $"{factionReputations.Count} player-facing factions loaded."
+        End Sub
+
+        Private Function ReadIntegerAttribute(element As XElement, attributeName As String, Optional defaultValue As Integer = 0) As Integer
+            Dim value = defaultValue
+            Integer.TryParse(element?.Attribute(attributeName)?.Value, value)
+            Return value
+        End Function
+
+        Private Function ReadBooleanAttribute(element As XElement, attributeName As String) As Boolean
+            Return String.Equals(element?.Attribute(attributeName)?.Value, "true", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        Private Sub ClearFactionReputations()
+            factionReputations.Clear()
+            If dgvFactionReputation IsNot Nothing Then dgvFactionReputation.ItemsSource = Nothing
+            If lblFactionStatus IsNot Nothing Then lblFactionStatus.Text = ""
+        End Sub
+
+        Private Function GetSelectedFaction() As FactionReputationInfo
+            Return TryCast(dgvFactionReputation.SelectedItem, FactionReputationInfo)
+        End Function
+
+        Private Sub ApplyFactionPreset(relationship As Integer, stance As String,
+                                       trade As Boolean, shipAccess As Boolean,
+                                       vision As Boolean, services As Boolean, hire As Boolean)
+            Dim faction = GetSelectedFaction()
+            If faction Is Nothing Then
+                MessageBox.Show("Select a faction first.", "Faction Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            faction.Relationship = relationship
+            faction.Stance = stance
+            faction.AccessTrade = trade
+            faction.AccessShip = shipAccess
+            faction.AccessVision = vision
+            faction.AccessServices = services
+            faction.AccessHire = hire
+            dgvFactionReputation.Items.Refresh()
+            lblFactionStatus.Text = $"{faction.FactionName} preset loaded. Click Apply Selected Faction to commit it."
+        End Sub
+
+        Private Sub btnFactionEnemy_Click(sender As Object, e As RoutedEventArgs)
+            ApplyFactionPreset(-100, "Enemies", False, False, False, False, False)
+        End Sub
+
+        Private Sub btnFactionNeutral_Click(sender As Object, e As RoutedEventArgs)
+            ApplyFactionPreset(0, "Neutral", True, False, False, True, False)
+        End Sub
+
+        Private Sub btnFactionFriendly_Click(sender As Object, e As RoutedEventArgs)
+            ApplyFactionPreset(75, "Friendly", True, True, True, True, False)
+        End Sub
+
+        Private Sub btnFactionFullAccess_Click(sender As Object, e As RoutedEventArgs)
+            ApplyFactionPreset(100, "Friendly", True, True, True, True, True)
+        End Sub
+
+        Private Sub btnApplyFaction_Click(sender As Object, e As RoutedEventArgs)
+            Dim faction = GetSelectedFaction()
+            If faction Is Nothing Then
+                MessageBox.Show("Select a faction first.", "Faction Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Try
+                dgvFactionReputation.CommitEdit(DataGridEditingUnit.Cell, True)
+                dgvFactionReputation.CommitEdit(DataGridEditingUnit.Row, True)
+
+                If faction.Relationship < -100 OrElse faction.Relationship > 100 Then
+                    Throw New ArgumentOutOfRangeException("Relationship", "Reputation must be between -100 and 100.")
+                End If
+                If faction.Patience < 0 OrElse faction.Patience > 100 Then
+                    Throw New ArgumentOutOfRangeException("Patience", "Patience must be between 0 and 100.")
+                End If
+                If Not FactionStances.Contains(faction.Stance) Then
+                    Throw New InvalidDataException("Stance must be Enemies, Neutral, or Friendly.")
+                End If
+                If faction.SettlementDebt < 0 Then
+                    Throw New ArgumentOutOfRangeException("SettlementDebt", "Settlement debt cannot be negative.")
+                End If
+                If faction.SourceElement Is Nothing Then
+                    Throw New InvalidDataException("The faction's XML relationship row is missing.")
+                End If
+
+                faction.SourceElement.SetAttributeValue("relationship", faction.Relationship)
+                faction.SourceElement.SetAttributeValue("stance", faction.Stance)
+                faction.SourceElement.SetAttributeValue("patience", faction.Patience)
+                faction.SourceElement.SetAttributeValue("accessTrade", faction.AccessTrade.ToString().ToLowerInvariant())
+                faction.SourceElement.SetAttributeValue("accessShip", faction.AccessShip.ToString().ToLowerInvariant())
+                faction.SourceElement.SetAttributeValue("accessVision", faction.AccessVision.ToString().ToLowerInvariant())
+                faction.SourceElement.SetAttributeValue("accessServices", faction.AccessServices.ToString().ToLowerInvariant())
+                faction.SourceElement.SetAttributeValue("accessHire", faction.AccessHire.ToString().ToLowerInvariant())
+                faction.SourceElement.SetAttributeValue("playerOwesSettlement", faction.SettlementDebt)
+
+                MarkUnsavedChanges()
+                lblFactionStatus.Text = $"{faction.FactionName} updated in memory. Use File > Save to make it permanent."
+            Catch ex As Exception
+                MessageBox.Show($"Could not update faction: {ex.Message}", "Faction Update Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
         Private Sub btnExportBlueprint_Click(sender As Object, e As RoutedEventArgs) Handles btnExportBlueprint.Click
             Dim selectedShipInfo = TryCast(cmbShipsToExport.SelectedItem, ShipInfo)
             If selectedShipInfo Is Nothing Then
                 MessageBox.Show("Please select a ship from the list.", "No Ship Selected", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+            End If
+            If selectedShipInfo.IsStation Then
+                MessageBox.Show("Stations use additional map and generation data and cannot be exported as ordinary ship blueprints.",
+                                "Station Export Not Supported", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
             End If
             If sourceXmlDoc Is Nothing OrElse sourceXmlDoc.Root Is Nothing Then
                 MessageBox.Show("Source save file is not loaded or is invalid.", "Error", MessageBoxButton.OK, MessageBoxImage.Error) : Return
@@ -855,15 +1262,7 @@ Namespace SpaceHavenEditor2
                 Dim originalShipElement = sourceXmlDoc.Root.Descendants("ship").FirstOrDefault(Function(s) s.Attribute("sid")?.Value = selectedShipInfo.Sid.ToString())
                 If originalShipElement Is Nothing Then Throw New Exception($"Ship node with SID {selectedShipInfo.Sid} not found in source XML.")
 
-                Dim blueprintNodeToSave As New XElement(originalShipElement)
-
-                ' Always remove crew data on export
-                blueprintNodeToSave.Element("characters")?.Remove()
-
-                ' Keep inventory data in export - import will handle removing it if needed
-
-                ' Export as blueprint (unbuilt) - set real="0"
-                blueprintNodeToSave.SetAttributeValue("real", "0")
+                Dim blueprintNodeToSave = BlueprintConverter.CreateUnbuiltBlueprint(originalShipElement)
 
                 Dim sfd As New Microsoft.Win32.SaveFileDialog() With {
                     .Title = "Save Ship Blueprint As",
@@ -922,41 +1321,15 @@ Namespace SpaceHavenEditor2
                 Dim bpDoc = XDocument.Load(blueprintFilePath)
                 Dim loadedShip = bpDoc.Descendants("ship").FirstOrDefault()
                 If loadedShip Is Nothing Then Throw New Exception("Blueprint has no <ship>.")
+                If loadedShip.Attribute("sta")?.Value = "1" OrElse loadedShip.Element("station") IsNot Nothing Then
+                    Throw New InvalidDataException("Station imports are not supported by the ship blueprint importer.")
+                End If
                 blueprintNode = New XElement(loadedShip)
+                Dim importAsBlueprint = chkImportAsBlueprint IsNot Nothing AndAlso
+                                        chkImportAsBlueprint.IsChecked = True
 
-                ' If importing as blueprint, remove crew, inventory, and built structures (but keep planning grid)
-                If chkImportAsBlueprint IsNot Nothing AndAlso chkImportAsBlueprint.IsChecked = True Then
-                    ' Remove crew
-                    blueprintNode.Element("characters")?.Remove()
-                    For Each n In blueprintNode.Descendants().Where(Function(x)
-                                                                        Return {"crew", "persons", "prePersons"}.Contains(x.Name.LocalName)
-                                                                    End Function).ToList()
-                        n.Remove()
-                    Next
-                    blueprintNode.SetAttributeValue("crew", "0")
-                    blueprintNode.SetAttributeValue("cryoCrew", "0")
-
-                    ' Remove inventory/items
-                    For Each n In blueprintNode.Descendants().Where(Function(x)
-                                                                        Return {"inventory", "item"}.Contains(x.Name.LocalName)
-                                                                    End Function).ToList()
-                        n.Remove()
-                    Next
-                    ' Remove inventory from feat elements
-                    For Each featNode In blueprintNode.Descendants("feat")
-                        featNode.Element("inv")?.Remove()
-                    Next
-
-                    ' Remove built structures (but keep planning grid - <e> elements without id)
-                    ' Remove all built structure elements (<e> elements with id attribute - walls, floors, etc.)
-                    ' NOTE: Keep <e> elements WITHOUT id (these are planning grid markers like <e m="-2">)
-                    For Each eElement In blueprintNode.Descendants("e").Where(Function(elem) elem.Attribute("id") IsNot Nothing).ToList()
-                        eElement.Remove()
-                    Next
-                    ' Remove feat elements (features/structures that are built)
-                    For Each featElement In blueprintNode.Descendants("feat").ToList()
-                        featElement.Remove()
-                    Next
+                If importAsBlueprint Then
+                    blueprintNode = BlueprintConverter.CreateUnbuiltBlueprint(blueprintNode)
                 End If
 
                 ' --- 3) Assign new blueprint SID via <game idCounter> ---
@@ -993,15 +1366,12 @@ Namespace SpaceHavenEditor2
                 Dim baseName = blueprintNode.Attribute("sname")?.Value
                 blueprintNode.SetAttributeValue("sname", $"{baseName} (Imported)")
 
-                ' Set real attribute and idCnt based on import as blueprint checkbox
-                ' If checked, import as blueprint (unbuilt) - real="0", idCnt="0"
-                ' If NOT checked, import as built ship - real="1", preserve idCnt
-                If chkImportAsBlueprint IsNot Nothing AndAlso chkImportAsBlueprint.IsChecked = True Then
+                ' Native blueprints have no runtime object IDs.
+                If importAsBlueprint Then
                     blueprintNode.SetAttributeValue("real", "0")
-                    blueprintNode.SetAttributeValue("idCnt", "0") ' No built structures in blueprint
+                    blueprintNode.SetAttributeValue("idCnt", "0")
                 Else
                     blueprintNode.SetAttributeValue("real", "1")
-                    ' Preserve idCnt if it exists, otherwise set to 0
                     If blueprintNode.Attribute("idCnt") Is Nothing Then
                         blueprintNode.SetAttributeValue("idCnt", "0")
                     End If
@@ -1013,6 +1383,24 @@ Namespace SpaceHavenEditor2
                     gameRoot.Add(shipsEl)
                 End If
                 shipsEl.Add(blueprintNode)
+
+                ' Native unbuilt ships are stored directly under <ships>. Unlike a built ship,
+                ' they do not have a starmap createdShips instance or a root <blueprints> copy.
+                If importAsBlueprint Then
+                    Try
+                        Dim bak = targetSavePath & ".bak"
+                        File.Copy(targetSavePath, bak, True)
+                        UpdateBlueprintStatus($"Backup created: {Path.GetFileName(bak)}")
+                    Catch ex As Exception
+                        UpdateBlueprintStatus($"Warning: backup failed - {ex.Message}")
+                    End Try
+
+                    targetXmlDoc.Save(targetSavePath)
+                    UpdateBlueprintStatus($"Blueprint import complete: SID {newBlueprintSid}.")
+                    MessageBox.Show("Ship blueprint imported successfully!", "Done",
+                                    MessageBoxButton.OK, MessageBoxImage.Information)
+                    Return
+                End If
 
                 Dim bpContainer = gameRoot.Element("blueprints")
                 If bpContainer Is Nothing Then
@@ -1136,8 +1524,8 @@ Namespace SpaceHavenEditor2
             New XAttribute("created", "true"),
             New XAttribute("station", "false"),
             New XAttribute("shipDamagedNoFTL", "false"),
-            New XAttribute("crew", If(chkImportAsBlueprint IsNot Nothing AndAlso chkImportAsBlueprint.IsChecked, "0", "0")),
-            New XAttribute("cryoCrew", If(chkImportAsBlueprint IsNot Nothing AndAlso chkImportAsBlueprint.IsChecked, "0", "0")),
+            New XAttribute("crew", "0"),
+            New XAttribute("cryoCrew", "0"),
             New XAttribute("monsters", "0"),
             New XAttribute("bigMonsters", "0"),
             New XAttribute("hives", "0"),
@@ -1184,6 +1572,99 @@ Namespace SpaceHavenEditor2
 
 #End Region
 
+        Private Function RunIntegrityScan(Optional updateStatus As Boolean = True) As String
+            integrityFindings.Clear()
+            If xmlDoc Is Nothing OrElse xmlDoc.Root Is Nothing Then
+                lblIntegritySummary.Text = "Load a save to run the scanner."
+                If updateStatus Then lblIntegrityStatus.Text = ""
+                Return "Integrity scan unavailable"
+            End If
+
+            For Each finding In integrityScanner.Scan(xmlDoc).
+                OrderByDescending(Function(item) item.Severity).
+                ThenBy(Function(item) item.Category).
+                ThenBy(Function(item) item.AffectedObject)
+                integrityFindings.Add(finding)
+            Next
+
+            Dim criticalCount = integrityFindings.Where(
+                Function(item) item.Severity = SaveIntegritySeverity.Critical).Count()
+            Dim warningCount = integrityFindings.Where(
+                Function(item) item.Severity = SaveIntegritySeverity.Warning).Count()
+            Dim informationCount = integrityFindings.Where(
+                Function(item) item.Severity = SaveIntegritySeverity.Information).Count()
+            Dim repairableCount = integrityFindings.Where(Function(item) item.CanRepair).Count()
+            lblIntegritySummary.Text =
+                $"Integrity scan: {criticalCount} critical, {warningCount} warning, {informationCount} information; {repairableCount} repairable."
+            If updateStatus Then
+                lblIntegrityStatus.Text = If(
+                    integrityFindings.Count = 0,
+                    "No integrity issues were found in the structures checked by the editor.",
+                    "Review the findings below. Critical findings must be corrected manually before saving.")
+            End If
+            Return lblIntegritySummary.Text
+        End Function
+
+        Private Function GetIntegrityBackupPath() As String
+            Return currentFilePath & ".integrity-backup." & DateTime.Now.ToString("yyyyMMdd_HHmmss_fff")
+        End Function
+
+        Private Sub btnScanIntegrity_Click(sender As Object, e As RoutedEventArgs)
+            RunIntegrityScan()
+        End Sub
+
+        Private Sub btnSelectRepairableIntegrity_Click(sender As Object, e As RoutedEventArgs)
+            For Each finding In integrityFindings
+                finding.IsSelected = finding.CanRepair
+            Next
+            dgvIntegrityFindings.Items.Refresh()
+        End Sub
+
+        Private Sub btnClearIntegritySelection_Click(sender As Object, e As RoutedEventArgs)
+            For Each finding In integrityFindings
+                finding.IsSelected = False
+            Next
+            dgvIntegrityFindings.Items.Refresh()
+        End Sub
+
+        Private Sub btnApplyIntegrityRepairs_Click(sender As Object, e As RoutedEventArgs)
+            Dim selectedRepairs = integrityFindings.
+                Where(Function(item) item.IsSelected AndAlso item.CanRepair).
+                ToList()
+            If selectedRepairs.Count = 0 Then
+                MessageBox.Show("Select at least one repairable finding.", "No Repairs Selected",
+                                MessageBoxButton.OK, MessageBoxImage.Information)
+                Return
+            End If
+            If String.IsNullOrWhiteSpace(currentFilePath) OrElse Not File.Exists(currentFilePath) Then
+                MessageBox.Show("The loaded save file could not be found for backup.", "Repair Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+                Return
+            End If
+            If MessageBox.Show(
+                $"Apply {selectedRepairs.Count} selected repair(s)? A timestamped backup will be created first.",
+                "Confirm Integrity Repairs", MessageBoxButton.YesNo,
+                MessageBoxImage.Question) <> MessageBoxResult.Yes Then Return
+
+            Try
+                Dim backupPath = GetIntegrityBackupPath()
+                File.Copy(currentFilePath, backupPath, False)
+                For Each finding In selectedRepairs
+                    SaveIntegrityRepairService.Apply(finding)
+                Next
+                MarkUnsavedChanges()
+                LoadCharacters()
+                LoadGlobalScheduleDefinitions()
+                RunIntegrityScan(False)
+                lblIntegrityStatus.Text =
+                    $"Applied {selectedRepairs.Count} repair(s). Backup: {backupPath}. Review the rescan, then use File > Save."
+            Catch ex As Exception
+                MessageBox.Show($"Could not apply integrity repairs: {ex.Message}", "Repair Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+                RunIntegrityScan(False)
+            End Try
+        End Sub
+
 
 
         ' --- SIMPLIFIED SaveFileMenu_Click ---
@@ -1198,6 +1679,26 @@ Namespace SpaceHavenEditor2
             Try : dgvRelationships.CommitEdit(DataGridEditingUnit.Row, True) : Catch : End Try
 
             Try
+                RunIntegrityScan(False)
+                Dim criticalCount = integrityFindings.Where(
+                    Function(item) item.Severity = SaveIntegritySeverity.Critical).Count()
+                If criticalCount > 0 Then
+                    mainNavigationTabs.SelectedItem = navSaveIntegrity
+                    MessageBox.Show(
+                        $"Saving is blocked because the integrity scanner found {criticalCount} critical issue(s). Review Save Integrity for details.",
+                        "Critical Integrity Issues", MessageBoxButton.OK, MessageBoxImage.Error)
+                    Return
+                End If
+                Dim warningCount = integrityFindings.Where(
+                    Function(item) item.Severity = SaveIntegritySeverity.Warning).Count()
+                If warningCount > 0 AndAlso MessageBox.Show(
+                    $"The integrity scanner found {warningCount} warning(s). Save anyway?",
+                    "Integrity Warnings", MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning) <> MessageBoxResult.Yes Then
+                    mainNavigationTabs.SelectedItem = navSaveIntegrity
+                    Return
+                End If
+
                 ' Global settings should have been updated in memory via the 'Update Globals' button.
                 ' Grid/List changes should be handled by their respective edit/add/delete handlers updating the xmlDoc in memory.
 
@@ -1390,18 +1891,22 @@ Namespace SpaceHavenEditor2
             Dim canvasWidth As Integer = selectedShip.Sx \ 28 ' Integer division
             Dim canvasHeight As Integer = selectedShip.Sy \ 28 ' Integer division
             lbl_CanvasSize.Text = $"Canvas Size: {canvasWidth} W x {canvasHeight} H squares"
+            lbl_structureType.Text = $"Structure Type: {selectedShip.StructureType}"
+            txtStructureName.Text = selectedShip.Sname
+            btnRenameStructure.IsEnabled = selectedShip.IsPlayerOwned
+            btn_updateSize.IsEnabled = selectedShip.IsPlayerOwned AndAlso Not selectedShip.IsStation
+            btn_updateSize.ToolTip = If(selectedShip.IsStation,
+                                        "Station dimensions are protected because changing them can corrupt station geometry.",
+                                        Nothing)
+
+            pnlStationInfo.Visibility = If(selectedShip.IsStation, Visibility.Visible, Visibility.Collapsed)
+            If selectedShip.IsStation Then
+                lblStationType.Text = $"Type: {selectedShip.StationType}"
+                lblStationPopulation.Text = $"Crew: {selectedShip.CrewCount} | Storage containers: {selectedShip.StorageContainerCount}"
+            End If
 
             ' Load owner info
             LoadOwnerInfo(selectedShip.Sid)
-
-            ' Load crew for the selected ship
-            LoadCrewForShip(selectedShip.Sid)
-
-            ' Load Storage Containers for the selected ship
-            LoadStorageContainers(selectedShip.Sid)
-
-            'Bulk Crew Add (Template Crew)
-            PopulateTemplateCrewComboBox(selectedShip.Sid)
 
         End Sub
 
@@ -1414,47 +1919,180 @@ Namespace SpaceHavenEditor2
             cmb_ships.ItemsSource = Nothing
             cmb_ships.Items.Clear()
             ships.Clear()
-            Dim tempShipList As New List(Of Ship)()
 
-            For Each shipXml In xmlDoc.Descendants("ship")
+            For Each shipXml In xmlDoc.Root?.Element("ships")?.Elements("ship")
                 Dim sid = 0 : Integer.TryParse(shipXml.Attribute("sid")?.Value, sid)
                 If sid = 0 Then Continue For ' Skip if SID is invalid
 
                 Dim sname = If(shipXml.Attribute("sname")?.Value, "Unnamed Ship")
                 Dim sxVal = 0 : Integer.TryParse(shipXml.Attribute("sx")?.Value, sxVal)
                 Dim syVal = 0 : Integer.TryParse(shipXml.Attribute("sy")?.Value, syVal)
+                Dim settings = shipXml.Element("settings")
+                Dim owner = If(settings?.Attribute("owner")?.Value, "Unknown")
+                Dim state = If(settings?.Attribute("state")?.Value, "Unknown")
+                Dim createdShipRef = FindCreatedShipReference(sid)
+                Dim isStation = shipXml.Attribute("sta")?.Value = "1" OrElse
+                                shipXml.Element("station") IsNot Nothing OrElse
+                                String.Equals(createdShipRef?.Attribute("station")?.Value, "true", StringComparison.OrdinalIgnoreCase)
+                Dim isPlayerOwned = String.Equals(owner, "Player", StringComparison.OrdinalIgnoreCase) OrElse
+                                    String.Equals(createdShipRef?.Parent?.Parent?.Attribute("isPlayer")?.Value, "true", StringComparison.OrdinalIgnoreCase)
+                Dim isStationSaveAnchor = isStation AndAlso
+                    String.Equals(createdShipRef?.Attribute("station")?.Value, "true", StringComparison.OrdinalIgnoreCase) AndAlso
+                    String.Equals(createdShipRef?.Parent?.Parent?.Attribute("isPlayer")?.Value, "true", StringComparison.OrdinalIgnoreCase)
+                Dim isDerelict = String.Equals(state, "Derelict", StringComparison.OrdinalIgnoreCase) OrElse
+                                 String.Equals(createdShipRef?.Attribute("derelict")?.Value, "true", StringComparison.OrdinalIgnoreCase)
+                Dim structureType = If(isStation, "Station",
+                                       If(isPlayerOwned, "Player Ship",
+                                          If(isDerelict, "NPC Derelict", "NPC Ship")))
+                Dim station = shipXml.Element("station")
+                Dim materials = If(station Is Nothing, "",
+                    $"Hull {station.Attribute("asteroidHull")?.Value}; Floor {station.Attribute("groundFloor")?.Value}; Wall {station.Attribute("groundWall")?.Value}; Asteroid {station.Attribute("asteroid")?.Value}")
+                Dim options = If(station Is Nothing, "",
+                    $"randomWalls={station.Attribute("randomWalls")?.Value}, miniWalls={station.Attribute("miniWalls")?.Value}, addMineables={station.Attribute("addMineables")?.Value}, addSalvageables={station.Attribute("addSalvageables")?.Value}")
+                Dim crewCount = shipXml.Element("characters")?.Elements("c").Count()
+                Dim storageCount = shipXml.Descendants("feat").
+                    Count(Function(feature) feature.Attribute("eatAllowed") IsNot Nothing AndAlso feature.Descendants("inv").Any())
 
                 ' Check if ship with this SID already exists in the main 'ships' list before adding
                 If Not ships.Any(Function(s) s.Sid = sid) Then
-                    Dim newShip = New Ship() With {.Sid = sid, .Sname = sname, .Sx = sxVal, .Sy = syVal}
+                    Dim newShip = New Ship() With {
+                        .Sid = sid, .Sname = sname, .Sx = sxVal, .Sy = syVal,
+                        .Owner = owner, .State = state, .IsStation = isStation,
+                        .IsStationSaveAnchor = isStationSaveAnchor,
+                        .IsPlayerOwned = isPlayerOwned, .IsDerelict = isDerelict,
+                        .StructureType = structureType,
+                        .StationType = If(station?.Attribute("type")?.Value, "Unknown"),
+                        .Rotation = If(shipXml.Attribute("rot")?.Value, If(station?.Attribute("rot")?.Value, "Not specified")),
+                        .StationMaterials = materials, .StationOptions = options,
+                        .CrewCount = crewCount.GetValueOrDefault(),
+                        .StorageContainerCount = storageCount
+                    }
                     ships.Add(newShip) ' Add to the main list
-                    tempShipList.Add(newShip) ' Add to the list for the ComboBox
                 End If
             Next
 
-            ' Bind the temporary list (sorted) to the ComboBox
-            cmb_ships.ItemsSource = tempShipList.OrderBy(Function(s) s.Sname).ToList()
-            cmb_ships.DisplayMemberPath = "Sname"
+            pnlStationSaveBadge.Visibility = If(IsStationSave(),
+                                                Visibility.Visible, Visibility.Collapsed)
+            RefreshStructureList()
+            SetWindowTitle(currentFilePath)
+        End Sub
+
+        Private Function IsStationSave() As Boolean
+            Return ships.Any(Function(ship) ship.IsStationSaveAnchor)
+        End Function
+
+        Private Function FindCreatedShipReference(sid As Integer) As XElement
+            Dim sidText = sid.ToString()
+            Return xmlDoc?.Descendants("createdShips").
+                Elements("l").
+                FirstOrDefault(Function(instance)
+                                   Return instance.Attribute("slid")?.Value = sidText OrElse
+                                          instance.Attribute("createdShipId")?.Value = sidText
+                               End Function)
+        End Function
+
+        Private Sub RefreshStructureList(Optional selectedSid As Integer = 0)
+            If cmb_ships Is Nothing Then Return
+            If selectedSid = 0 Then
+                Dim current = TryCast(cmb_ships.SelectedItem, Ship)
+                If current IsNot Nothing Then selectedSid = current.Sid
+            End If
+
+            Dim showNpc = chkShowNpcShips IsNot Nothing AndAlso chkShowNpcShips.IsChecked = True
+            Dim visibleStructures = ships.
+                Where(Function(ship) ship.IsPlayerOwned OrElse showNpc).
+                OrderBy(Function(ship) If(ship.IsPlayerOwned, 0, 1)).
+                ThenBy(Function(ship) ship.Sname).
+                ToList()
+
+            cmb_ships.ItemsSource = visibleStructures
+            cmb_ships.DisplayMemberPath = "DisplayName"
             cmb_ships.SelectedValuePath = "Sid"
 
-            ' --- CHANGE IS HERE ---
-            If tempShipList.Any() Then
-                cmb_ships.SelectedIndex = 0 ' Select the first item
+            Dim selectedCrewShip = TryCast(cmbCrewShip.SelectedItem, Ship)
+            Dim selectedStorageShip = TryCast(cmbStorageShip.SelectedItem, Ship)
+            Dim crewSelectedSid As Integer = If(selectedCrewShip IsNot Nothing, selectedCrewShip.Sid, 0)
+            Dim storageSelectedSid As Integer = If(selectedStorageShip IsNot Nothing, selectedStorageShip.Sid, 0)
+            Dim crewStructures As New List(Of Ship) From {
+                New Ship With {.Sid = -1, .Sname = "-- Select Ship --", .StructureType = ""}
+            }
+            crewStructures.AddRange(visibleStructures)
+            Dim storageStructures As New List(Of Ship) From {
+                New Ship With {.Sid = -1, .Sname = "-- Select Ship --", .StructureType = ""}
+            }
+            storageStructures.AddRange(visibleStructures)
+            cmbCrewShip.ItemsSource = crewStructures
+            cmbCrewShip.SelectedValuePath = "Sid"
+            cmbStorageShip.ItemsSource = storageStructures
+            cmbStorageShip.SelectedValuePath = "Sid"
+            cmbNewCrewShip.ItemsSource = crewStructures.ToList()
+            cmbNewCrewShip.SelectedValuePath = "Sid"
 
-                ' *** If there's only one ship, manually trigger the processing ***
-                If tempShipList.Count = 1 Then
-                    Dim singleShip = TryCast(cmb_ships.SelectedItem, Ship)
-                    If singleShip IsNot Nothing Then
-                        ' Use Dispatcher to ensure UI is ready before processing
-                        Dispatcher.BeginInvoke(New Action(Sub() ProcessShipSelection(singleShip)), System.Windows.Threading.DispatcherPriority.Background)
-                    End If
-                End If
-                ' --- END OF CHANGE ---
+            If visibleStructures.Any() Then
+                Dim selected = visibleStructures.FirstOrDefault(Function(ship) ship.Sid = selectedSid)
+                cmb_ships.SelectedItem = If(selected, visibleStructures.First())
+                ProcessShipSelection(TryCast(cmb_ships.SelectedItem, Ship))
+                cmbCrewShip.SelectedItem = If(crewStructures.FirstOrDefault(Function(ship) ship.Sid = crewSelectedSid),
+                                              crewStructures.First())
+                cmbStorageShip.SelectedItem = If(storageStructures.FirstOrDefault(Function(ship) ship.Sid = storageSelectedSid),
+                                                 storageStructures.First())
+                If cmbNewCrewShip.SelectedItem Is Nothing Then cmbNewCrewShip.SelectedIndex = 0
             Else
-                ' No ships found, clear related UI
                 ClearUI()
                 ClearStorageDisplay()
             End If
+        End Sub
+
+        Private Sub cmbCrewShip_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+            Dim selectedShip = TryCast(cmbCrewShip.SelectedItem, Ship)
+            If selectedShip Is Nothing OrElse selectedShip.Sid = -1 Then
+                lstCharacters.ItemsSource = Nothing
+                ClearDataGrids()
+                txtCrewCount.Text = "Total Crew: 0"
+                cmbTemplateCrew.ItemsSource = Nothing
+                Return
+            End If
+            LoadCrewForShip(selectedShip.Sid)
+            PopulateTemplateCrewComboBox(selectedShip.Sid)
+        End Sub
+
+        Private Sub cmbStorageShip_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+            Dim selectedShip = TryCast(cmbStorageShip.SelectedItem, Ship)
+            If selectedShip Is Nothing OrElse selectedShip.Sid = -1 Then
+                ClearStorageDisplay()
+                Return
+            End If
+            LoadStorageContainers(selectedShip.Sid)
+        End Sub
+
+        Private Sub chkShowNpcShips_Changed(sender As Object, e As RoutedEventArgs)
+            If ships Is Nothing OrElse ships.Count = 0 Then Return
+            RefreshStructureList()
+        End Sub
+
+        Private Sub btnRenameStructure_Click(sender As Object, e As RoutedEventArgs)
+            Dim selectedShip = TryCast(cmb_ships.SelectedItem, Ship)
+            If selectedShip Is Nothing OrElse Not selectedShip.IsPlayerOwned Then Return
+
+            Dim newName = txtStructureName.Text.Trim()
+            If String.IsNullOrWhiteSpace(newName) Then
+                MessageBox.Show("Enter a name for the selected structure.", "Name Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Dim shipNode = xmlDoc?.Root?.Element("ships")?.Elements("ship").
+                FirstOrDefault(Function(node) node.Attribute("sid")?.Value = selectedShip.Sid.ToString())
+            If shipNode Is Nothing Then Return
+
+            shipNode.SetAttributeValue("sname", newName)
+            Dim createdRef = FindCreatedShipReference(selectedShip.Sid)
+            If createdRef IsNot Nothing AndAlso createdRef.Attribute("shn") IsNot Nothing Then
+                createdRef.SetAttributeValue("shn", newName)
+            End If
+            selectedShip.Sname = newName
+            MarkUnsavedChanges()
+            RefreshStructureList(selectedShip.Sid)
         End Sub
 
         ' Load characters into the internal list
@@ -1474,6 +2112,26 @@ Namespace SpaceHavenEditor2
                         End If
                     Next
                 End If
+            Next
+            ResolveRelationshipTargetNames()
+            Dim selectedCrewShip = TryCast(cmbCrewShip.SelectedItem, Ship)
+            If selectedCrewShip IsNot Nothing AndAlso selectedCrewShip.Sid <> -1 Then
+                LoadCrewForShip(selectedCrewShip.Sid)
+                PopulateTemplateCrewComboBox(selectedCrewShip.Sid)
+            End If
+            RefreshEmbeddedNewCrewTemplates()
+        End Sub
+
+        Private Sub ResolveRelationshipTargetNames()
+            Dim namesById = characters.ToDictionary(Function(character) character.CharacterEntityId,
+                                                     Function(character) character.CharacterName)
+            For Each character In characters
+                For Each relationship In character.CharacterRelationships
+                    Dim targetName As String = Nothing
+                    relationship.TargetName = If(namesById.TryGetValue(relationship.TargetId, targetName),
+                                                 targetName,
+                                                 $"Missing crew ID ({relationship.TargetId})")
+                Next
             Next
         End Sub
         ' Helper to load details for a character node
@@ -1550,6 +2208,10 @@ Namespace SpaceHavenEditor2
                 Next
             End If
 
+            character.UsesGlobalSchedule = String.Equals(persNode.Attribute("useGlobal")?.Value, "true", StringComparison.OrdinalIgnoreCase)
+            Integer.TryParse(persNode.Attribute("globalSch")?.Value, character.GlobalScheduleId)
+            LoadCharacterSchedule(persNode.Element("schedule"), character)
+
             ' Load Uniform Data
             Dim colorsNode = cNode.Element("colors")
             If colorsNode IsNot Nothing Then
@@ -1597,6 +2259,9 @@ Namespace SpaceHavenEditor2
             Else
                 txtCrewCount.Text = "Total Crew: 0"
             End If
+            PopulateBulkScheduleCrew(shipSid)
+            PopulateBulkLoadoutCrew(shipSid)
+            PopulateBulkTraitOptions(shipSid)
             ClearDataGrids()
         End Sub
 
@@ -1614,9 +2279,1658 @@ Namespace SpaceHavenEditor2
                 lstConditions.ItemsSource = New ObservableCollection(Of DataProp)(selectedCharacter.CharacterConditions)
                 _relationshipsCurrentPage = 1 ' Reset to first page
                 LoadRelationshipsPage()
+                PopulateRelationshipTargetCombo(selectedCharacter)
+                dgvCrewSchedule.ItemsSource = New ObservableCollection(Of CrewScheduleSlot)(selectedCharacter.CharacterSchedule)
+                PopulateGlobalScheduleComboBoxes()
+                cmbCrewGlobalSchedule.SelectedValue = selectedCharacter.GlobalScheduleId
+                txtScheduleMode.Text = If(selectedCharacter.UsesGlobalSchedule,
+                                          $"Currently follows {GetGlobalScheduleDisplayName(selectedCharacter.GlobalScheduleId)}. Applying changes will make it custom.",
+                                          "Currently uses a custom individual schedule.")
 
                 PopulateAddTraitComboBox(selectedCharacter)
+                RefreshCrewRecoverySummary(selectedCharacter)
+                LoadCrewLoadoutEditor(selectedCharacter)
             End If
+        End Sub
+
+        Private Function GetLoadoutTemplatePath() As String
+            Dim folder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Moarage Space Haven Save Game Editor")
+            Directory.CreateDirectory(folder)
+            Return Path.Combine(folder, "loadout_templates.xml")
+        End Function
+
+        Private Function CreateLoadoutOptions(ids As IEnumerable(Of Integer),
+                                              names As IReadOnlyDictionary(Of Integer, String)) As List(Of LoadoutItemOption)
+            Dim options As New List(Of LoadoutItemOption) From {
+                New LoadoutItemOption With {.ItemId = 0, .ItemName = "None"}
+            }
+            For Each itemId In ids.Distinct()
+                Dim itemName As String = Nothing
+                If Not names.TryGetValue(itemId, itemName) Then itemName = $"Unknown Item {itemId}"
+                options.Add(New LoadoutItemOption With {.ItemId = itemId, .ItemName = itemName})
+            Next
+            Return options.OrderBy(Function(item) If(item.ItemId = 0, "", item.ItemName)).ToList()
+        End Function
+
+        Private Sub InitializeLoadoutManager()
+            Dim itemNames As New Dictionary(Of Integer, String)(IdCollection.DefaultStorageIDs)
+            Dim additionalItems As New Dictionary(Of Integer, String) From {
+                {481, "Hat"}, {488, "Sunglasses"}, {746, "Grenade"},
+                {1021, "Sniper Rifle"}, {1733, "Fire Extinguisher"},
+                {2419, "Cleaning Tool"}, {2714, "Explosive Ammunition"},
+                {3658, "Laser Pistol"}, {3956, "SMG"},
+                {3975, "Shotgun Autoloader"}, {4020, "Mood Stimulant"},
+                {4022, "CSP"}, {4025, "Alien Enzyme"},
+                {4035, "Sedative Syringe"}
+            }
+            For Each pair In additionalItems
+                itemNames(pair.Key) = pair.Value
+            Next
+
+            loadoutHeadgearItems = CreateLoadoutOptions({481, 488}, itemNames)
+            loadoutArmorItems = CreateLoadoutOptions({3383, 3384}, itemNames)
+            loadoutWeaponItems = CreateLoadoutOptions(
+                {725, 728, 729, 760, 1021, 3069, 3070, 3071, 3072, 3658, 3956, 3961, 3962},
+                itemNames)
+            loadoutAttachmentItems = CreateLoadoutOptions({3960, 3967, 3968, 3969, 3975, 4076}, itemNames)
+            loadoutPocketItems = CreateLoadoutOptions(
+                {746, 1152, 1733, 2419, 2714, 2715, 3386, 3388, 4005, 4006, 4007,
+                 4020, 4022, 4025, 4030, 4035, 4040, 4065},
+                itemNames)
+
+            BindLoadoutComboBoxes()
+            LoadLoadoutTemplates()
+        End Sub
+
+        Private Sub BindLoadoutComboBoxes()
+            For Each combo In {cmbCrewLoadoutHeadgear, cmbTemplateHeadgear}
+                combo.ItemsSource = loadoutHeadgearItems
+            Next
+            For Each combo In {cmbCrewLoadoutArmor, cmbTemplateArmor}
+                combo.ItemsSource = loadoutArmorItems
+            Next
+            For Each combo In {cmbCrewLoadoutPrimary, cmbCrewLoadoutSecondary,
+                               cmbTemplatePrimary, cmbTemplateSecondary}
+                combo.ItemsSource = loadoutWeaponItems
+            Next
+            For Each combo In {cmbCrewLoadoutAttachment, cmbTemplateAttachment}
+                combo.ItemsSource = loadoutAttachmentItems
+            Next
+            For Each combo In {cmbCrewLoadoutPocket1, cmbCrewLoadoutPocket2, cmbCrewLoadoutPocket3,
+                               cmbTemplatePocket1, cmbTemplatePocket2, cmbTemplatePocket3}
+                combo.ItemsSource = loadoutPocketItems
+            Next
+        End Sub
+
+        Private Sub LoadLoadoutTemplates()
+            loadoutTemplates.Clear()
+            Dim templatePath = GetLoadoutTemplatePath()
+            If File.Exists(templatePath) Then
+                Try
+                    Dim document = XDocument.Load(templatePath)
+                    For Each node In document.Root?.Elements("template")
+                        loadoutTemplates.Add(New LoadoutTemplate With {
+                            .Name = If(node.Attribute("name")?.Value, "Unnamed Loadout"),
+                            .Headgear = ReadCrewIntegerAttribute(node, "headgear", 0),
+                            .Armor = ReadCrewIntegerAttribute(node, "armor", 0),
+                            .Primary = ReadCrewIntegerAttribute(node, "primary", 0),
+                            .Attachment = ReadCrewIntegerAttribute(node, "attachment", 0),
+                            .Secondary = ReadCrewIntegerAttribute(node, "secondary", 0),
+                            .Pocket1 = ReadCrewIntegerAttribute(node, "pocket1", 0),
+                            .Pocket2 = ReadCrewIntegerAttribute(node, "pocket2", 0),
+                            .Pocket3 = ReadCrewIntegerAttribute(node, "pocket3", 0),
+                            .BestQualityArmor = String.Equals(node.Attribute("bestQArmor")?.Value, "true", StringComparison.OrdinalIgnoreCase),
+                            .BestQualityPrimary = String.Equals(node.Attribute("bestQPrimary")?.Value, "true", StringComparison.OrdinalIgnoreCase)
+                        })
+                    Next
+                Catch ex As Exception
+                    MessageBox.Show($"Could not load saved loadout configurations: {ex.Message}",
+                                    "Loadout Templates", MessageBoxButton.OK, MessageBoxImage.Warning)
+                End Try
+            End If
+            RefreshLoadoutTemplateCombo()
+        End Sub
+
+        Private Sub SaveLoadoutTemplates()
+            Dim document As New XDocument(
+                New XElement("loadoutTemplates",
+                    loadoutTemplates.Select(
+                        Function(template) New XElement("template",
+                            New XAttribute("name", template.Name),
+                            New XAttribute("headgear", template.Headgear),
+                            New XAttribute("armor", template.Armor),
+                            New XAttribute("primary", template.Primary),
+                            New XAttribute("attachment", template.Attachment),
+                            New XAttribute("secondary", template.Secondary),
+                            New XAttribute("pocket1", template.Pocket1),
+                            New XAttribute("pocket2", template.Pocket2),
+                            New XAttribute("pocket3", template.Pocket3),
+                            New XAttribute("bestQArmor", template.BestQualityArmor.ToString().ToLowerInvariant()),
+                            New XAttribute("bestQPrimary", template.BestQualityPrimary.ToString().ToLowerInvariant())))))
+            document.Save(GetLoadoutTemplatePath())
+        End Sub
+
+        Private Sub RefreshLoadoutTemplateCombo(Optional selectedTemplate As LoadoutTemplate = Nothing)
+            cmbBulkLoadoutTemplate.ItemsSource = Nothing
+            cmbBulkLoadoutTemplate.ItemsSource = loadoutTemplates.OrderBy(Function(item) item.Name).ToList()
+            If selectedTemplate IsNot Nothing Then
+                cmbBulkLoadoutTemplate.SelectedItem = selectedTemplate
+            ElseIf cmbBulkLoadoutTemplate.Items.Count > 0 Then
+                cmbBulkLoadoutTemplate.SelectedIndex = 0
+            End If
+        End Sub
+
+        Private Sub EnsureLoadoutOption(combo As ComboBox, options As List(Of LoadoutItemOption), itemId As Integer)
+            If itemId <> 0 AndAlso Not options.Any(Function(item) item.ItemId = itemId) Then
+                options.Add(New LoadoutItemOption With {.ItemId = itemId, .ItemName = $"Unknown Item {itemId}"})
+                combo.Items.Refresh()
+            End If
+            combo.SelectedValue = itemId
+        End Sub
+
+        Private Function LoadoutFromElement(loadoutNode As XElement,
+                                            Optional templateName As String = Nothing) As LoadoutTemplate
+            Return New LoadoutTemplate With {
+                .Name = templateName,
+                .Headgear = ReadCrewIntegerAttribute(loadoutNode, "headgear", 0),
+                .Armor = ReadCrewIntegerAttribute(loadoutNode, "armor", 0),
+                .Primary = ReadCrewIntegerAttribute(loadoutNode, "primary", 0),
+                .Attachment = ReadCrewIntegerAttribute(loadoutNode, "attachment", 0),
+                .Secondary = ReadCrewIntegerAttribute(loadoutNode, "secondary", 0),
+                .Pocket1 = ReadCrewIntegerAttribute(loadoutNode, "pocket1", 0),
+                .Pocket2 = ReadCrewIntegerAttribute(loadoutNode, "pocket2", 0),
+                .Pocket3 = ReadCrewIntegerAttribute(loadoutNode, "pocket3", 0),
+                .BestQualityArmor = If(loadoutNode Is Nothing, True,
+                    Not String.Equals(loadoutNode.Attribute("bestQArmor")?.Value, "false", StringComparison.OrdinalIgnoreCase)),
+                .BestQualityPrimary = If(loadoutNode Is Nothing, True,
+                    Not String.Equals(loadoutNode.Attribute("bestQPrimary")?.Value, "false", StringComparison.OrdinalIgnoreCase))
+            }
+        End Function
+
+        Private Sub PopulateLoadoutControls(template As LoadoutTemplate, crewControls As Boolean)
+            If template Is Nothing Then template = New LoadoutTemplate()
+            If crewControls Then
+                EnsureLoadoutOption(cmbCrewLoadoutHeadgear, loadoutHeadgearItems, template.Headgear)
+                EnsureLoadoutOption(cmbCrewLoadoutArmor, loadoutArmorItems, template.Armor)
+                EnsureLoadoutOption(cmbCrewLoadoutPrimary, loadoutWeaponItems, template.Primary)
+                EnsureLoadoutOption(cmbCrewLoadoutAttachment, loadoutAttachmentItems, template.Attachment)
+                EnsureLoadoutOption(cmbCrewLoadoutSecondary, loadoutWeaponItems, template.Secondary)
+                EnsureLoadoutOption(cmbCrewLoadoutPocket1, loadoutPocketItems, template.Pocket1)
+                EnsureLoadoutOption(cmbCrewLoadoutPocket2, loadoutPocketItems, template.Pocket2)
+                EnsureLoadoutOption(cmbCrewLoadoutPocket3, loadoutPocketItems, template.Pocket3)
+                chkCrewBestQualityArmor.IsChecked = template.BestQualityArmor
+                chkCrewBestQualityPrimary.IsChecked = template.BestQualityPrimary
+            Else
+                EnsureLoadoutOption(cmbTemplateHeadgear, loadoutHeadgearItems, template.Headgear)
+                EnsureLoadoutOption(cmbTemplateArmor, loadoutArmorItems, template.Armor)
+                EnsureLoadoutOption(cmbTemplatePrimary, loadoutWeaponItems, template.Primary)
+                EnsureLoadoutOption(cmbTemplateAttachment, loadoutAttachmentItems, template.Attachment)
+                EnsureLoadoutOption(cmbTemplateSecondary, loadoutWeaponItems, template.Secondary)
+                EnsureLoadoutOption(cmbTemplatePocket1, loadoutPocketItems, template.Pocket1)
+                EnsureLoadoutOption(cmbTemplatePocket2, loadoutPocketItems, template.Pocket2)
+                EnsureLoadoutOption(cmbTemplatePocket3, loadoutPocketItems, template.Pocket3)
+                chkTemplateBestQualityArmor.IsChecked = template.BestQualityArmor
+                chkTemplateBestQualityPrimary.IsChecked = template.BestQualityPrimary
+            End If
+        End Sub
+
+        Private Function SelectedLoadoutValue(combo As ComboBox) As Integer
+            If combo.SelectedValue Is Nothing Then Return 0
+            Return CInt(combo.SelectedValue)
+        End Function
+
+        Private Function CaptureLoadoutControls(crewControls As Boolean,
+                                                Optional templateName As String = Nothing) As LoadoutTemplate
+            If crewControls Then
+                Return New LoadoutTemplate With {
+                    .Name = templateName,
+                    .Headgear = SelectedLoadoutValue(cmbCrewLoadoutHeadgear),
+                    .Armor = SelectedLoadoutValue(cmbCrewLoadoutArmor),
+                    .Primary = SelectedLoadoutValue(cmbCrewLoadoutPrimary),
+                    .Attachment = SelectedLoadoutValue(cmbCrewLoadoutAttachment),
+                    .Secondary = SelectedLoadoutValue(cmbCrewLoadoutSecondary),
+                    .Pocket1 = SelectedLoadoutValue(cmbCrewLoadoutPocket1),
+                    .Pocket2 = SelectedLoadoutValue(cmbCrewLoadoutPocket2),
+                    .Pocket3 = SelectedLoadoutValue(cmbCrewLoadoutPocket3),
+                    .BestQualityArmor = chkCrewBestQualityArmor.IsChecked.GetValueOrDefault(True),
+                    .BestQualityPrimary = chkCrewBestQualityPrimary.IsChecked.GetValueOrDefault(True)
+                }
+            End If
+            Return New LoadoutTemplate With {
+                .Name = templateName,
+                .Headgear = SelectedLoadoutValue(cmbTemplateHeadgear),
+                .Armor = SelectedLoadoutValue(cmbTemplateArmor),
+                .Primary = SelectedLoadoutValue(cmbTemplatePrimary),
+                .Attachment = SelectedLoadoutValue(cmbTemplateAttachment),
+                .Secondary = SelectedLoadoutValue(cmbTemplateSecondary),
+                .Pocket1 = SelectedLoadoutValue(cmbTemplatePocket1),
+                .Pocket2 = SelectedLoadoutValue(cmbTemplatePocket2),
+                .Pocket3 = SelectedLoadoutValue(cmbTemplatePocket3),
+                .BestQualityArmor = chkTemplateBestQualityArmor.IsChecked.GetValueOrDefault(True),
+                .BestQualityPrimary = chkTemplateBestQualityPrimary.IsChecked.GetValueOrDefault(True)
+            }
+        End Function
+
+        Private Sub WriteLoadout(character As Character, template As LoadoutTemplate)
+            Dim characterNode = FindCharacterNode(character.CharacterEntityId)
+            If characterNode Is Nothing Then Throw New InvalidDataException($"Crew member '{character.CharacterName}' was not found.")
+            Dim loadoutNode = characterNode.Element("loadout")
+            If loadoutNode Is Nothing Then
+                loadoutNode = New XElement("loadout")
+                characterNode.Add(loadoutNode)
+            End If
+            loadoutNode.SetAttributeValue("headgear", template.Headgear)
+            loadoutNode.SetAttributeValue("armor", template.Armor)
+            loadoutNode.SetAttributeValue("primary", template.Primary)
+            loadoutNode.SetAttributeValue("attachment", template.Attachment)
+            loadoutNode.SetAttributeValue("secondary", template.Secondary)
+            loadoutNode.SetAttributeValue("pocket1", template.Pocket1)
+            loadoutNode.SetAttributeValue("pocket2", template.Pocket2)
+            loadoutNode.SetAttributeValue("pocket3", template.Pocket3)
+            loadoutNode.SetAttributeValue("bestQArmor", template.BestQualityArmor.ToString().ToLowerInvariant())
+            loadoutNode.SetAttributeValue("bestQPrimary", template.BestQualityPrimary.ToString().ToLowerInvariant())
+        End Sub
+
+        Private Function LoadoutsMatch(left As LoadoutTemplate, right As LoadoutTemplate) As Boolean
+            Return left.Headgear = right.Headgear AndAlso left.Armor = right.Armor AndAlso
+                   left.Primary = right.Primary AndAlso left.Attachment = right.Attachment AndAlso
+                   left.Secondary = right.Secondary AndAlso left.Pocket1 = right.Pocket1 AndAlso
+                   left.Pocket2 = right.Pocket2 AndAlso left.Pocket3 = right.Pocket3 AndAlso
+                   left.BestQualityArmor = right.BestQualityArmor AndAlso
+                   left.BestQualityPrimary = right.BestQualityPrimary
+        End Function
+
+        Private Function GetCrewLoadoutSummary(character As Character) As String
+            Dim loadoutNode = FindCharacterNode(character.CharacterEntityId)?.Element("loadout")
+            If loadoutNode Is Nothing Then Return "No loadout"
+            Dim current = LoadoutFromElement(loadoutNode)
+            Dim matching = loadoutTemplates.FirstOrDefault(Function(template) LoadoutsMatch(template, current))
+            If matching IsNot Nothing Then Return matching.Name
+            Return $"Custom: armor {current.Armor}, primary {current.Primary}"
+        End Function
+
+        Private Sub LoadCrewLoadoutEditor(character As Character)
+            If character Is Nothing Then
+                txtCrewLoadoutMember.Text = "Select a crew member to view their loadout."
+                PopulateLoadoutControls(New LoadoutTemplate(), True)
+                Return
+            End If
+            Dim loadoutNode = FindCharacterNode(character.CharacterEntityId)?.Element("loadout")
+            PopulateLoadoutControls(LoadoutFromElement(loadoutNode), True)
+            txtCrewLoadoutMember.Text = $"{character.CharacterName} (Crew ID {character.CharacterEntityId})"
+            lblCrewLoadoutStatus.Text = If(loadoutNode Is Nothing,
+                                           "This crew member has no loadout node yet. Applying will create one.",
+                                           $"Current configuration: {GetCrewLoadoutSummary(character)}")
+        End Sub
+
+        Private Sub PopulateBulkLoadoutCrew(shipSid As Integer)
+            bulkLoadoutCrew = New ObservableCollection(Of BulkLoadoutCrewItem)(
+                characters.Where(Function(character) character.ShipSid = shipSid).
+                    OrderBy(Function(character) character.CharacterName).
+                    Select(Function(character) New BulkLoadoutCrewItem With {
+                        .Crew = character,
+                        .IsSelected = False,
+                        .CurrentLoadout = GetCrewLoadoutSummary(character)
+                    }))
+            lstBulkLoadoutCrew.ItemsSource = bulkLoadoutCrew
+        End Sub
+
+        Private Function LoadoutTemplateNameExists(templateName As String,
+                                                   Optional exceptTemplate As LoadoutTemplate = Nothing) As Boolean
+            Return loadoutTemplates.Any(
+                Function(item) item IsNot exceptTemplate AndAlso
+                    String.Equals(item.Name, templateName, StringComparison.OrdinalIgnoreCase))
+        End Function
+
+        Private Function PromptForLoadoutTemplateName(prompt As String,
+                                                      Optional defaultName As String = "") As String
+            Return Microsoft.VisualBasic.Interaction.InputBox(prompt, "Loadout Configuration", defaultName).Trim()
+        End Function
+
+        Private Sub CopyLoadoutValues(source As LoadoutTemplate, target As LoadoutTemplate)
+            target.Headgear = source.Headgear
+            target.Armor = source.Armor
+            target.Primary = source.Primary
+            target.Attachment = source.Attachment
+            target.Secondary = source.Secondary
+            target.Pocket1 = source.Pocket1
+            target.Pocket2 = source.Pocket2
+            target.Pocket3 = source.Pocket3
+            target.BestQualityArmor = source.BestQualityArmor
+            target.BestQualityPrimary = source.BestQualityPrimary
+        End Sub
+
+        Private Sub RefreshBulkLoadoutSummaries()
+            For Each item In bulkLoadoutCrew
+                item.CurrentLoadout = GetCrewLoadoutSummary(item.Crew)
+            Next
+            lstBulkLoadoutCrew.Items.Refresh()
+        End Sub
+
+        Private Sub btnApplyCrewLoadout_Click(sender As Object, e As RoutedEventArgs)
+            Dim character = TryCast(lstCharacters.SelectedItem, Character)
+            If character Is Nothing Then
+                MessageBox.Show("Select a crew member first.", "Selection Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            Try
+                WriteLoadout(character, CaptureLoadoutControls(True))
+                MarkUnsavedChanges()
+                RefreshBulkLoadoutSummaries()
+                lblCrewLoadoutStatus.Text = $"Applied loadout to {character.CharacterName}. Use File > Save to make it permanent."
+            Catch ex As Exception
+                MessageBox.Show($"Could not apply the loadout: {ex.Message}", "Loadout Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub btnClearCrewLoadout_Click(sender As Object, e As RoutedEventArgs)
+            Dim character = TryCast(lstCharacters.SelectedItem, Character)
+            If character Is Nothing Then
+                MessageBox.Show("Select a crew member first.", "Selection Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            Dim emptyLoadout As New LoadoutTemplate With {
+                .BestQualityArmor = True,
+                .BestQualityPrimary = True
+            }
+            PopulateLoadoutControls(emptyLoadout, True)
+            WriteLoadout(character, emptyLoadout)
+            MarkUnsavedChanges()
+            RefreshBulkLoadoutSummaries()
+            lblCrewLoadoutStatus.Text = $"Cleared the requested equipment for {character.CharacterName}."
+        End Sub
+
+        Private Sub btnSaveCrewLoadoutTemplate_Click(sender As Object, e As RoutedEventArgs)
+            Dim character = TryCast(lstCharacters.SelectedItem, Character)
+            If character Is Nothing Then
+                MessageBox.Show("Select a crew member first.", "Selection Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            Dim templateName = PromptForLoadoutTemplateName(
+                "Enter a name for this loadout configuration:",
+                $"{character.CharacterName} Loadout")
+            If String.IsNullOrWhiteSpace(templateName) Then Return
+            If LoadoutTemplateNameExists(templateName) Then
+                MessageBox.Show("A loadout configuration with that name already exists.", "Duplicate Name",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            Dim template = CaptureLoadoutControls(True, templateName)
+            loadoutTemplates.Add(template)
+            SaveLoadoutTemplates()
+            RefreshLoadoutTemplateCombo(template)
+            RefreshBulkLoadoutSummaries()
+            lblCrewLoadoutStatus.Text = $"Saved '{templateName}' for reuse in this and other saves."
+        End Sub
+
+        Private Sub cmbBulkLoadoutTemplate_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+            Dim template = TryCast(cmbBulkLoadoutTemplate.SelectedItem, LoadoutTemplate)
+            If template IsNot Nothing Then PopulateLoadoutControls(template, False)
+        End Sub
+
+        Private Sub btnNewLoadoutTemplate_Click(sender As Object, e As RoutedEventArgs)
+            Dim templateName = PromptForLoadoutTemplateName("Enter a name for the new loadout configuration:")
+            If String.IsNullOrWhiteSpace(templateName) Then Return
+            If LoadoutTemplateNameExists(templateName) Then
+                MessageBox.Show("A loadout configuration with that name already exists.", "Duplicate Name",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            Dim template As New LoadoutTemplate With {
+                .Name = templateName,
+                .BestQualityArmor = True,
+                .BestQualityPrimary = True
+            }
+            loadoutTemplates.Add(template)
+            SaveLoadoutTemplates()
+            RefreshLoadoutTemplateCombo(template)
+            lblBulkLoadoutStatus.Text = $"Created '{templateName}'. Choose its equipment and click Save."
+        End Sub
+
+        Private Sub btnSaveLoadoutTemplate_Click(sender As Object, e As RoutedEventArgs)
+            Dim template = TryCast(cmbBulkLoadoutTemplate.SelectedItem, LoadoutTemplate)
+            If template Is Nothing Then
+                MessageBox.Show("Create or select a loadout configuration first.", "Template Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            CopyLoadoutValues(CaptureLoadoutControls(False), template)
+            SaveLoadoutTemplates()
+            RefreshBulkLoadoutSummaries()
+            lblBulkLoadoutStatus.Text = $"Saved changes to '{template.Name}'."
+        End Sub
+
+        Private Sub btnRenameLoadoutTemplate_Click(sender As Object, e As RoutedEventArgs)
+            Dim template = TryCast(cmbBulkLoadoutTemplate.SelectedItem, LoadoutTemplate)
+            If template Is Nothing Then Return
+            Dim newName = PromptForLoadoutTemplateName("Enter the new configuration name:", template.Name)
+            If String.IsNullOrWhiteSpace(newName) OrElse String.Equals(newName, template.Name, StringComparison.Ordinal) Then Return
+            If LoadoutTemplateNameExists(newName, template) Then
+                MessageBox.Show("A loadout configuration with that name already exists.", "Duplicate Name",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            template.Name = newName
+            SaveLoadoutTemplates()
+            RefreshLoadoutTemplateCombo(template)
+            RefreshBulkLoadoutSummaries()
+            lblBulkLoadoutStatus.Text = $"Renamed the configuration to '{newName}'."
+        End Sub
+
+        Private Sub btnDeleteLoadoutTemplate_Click(sender As Object, e As RoutedEventArgs)
+            Dim template = TryCast(cmbBulkLoadoutTemplate.SelectedItem, LoadoutTemplate)
+            If template Is Nothing Then Return
+            If MessageBox.Show($"Delete the reusable loadout configuration '{template.Name}'?",
+                               "Delete Loadout", MessageBoxButton.YesNo,
+                               MessageBoxImage.Question) <> MessageBoxResult.Yes Then Return
+            loadoutTemplates.Remove(template)
+            SaveLoadoutTemplates()
+            RefreshLoadoutTemplateCombo()
+            RefreshBulkLoadoutSummaries()
+            lblBulkLoadoutStatus.Text = $"Deleted '{template.Name}'. Existing crew loadouts were not changed."
+        End Sub
+
+        Private Sub btnBulkLoadoutSelectAll_Click(sender As Object, e As RoutedEventArgs)
+            For Each item In bulkLoadoutCrew
+                item.IsSelected = True
+            Next
+            lstBulkLoadoutCrew.Items.Refresh()
+        End Sub
+
+        Private Sub btnBulkLoadoutClear_Click(sender As Object, e As RoutedEventArgs)
+            For Each item In bulkLoadoutCrew
+                item.IsSelected = False
+            Next
+            lstBulkLoadoutCrew.Items.Refresh()
+        End Sub
+
+        Private Sub btnApplyBulkLoadout_Click(sender As Object, e As RoutedEventArgs)
+            Dim template = TryCast(cmbBulkLoadoutTemplate.SelectedItem, LoadoutTemplate)
+            Dim selectedCrew = bulkLoadoutCrew.Where(Function(item) item.IsSelected AndAlso item.Crew IsNot Nothing).ToList()
+            If template Is Nothing OrElse selectedCrew.Count = 0 Then
+                MessageBox.Show("Select a loadout configuration and check at least one crew member.",
+                                "Selection Required", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            If MessageBox.Show($"Apply '{template.Name}' to {selectedCrew.Count} checked crew member(s)?",
+                               "Confirm Bulk Loadout", MessageBoxButton.YesNo,
+                               MessageBoxImage.Question) <> MessageBoxResult.Yes Then Return
+            Try
+                For Each item In selectedCrew
+                    WriteLoadout(item.Crew, template)
+                    item.CurrentLoadout = template.Name
+                Next
+                MarkUnsavedChanges()
+                lstBulkLoadoutCrew.Items.Refresh()
+                Dim currentCharacter = TryCast(lstCharacters.SelectedItem, Character)
+                If currentCharacter IsNot Nothing AndAlso
+                   selectedCrew.Any(Function(item) item.Crew.CharacterEntityId = currentCharacter.CharacterEntityId) Then
+                    LoadCrewLoadoutEditor(currentCharacter)
+                End If
+                lblBulkLoadoutStatus.Text =
+                    $"Applied '{template.Name}' to {selectedCrew.Count} crew member(s). Use File > Save to make it permanent."
+            Catch ex As Exception
+                MessageBox.Show($"Could not apply the bulk loadout: {ex.Message}", "Bulk Loadout Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub LoadCharacterSchedule(scheduleNode As XElement, character As Character)
+            character.CharacterSchedule.Clear()
+            Dim packedValues = {
+                ReadPackedScheduleValue(scheduleNode, "p0"),
+                ReadPackedScheduleValue(scheduleNode, "p1"),
+                ReadPackedScheduleValue(scheduleNode, "p2")
+            }
+
+            For hourIndex = 0 To 23
+                Dim packedIndex = hourIndex \ 8
+                Dim shift = (hourIndex Mod 8) * 4
+                Dim activity = CInt((packedValues(packedIndex) >> shift) And 15L)
+                If activity < 0 OrElse activity > 2 Then activity = 0
+                character.CharacterSchedule.Add(New CrewScheduleSlot With {
+                    .HourIndex = hourIndex,
+                    .Activity = activity
+                })
+            Next
+        End Sub
+
+        Private Function ReadPackedScheduleValue(scheduleNode As XElement, attributeName As String) As Long
+            Dim value As Long = 0
+            Long.TryParse(scheduleNode?.Attribute(attributeName)?.Value, value)
+            Return value
+        End Function
+
+        Private Function PackScheduleSlots(slots As IEnumerable(Of CrewScheduleSlot), startHour As Integer) As Long
+            Dim packed As Long = 0
+            For Each slot In slots.Where(Function(item) item.HourIndex >= startHour AndAlso item.HourIndex < startHour + 8)
+                If slot.Activity < 0 OrElse slot.Activity > 2 Then
+                    Throw New InvalidDataException($"Hour {slot.HourIndex}: unknown schedule activity {slot.Activity}.")
+                End If
+                packed = packed Or (CLng(slot.Activity) << ((slot.HourIndex - startHour) * 4))
+            Next
+            Return packed
+        End Function
+
+        Private Sub btnApplyCrewSchedule_Click(sender As Object, e As RoutedEventArgs)
+            Dim selectedCharacter = TryCast(lstCharacters.SelectedItem, Character)
+            If selectedCharacter Is Nothing Then
+                MessageBox.Show("Select a crew member first.", "Crew Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Try
+                dgvCrewSchedule.CommitEdit(DataGridEditingUnit.Cell, True)
+                dgvCrewSchedule.CommitEdit(DataGridEditingUnit.Row, True)
+
+                Dim characterNode = FindCharacterNode(selectedCharacter.CharacterEntityId)
+                Dim persNode = characterNode?.Element("pers")
+                If persNode Is Nothing Then Throw New InvalidDataException("The selected crew member has no <pers> node.")
+
+                Dim scheduleNode = persNode.Element("schedule")
+                If scheduleNode Is Nothing Then
+                    scheduleNode = New XElement("schedule")
+                    persNode.Add(scheduleNode)
+                End If
+
+                scheduleNode.SetAttributeValue("p0", PackScheduleSlots(selectedCharacter.CharacterSchedule, 0))
+                scheduleNode.SetAttributeValue("p1", PackScheduleSlots(selectedCharacter.CharacterSchedule, 8))
+                scheduleNode.SetAttributeValue("p2", PackScheduleSlots(selectedCharacter.CharacterSchedule, 16))
+                persNode.SetAttributeValue("useGlobal", "false")
+                selectedCharacter.UsesGlobalSchedule = False
+                txtScheduleMode.Text = "Currently uses a custom individual schedule."
+                MarkUnsavedChanges()
+            Catch ex As Exception
+                MessageBox.Show($"Could not update crew schedule: {ex.Message}", "Schedule Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Function GetGlobalScheduleOptions() As List(Of KeyValuePair(Of Integer, String))
+            Dim options As New List(Of KeyValuePair(Of Integer, String))
+            For Each scheduleGroup In xmlDoc?.Root?.Element("globalSchedules")?.Elements("g")
+                Dim scheduleId As Integer
+                If Integer.TryParse(scheduleGroup.Attribute("schedId")?.Value, scheduleId) Then
+                    Dim scheduleName = scheduleGroup.Attribute("name")?.Value
+                    Dim displayName = If(String.IsNullOrWhiteSpace(scheduleName),
+                                         $"Global Schedule {scheduleId}",
+                                         $"{scheduleName} (Schedule {scheduleId})")
+                    options.Add(New KeyValuePair(Of Integer, String)(scheduleId, displayName))
+                End If
+            Next
+            Return options.OrderBy(Function(optionItem) optionItem.Key).ToList()
+        End Function
+
+        Private Sub PopulateGlobalScheduleComboBoxes()
+            Dim options = GetGlobalScheduleOptions()
+            Dim selectedCrewSchedule = cmbCrewGlobalSchedule.SelectedValue
+            Dim selectedBulkSchedule = cmbBulkGlobalSchedule.SelectedValue
+            cmbCrewGlobalSchedule.ItemsSource = options
+            cmbBulkGlobalSchedule.ItemsSource = options
+            If selectedCrewSchedule IsNot Nothing Then cmbCrewGlobalSchedule.SelectedValue = selectedCrewSchedule
+            If selectedBulkSchedule IsNot Nothing Then cmbBulkGlobalSchedule.SelectedValue = selectedBulkSchedule
+            If cmbBulkGlobalSchedule.SelectedItem Is Nothing AndAlso options.Any() Then
+                cmbBulkGlobalSchedule.SelectedIndex = 0
+            End If
+        End Sub
+
+        Private Function GetGlobalScheduleDisplayName(scheduleId As Integer) As String
+            Dim optionItem = GetGlobalScheduleOptions().
+                FirstOrDefault(Function(item) item.Key = scheduleId)
+            If optionItem.Value IsNot Nothing Then Return optionItem.Value
+            Return $"Global Schedule {scheduleId}"
+        End Function
+
+        Private Sub LoadGlobalScheduleDefinitions(Optional selectedScheduleId As Integer? = Nothing)
+            globalScheduleDefinitions.Clear()
+
+            For Each scheduleGroup In xmlDoc?.Root?.Element("globalSchedules")?.Elements("g")
+                Dim scheduleId As Integer
+                If Not Integer.TryParse(scheduleGroup.Attribute("schedId")?.Value, scheduleId) Then Continue For
+
+                Dim temporaryCharacter As New Character()
+                LoadCharacterSchedule(scheduleGroup.Element("schedule"), temporaryCharacter)
+                globalScheduleDefinitions.Add(New GlobalScheduleDefinition With {
+                    .ScheduleId = scheduleId,
+                    .ScheduleName = scheduleGroup.Attribute("name")?.Value,
+                    .Slots = New ObservableCollection(Of CrewScheduleSlot)(
+                        temporaryCharacter.CharacterSchedule.Select(
+                            Function(slot) New CrewScheduleSlot With {
+                                .HourIndex = slot.HourIndex,
+                                .Activity = slot.Activity
+                            }))
+                })
+            Next
+
+            globalScheduleDefinitions = New ObservableCollection(Of GlobalScheduleDefinition)(
+                globalScheduleDefinitions.OrderBy(Function(item) item.ScheduleId))
+            lstGlobalScheduleDesigner.ItemsSource = globalScheduleDefinitions
+            PopulateGlobalScheduleComboBoxes()
+
+            If selectedScheduleId.HasValue Then
+                lstGlobalScheduleDesigner.SelectedItem = globalScheduleDefinitions.
+                    FirstOrDefault(Function(item) item.ScheduleId = selectedScheduleId.Value)
+            ElseIf globalScheduleDefinitions.Any() Then
+                lstGlobalScheduleDesigner.SelectedIndex = 0
+            Else
+                dgvGlobalScheduleDesigner.ItemsSource = Nothing
+                txtGlobalScheduleName.Text = ""
+            End If
+        End Sub
+
+        Private Function GetSelectedGlobalScheduleDefinition() As GlobalScheduleDefinition
+            Return TryCast(lstGlobalScheduleDesigner.SelectedItem, GlobalScheduleDefinition)
+        End Function
+
+        Private Function GetGlobalSchedulesElement() As XElement
+            Dim schedulesElement = xmlDoc?.Root?.Element("globalSchedules")
+            If schedulesElement Is Nothing AndAlso xmlDoc?.Root IsNot Nothing Then
+                schedulesElement = New XElement("globalSchedules")
+                xmlDoc.Root.Add(schedulesElement)
+            End If
+            Return schedulesElement
+        End Function
+
+        Private Function GetGlobalScheduleElement(scheduleId As Integer) As XElement
+            Return GetGlobalSchedulesElement()?.Elements("g").
+                FirstOrDefault(Function(group) group.Attribute("schedId")?.Value = scheduleId.ToString())
+        End Function
+
+        Private Function GetNextGlobalScheduleId() As Integer
+            Dim usedIds = New HashSet(Of Integer)(globalScheduleDefinitions.Select(Function(item) item.ScheduleId))
+            Dim scheduleId = 1
+            While usedIds.Contains(scheduleId)
+                scheduleId += 1
+            End While
+            Return scheduleId
+        End Function
+
+        Private Sub lstGlobalScheduleDesigner_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+            Dim definition = GetSelectedGlobalScheduleDefinition()
+            If definition Is Nothing Then
+                dgvGlobalScheduleDesigner.ItemsSource = Nothing
+                txtGlobalScheduleName.Text = ""
+                Return
+            End If
+
+            txtGlobalScheduleName.Text = definition.ScheduleName
+            dgvGlobalScheduleDesigner.ItemsSource = definition.Slots
+            lblGlobalScheduleDesignerStatus.Text = $"Editing schedule ID {definition.ScheduleId}."
+        End Sub
+
+        Private Sub btnCreateGlobalSchedule_Click(sender As Object, e As RoutedEventArgs)
+            If xmlDoc?.Root Is Nothing Then
+                MessageBox.Show("Load a save game first.", "Save Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Dim scheduleId = GetNextGlobalScheduleId()
+            Dim scheduleGroup As New XElement("g",
+                New XAttribute("schedId", scheduleId),
+                New XAttribute("name", $"New Schedule {scheduleId}"),
+                New XElement("schedule", New XAttribute("p0", 0), New XAttribute("p1", 0), New XAttribute("p2", 0)),
+                New XElement("sec", New XAttribute("s0", 0), New XAttribute("s1", 0), New XAttribute("s2", 0)))
+            GetGlobalSchedulesElement().Add(scheduleGroup)
+
+            LoadGlobalScheduleDefinitions(scheduleId)
+            MarkUnsavedChanges()
+            lblGlobalScheduleDesignerStatus.Text = $"Created schedule {scheduleId}. Configure its hours, then apply changes."
+        End Sub
+
+        Private Sub btnDuplicateGlobalSchedule_Click(sender As Object, e As RoutedEventArgs)
+            Dim sourceDefinition = GetSelectedGlobalScheduleDefinition()
+            If sourceDefinition Is Nothing Then
+                MessageBox.Show("Select a schedule to duplicate.", "Schedule Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Dim sourceElement = GetGlobalScheduleElement(sourceDefinition.ScheduleId)
+            If sourceElement Is Nothing Then Return
+
+            Dim scheduleId = GetNextGlobalScheduleId()
+            Dim duplicate = New XElement(sourceElement)
+            duplicate.SetAttributeValue("schedId", scheduleId)
+            duplicate.SetAttributeValue("name",
+                If(String.IsNullOrWhiteSpace(sourceDefinition.ScheduleName),
+                   $"Copy of Global Schedule {sourceDefinition.ScheduleId}",
+                   $"Copy of {sourceDefinition.ScheduleName}"))
+            sourceElement.AddAfterSelf(duplicate)
+
+            LoadGlobalScheduleDefinitions(scheduleId)
+            MarkUnsavedChanges()
+            lblGlobalScheduleDesignerStatus.Text = $"Duplicated schedule {sourceDefinition.ScheduleId} as schedule {scheduleId}."
+        End Sub
+
+        Private Sub btnRenameGlobalSchedule_Click(sender As Object, e As RoutedEventArgs)
+            Dim definition = GetSelectedGlobalScheduleDefinition()
+            If definition Is Nothing Then
+                MessageBox.Show("Select a schedule to rename.", "Schedule Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Dim scheduleName = txtGlobalScheduleName.Text.Trim()
+            If String.IsNullOrWhiteSpace(scheduleName) Then
+                MessageBox.Show("Enter a schedule name.", "Name Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            GetGlobalScheduleElement(definition.ScheduleId)?.SetAttributeValue("name", scheduleName)
+            definition.ScheduleName = scheduleName
+            LoadGlobalScheduleDefinitions(definition.ScheduleId)
+            RefreshScheduleAssignmentDisplays()
+            MarkUnsavedChanges()
+            lblGlobalScheduleDesignerStatus.Text = $"Renamed schedule {definition.ScheduleId} to '{scheduleName}'."
+        End Sub
+
+        Private Sub btnApplyGlobalScheduleChanges_Click(sender As Object, e As RoutedEventArgs)
+            Dim definition = GetSelectedGlobalScheduleDefinition()
+            If definition Is Nothing Then
+                MessageBox.Show("Select a schedule to edit.", "Schedule Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Try
+                dgvGlobalScheduleDesigner.CommitEdit(DataGridEditingUnit.Cell, True)
+                dgvGlobalScheduleDesigner.CommitEdit(DataGridEditingUnit.Row, True)
+
+                Dim scheduleGroup = GetGlobalScheduleElement(definition.ScheduleId)
+                If scheduleGroup Is Nothing Then Throw New InvalidDataException("The selected schedule no longer exists.")
+
+                Dim scheduleNode = scheduleGroup.Element("schedule")
+                If scheduleNode Is Nothing Then
+                    scheduleNode = New XElement("schedule")
+                    scheduleGroup.AddFirst(scheduleNode)
+                End If
+                scheduleNode.SetAttributeValue("p0", PackScheduleSlots(definition.Slots, 0))
+                scheduleNode.SetAttributeValue("p1", PackScheduleSlots(definition.Slots, 8))
+                scheduleNode.SetAttributeValue("p2", PackScheduleSlots(definition.Slots, 16))
+
+                SynchronizeCharactersUsingGlobalSchedule(definition.ScheduleId)
+                RefreshScheduleAssignmentDisplays()
+                MarkUnsavedChanges()
+                lblGlobalScheduleDesignerStatus.Text = $"Applied all 24 hourly slots to {definition.DisplayName}."
+            Catch ex As Exception
+                MessageBox.Show($"Could not update the global schedule: {ex.Message}", "Schedule Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub SynchronizeCharactersUsingGlobalSchedule(scheduleId As Integer)
+            For Each character In characters.Where(
+                Function(item) item.UsesGlobalSchedule AndAlso item.GlobalScheduleId = scheduleId)
+                ApplyGlobalScheduleToCharacter(character, scheduleId)
+            Next
+        End Sub
+
+        Private Sub RefreshScheduleAssignmentDisplays()
+            PopulateGlobalScheduleComboBoxes()
+
+            Dim selectedShip = TryCast(cmbCrewShip.SelectedItem, Ship)
+            If selectedShip IsNot Nothing Then PopulateBulkScheduleCrew(selectedShip.Sid)
+
+            Dim selectedCharacter = TryCast(lstCharacters.SelectedItem, Character)
+            If selectedCharacter IsNot Nothing AndAlso selectedCharacter.UsesGlobalSchedule Then
+                cmbCrewGlobalSchedule.SelectedValue = selectedCharacter.GlobalScheduleId
+                txtScheduleMode.Text = $"Currently follows {GetGlobalScheduleDisplayName(selectedCharacter.GlobalScheduleId)}."
+                dgvCrewSchedule.ItemsSource = New ObservableCollection(Of CrewScheduleSlot)(selectedCharacter.CharacterSchedule)
+            End If
+        End Sub
+
+        Private Function GetResearchName(techId As Integer) As String
+            Dim technologyName As String = Nothing
+            If IdCollection.ResearchIDs.TryGetValue(techId, technologyName) AndAlso
+               Not String.IsNullOrWhiteSpace(technologyName) AndAlso
+               Not String.Equals(technologyName, "Unknown", StringComparison.OrdinalIgnoreCase) Then
+                Return technologyName
+            End If
+            Return $"Unknown Technology {techId}"
+        End Function
+
+        Private Function GetResearchElement() As XElement
+            Return xmlDoc?.Root?.Element("research")
+        End Function
+
+        Private Function GetResearchQueueElement() As XElement
+            Dim researchElement = GetResearchElement()
+            If researchElement Is Nothing Then Return Nothing
+
+            Dim queueElement = researchElement.Element("queue")
+            If queueElement Is Nothing Then
+                queueElement = New XElement("queue")
+                researchElement.Add(queueElement)
+            End If
+            Return queueElement
+        End Function
+
+        Private Function ReadQueuedTechnologyId(queueElement As XElement) As Integer?
+            For Each attributeName In {"techId", "id", "researchId"}
+                Dim techId As Integer
+                If Integer.TryParse(queueElement.Attribute(attributeName)?.Value, techId) Then Return techId
+            Next
+            Return Nothing
+        End Function
+
+        Private Sub LoadResearchEditor(Optional selectedTechId As Integer? = Nothing,
+                                       Optional selectedQueueIndex As Integer = -1)
+            researchTechnologies.Clear()
+            researchQueue.Clear()
+
+            Dim researchElement = GetResearchElement()
+            If researchElement Is Nothing Then
+                dgvResearchTechnologies.ItemsSource = Nothing
+                lstResearchQueue.ItemsSource = Nothing
+                lblResearchStatus.Text = "This save does not contain a <research> section."
+                Return
+            End If
+
+            Dim queuedIds As New HashSet(Of Integer)
+            For Each queueEntry In researchElement.Element("queue")?.Elements()
+                Dim techId = ReadQueuedTechnologyId(queueEntry)
+                If Not techId.HasValue Then Continue For
+                queuedIds.Add(techId.Value)
+                researchQueue.Add(New ResearchQueueItem With {
+                    .TechId = techId.Value,
+                    .TechnologyName = GetResearchName(techId.Value),
+                    .QueueElement = queueEntry
+                })
+            Next
+
+            For Each stateElement In researchElement.Element("states")?.Elements("l")
+                Dim techId As Integer
+                If Not Integer.TryParse(stateElement.Attribute("techId")?.Value, techId) Then Continue For
+                researchTechnologies.Add(New ResearchTechnologyItem With {
+                    .TechId = techId,
+                    .TechnologyName = GetResearchName(techId),
+                    .StateElement = stateElement,
+                    .IsQueued = queuedIds.Contains(techId)
+                })
+            Next
+
+            researchTechnologies = New ObservableCollection(Of ResearchTechnologyItem)(
+                researchTechnologies.OrderBy(Function(item) item.TechnologyName).
+                                     ThenBy(Function(item) item.TechId))
+            dgvResearchTechnologies.ItemsSource = researchTechnologies
+            lstResearchQueue.ItemsSource = researchQueue
+
+            If selectedTechId.HasValue Then
+                dgvResearchTechnologies.SelectedItem = researchTechnologies.
+                    FirstOrDefault(Function(item) item.TechId = selectedTechId.Value)
+                dgvResearchTechnologies.ScrollIntoView(dgvResearchTechnologies.SelectedItem)
+            End If
+            If selectedQueueIndex >= 0 AndAlso selectedQueueIndex < researchQueue.Count Then
+                lstResearchQueue.SelectedIndex = selectedQueueIndex
+            End If
+
+            Dim completedCount = researchTechnologies.
+                Where(Function(item) item.StageCount > 0 AndAlso item.CompletedStageCount = item.StageCount).
+                Count()
+            lblResearchStatus.Text =
+                $"{researchTechnologies.Count} technologies loaded; {completedCount} completed; {researchQueue.Count} queued."
+        End Sub
+
+        Private Function GetSelectedResearchTechnology() As ResearchTechnologyItem
+            Return TryCast(dgvResearchTechnologies.SelectedItem, ResearchTechnologyItem)
+        End Function
+
+        Private Sub SetResearchCompletion(technology As ResearchTechnologyItem, completed As Boolean)
+            If technology?.StateElement Is Nothing Then Return
+
+            technology.StateElement.SetAttributeValue("paused", "false")
+            technology.StateElement.SetAttributeValue("activeStageIndex", "0")
+            For Each stage In technology.StateElement.Element("stageStates")?.Elements("l")
+                stage.SetAttributeValue("done", completed.ToString().ToLowerInvariant())
+
+                If Not completed Then
+                    Dim blocks = stage.Element("blocksDone")
+                    If blocks IsNot Nothing Then
+                        blocks.SetAttributeValue("level1", 0)
+                        blocks.SetAttributeValue("level2", 0)
+                        blocks.SetAttributeValue("level3", 0)
+                    End If
+                    For Each taskState In stage.Element("benchTaskStates")?.Elements("l")
+                        taskState.SetAttributeValue("scheduled", 0)
+                        taskState.SetAttributeValue("done", 0)
+                    Next
+                End If
+            Next
+        End Sub
+
+        Private Sub RemoveTechnologyFromResearchQueue(techId As Integer)
+            For Each queueEntry In GetResearchQueueElement()?.Elements().ToList()
+                If ReadQueuedTechnologyId(queueEntry) = techId Then queueEntry.Remove()
+            Next
+        End Sub
+
+        Private Sub btnCompleteSelectedResearch_Click(sender As Object, e As RoutedEventArgs)
+            Dim technology = GetSelectedResearchTechnology()
+            If technology Is Nothing Then
+                MessageBox.Show("Select a technology first.", "Research Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            SetResearchCompletion(technology, True)
+            RemoveTechnologyFromResearchQueue(technology.TechId)
+            LoadResearchEditor(technology.TechId)
+            MarkUnsavedChanges()
+            lblResearchStatus.Text = $"Completed {technology.TechnologyName}. Use File > Save to write the change."
+        End Sub
+
+        Private Sub btnResetSelectedResearch_Click(sender As Object, e As RoutedEventArgs)
+            Dim technology = GetSelectedResearchTechnology()
+            If technology Is Nothing Then
+                MessageBox.Show("Select a technology first.", "Research Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            SetResearchCompletion(technology, False)
+            RemoveTechnologyFromResearchQueue(technology.TechId)
+            LoadResearchEditor(technology.TechId)
+            MarkUnsavedChanges()
+            lblResearchStatus.Text = $"Reset {technology.TechnologyName} to not started."
+        End Sub
+
+        Private Sub btnCompleteAllResearch_Click(sender As Object, e As RoutedEventArgs)
+            If researchTechnologies.Count = 0 Then Return
+            If MessageBox.Show($"Complete all {researchTechnologies.Count} technologies?",
+                               "Complete All Research", MessageBoxButton.YesNo,
+                               MessageBoxImage.Question) <> MessageBoxResult.Yes Then Return
+
+            For Each technology In researchTechnologies
+                SetResearchCompletion(technology, True)
+            Next
+            GetResearchQueueElement()?.RemoveNodes()
+            LoadResearchEditor()
+            MarkUnsavedChanges()
+            lblResearchStatus.Text = "All research technologies have been marked completed."
+        End Sub
+
+        Private Sub btnAddResearchQueue_Click(sender As Object, e As RoutedEventArgs)
+            Dim technology = GetSelectedResearchTechnology()
+            If technology Is Nothing Then
+                MessageBox.Show("Select a technology to queue.", "Research Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            If technology.StageCount > 0 AndAlso technology.CompletedStageCount = technology.StageCount Then
+                MessageBox.Show("That technology is already completed.", "Research Completed",
+                                MessageBoxButton.OK, MessageBoxImage.Information)
+                Return
+            End If
+            If researchQueue.Any(Function(item) item.TechId = technology.TechId) Then
+                MessageBox.Show("That technology is already in the queue.", "Already Queued",
+                                MessageBoxButton.OK, MessageBoxImage.Information)
+                Return
+            End If
+
+            GetResearchQueueElement()?.Add(New XElement("l", New XAttribute("techId", technology.TechId)))
+            LoadResearchEditor(technology.TechId, researchQueue.Count)
+            MarkUnsavedChanges()
+            lblResearchStatus.Text = $"Added {technology.TechnologyName} to the research queue."
+        End Sub
+
+        Private Sub btnRemoveResearchQueue_Click(sender As Object, e As RoutedEventArgs)
+            Dim queueItem = TryCast(lstResearchQueue.SelectedItem, ResearchQueueItem)
+            If queueItem Is Nothing Then Return
+            Dim oldIndex = lstResearchQueue.SelectedIndex
+            queueItem.QueueElement?.Remove()
+            LoadResearchEditor(queueItem.TechId, Math.Min(oldIndex, researchQueue.Count - 2))
+            MarkUnsavedChanges()
+            lblResearchStatus.Text = $"Removed {queueItem.TechnologyName} from the research queue."
+        End Sub
+
+        Private Sub MoveResearchQueueItem(direction As Integer)
+            Dim queueItem = TryCast(lstResearchQueue.SelectedItem, ResearchQueueItem)
+            If queueItem Is Nothing Then Return
+            Dim oldIndex = lstResearchQueue.SelectedIndex
+            Dim newIndex = oldIndex + direction
+            If newIndex < 0 OrElse newIndex >= researchQueue.Count Then Return
+
+            Dim sibling = researchQueue(newIndex).QueueElement
+            queueItem.QueueElement.Remove()
+            If direction < 0 Then
+                sibling.AddBeforeSelf(queueItem.QueueElement)
+            Else
+                sibling.AddAfterSelf(queueItem.QueueElement)
+            End If
+            LoadResearchEditor(queueItem.TechId, newIndex)
+            MarkUnsavedChanges()
+        End Sub
+
+        Private Sub btnResearchQueueUp_Click(sender As Object, e As RoutedEventArgs)
+            MoveResearchQueueItem(-1)
+        End Sub
+
+        Private Sub btnResearchQueueDown_Click(sender As Object, e As RoutedEventArgs)
+            MoveResearchQueueItem(1)
+        End Sub
+
+        Private Sub btnClearResearchQueue_Click(sender As Object, e As RoutedEventArgs)
+            If researchQueue.Count = 0 Then Return
+            GetResearchQueueElement()?.RemoveNodes()
+            LoadResearchEditor()
+            MarkUnsavedChanges()
+            lblResearchStatus.Text = "Research queue cleared."
+        End Sub
+
+        Private Function GetDatalogsElement() As XElement
+            Dim datalogsElement = xmlDoc?.Root?.Element("datalogs")
+            If datalogsElement Is Nothing AndAlso xmlDoc?.Root IsNot Nothing Then
+                datalogsElement = New XElement("datalogs",
+                                               New XElement("unlocked"),
+                                               New XElement("cryoLogs"))
+                xmlDoc.Root.Add(datalogsElement)
+            End If
+            Return datalogsElement
+        End Function
+
+        Private Function GetUnlockedDatalogsElement() As XElement
+            Dim datalogsElement = GetDatalogsElement()
+            If datalogsElement Is Nothing Then Return Nothing
+
+            Dim unlockedElement = datalogsElement.Element("unlocked")
+            If unlockedElement Is Nothing Then
+                unlockedElement = New XElement("unlocked")
+                datalogsElement.AddFirst(unlockedElement)
+            End If
+            Return unlockedElement
+        End Function
+
+        Private Function ReadUnlockedDatalogIds() As List(Of Integer)
+            Dim ids As New List(Of Integer)
+            For Each group In GetUnlockedDatalogsElement()?.Elements("l")
+                For slot = 1 To 4
+                    Dim datalogId As Integer
+                    If Integer.TryParse(group.Attribute($"log{slot}")?.Value, datalogId) AndAlso datalogId > 0 Then
+                        ids.Add(datalogId)
+                    End If
+                Next
+            Next
+            Return ids.Distinct().ToList()
+        End Function
+
+        Private Function ReadDatalogReadStates() As Dictionary(Of Integer, Integer)
+            Dim readStates As New Dictionary(Of Integer, Integer)
+            For Each group In GetUnlockedDatalogsElement()?.Elements("l")
+                For slot = 1 To 4
+                    Dim datalogId As Integer
+                    If Not Integer.TryParse(group.Attribute($"log{slot}")?.Value, datalogId) OrElse datalogId <= 0 Then
+                        Continue For
+                    End If
+
+                    Dim readValue As Integer
+                    Integer.TryParse(group.Attribute($"read{slot}")?.Value, readValue)
+                    readStates(datalogId) = readValue
+                Next
+            Next
+            Return readStates
+        End Function
+
+        Private Function GetDatalogName(datalogId As Integer) As String
+            Dim datalogName As String = Nothing
+            If IdCollection.DatalogIDs.TryGetValue(datalogId, datalogName) Then Return datalogName
+            Return $"Datalog {datalogId}"
+        End Function
+
+        Private Sub LoadDatalogUnlocks()
+            datalogUnlocks.Clear()
+            If xmlDoc?.Root Is Nothing Then
+                dgvDatalogUnlocks.ItemsSource = Nothing
+                Return
+            End If
+
+            Dim unlockedIds = New HashSet(Of Integer)(ReadUnlockedDatalogIds())
+            Dim allIds = New HashSet(Of Integer)(IdCollection.DatalogIDs.Keys)
+            allIds.UnionWith(unlockedIds)
+
+            For Each datalogId In allIds.OrderBy(Function(id) id)
+                datalogUnlocks.Add(New DatalogUnlockItem With {
+                    .DatalogId = datalogId,
+                    .DatalogName = GetDatalogName(datalogId),
+                    .IsUnlocked = unlockedIds.Contains(datalogId)
+                })
+            Next
+            dgvDatalogUnlocks.ItemsSource = datalogUnlocks
+            lblDatalogStatus.Text =
+                $"{datalogUnlocks.Where(Function(item) item.IsUnlocked).Count()} of {datalogUnlocks.Count} known datalogs unlocked."
+        End Sub
+
+        Private Sub WriteUnlockedDatalogIds(ids As IEnumerable(Of Integer))
+            Dim unlockedElement = GetUnlockedDatalogsElement()
+            If unlockedElement Is Nothing Then Return
+            Dim readStates = ReadDatalogReadStates()
+            unlockedElement.RemoveNodes()
+
+            Dim orderedIds = ids.Where(Function(id) id > 0).Distinct().OrderBy(Function(id) id).ToList()
+            For index = 0 To orderedIds.Count - 1 Step 4
+                Dim group As New XElement("l",
+                    New XAttribute("log1", If(index < orderedIds.Count, orderedIds(index), 0)),
+                    New XAttribute("log2", If(index + 1 < orderedIds.Count, orderedIds(index + 1), 0)),
+                    New XAttribute("log3", If(index + 2 < orderedIds.Count, orderedIds(index + 2), 0)),
+                    New XAttribute("log4", If(index + 3 < orderedIds.Count, orderedIds(index + 3), 0)),
+                    New XAttribute("read1", If(index < orderedIds.Count AndAlso readStates.ContainsKey(orderedIds(index)),
+                                               readStates(orderedIds(index)), 0)),
+                    New XAttribute("read2", If(index + 1 < orderedIds.Count AndAlso readStates.ContainsKey(orderedIds(index + 1)),
+                                               readStates(orderedIds(index + 1)), 0)),
+                    New XAttribute("read", 0),
+                    New XAttribute("read3", If(index + 2 < orderedIds.Count AndAlso readStates.ContainsKey(orderedIds(index + 2)),
+                                               readStates(orderedIds(index + 2)), 0)),
+                    New XAttribute("read4", If(index + 3 < orderedIds.Count AndAlso readStates.ContainsKey(orderedIds(index + 3)),
+                                               readStates(orderedIds(index + 3)), 0)))
+                unlockedElement.Add(group)
+            Next
+        End Sub
+
+        Private Function GetSelectedDatalogIds() As List(Of Integer)
+            dgvDatalogUnlocks.CommitEdit(DataGridEditingUnit.Cell, True)
+            dgvDatalogUnlocks.CommitEdit(DataGridEditingUnit.Row, True)
+            Return datalogUnlocks.Where(Function(item) item.IsSelected).
+                                  Select(Function(item) item.DatalogId).
+                                  ToList()
+        End Function
+
+        Private Sub btnSelectAllDatalogs_Click(sender As Object, e As RoutedEventArgs)
+            For Each item In datalogUnlocks
+                item.IsSelected = True
+            Next
+        End Sub
+
+        Private Sub btnClearDatalogSelection_Click(sender As Object, e As RoutedEventArgs)
+            For Each item In datalogUnlocks
+                item.IsSelected = False
+            Next
+        End Sub
+
+        Private Sub btnUnlockSelectedDatalogs_Click(sender As Object, e As RoutedEventArgs)
+            Dim selectedIds = GetSelectedDatalogIds()
+            If selectedIds.Count = 0 Then
+                MessageBox.Show("Select at least one datalog.", "Datalog Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Dim unlockedIds = ReadUnlockedDatalogIds()
+            unlockedIds.AddRange(selectedIds)
+            WriteUnlockedDatalogIds(unlockedIds)
+            LoadDatalogUnlocks()
+            MarkUnsavedChanges()
+            lblDatalogStatus.Text = $"Unlocked {selectedIds.Count} selected datalog(s)."
+        End Sub
+
+        Private Sub btnUnlockAllDatalogs_Click(sender As Object, e As RoutedEventArgs)
+            WriteUnlockedDatalogIds(datalogUnlocks.Select(Function(item) item.DatalogId))
+            LoadDatalogUnlocks()
+            MarkUnsavedChanges()
+            lblDatalogStatus.Text = $"Unlocked all {datalogUnlocks.Count} known datalogs."
+        End Sub
+
+        Private Sub btnResetSelectedDatalogs_Click(sender As Object, e As RoutedEventArgs)
+            Dim selectedIds = GetSelectedDatalogIds()
+            If selectedIds.Count = 0 Then
+                MessageBox.Show("Select at least one datalog.", "Datalog Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Dim selectedSet = New HashSet(Of Integer)(selectedIds)
+            WriteUnlockedDatalogIds(ReadUnlockedDatalogIds().
+                Where(Function(id) Not selectedSet.Contains(id)))
+            LoadDatalogUnlocks()
+            MarkUnsavedChanges()
+            lblDatalogStatus.Text = $"Reset {selectedIds.Count} selected datalog(s)."
+        End Sub
+
+        Private Sub ApplyGlobalScheduleToCharacter(character As Character, scheduleId As Integer)
+            Dim scheduleGroup = xmlDoc?.Root?.Element("globalSchedules")?.
+                Elements("g").
+                FirstOrDefault(Function(group) group.Attribute("schedId")?.Value = scheduleId.ToString())
+            If scheduleGroup Is Nothing Then Throw New InvalidDataException($"Global schedule {scheduleId} was not found.")
+
+            Dim characterNode = FindCharacterNode(character.CharacterEntityId)
+            Dim persNode = characterNode?.Element("pers")
+            If persNode Is Nothing Then Throw New InvalidDataException($"Crew member '{character.CharacterName}' has no <pers> node.")
+
+            For Each nodeName In {"schedule", "sec"}
+                Dim sourceNode = scheduleGroup.Element(nodeName)
+                If sourceNode Is Nothing Then Continue For
+
+                Dim targetNode = persNode.Element(nodeName)
+                If targetNode Is Nothing Then
+                    targetNode = New XElement(nodeName)
+                    persNode.Add(targetNode)
+                End If
+                targetNode.ReplaceAttributes(sourceNode.Attributes())
+            Next
+
+            persNode.SetAttributeValue("useGlobal", "true")
+            persNode.SetAttributeValue("globalSch", scheduleId)
+            character.UsesGlobalSchedule = True
+            character.GlobalScheduleId = scheduleId
+            LoadCharacterSchedule(persNode.Element("schedule"), character)
+        End Sub
+
+        Private Sub btnApplyCrewGlobalSchedule_Click(sender As Object, e As RoutedEventArgs)
+            Dim selectedCharacter = TryCast(lstCharacters.SelectedItem, Character)
+            If selectedCharacter Is Nothing OrElse cmbCrewGlobalSchedule.SelectedValue Is Nothing Then
+                MessageBox.Show("Select a crew member and a global schedule.", "Selection Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Try
+                Dim scheduleId = CInt(cmbCrewGlobalSchedule.SelectedValue)
+                ApplyGlobalScheduleToCharacter(selectedCharacter, scheduleId)
+                dgvCrewSchedule.ItemsSource = New ObservableCollection(Of CrewScheduleSlot)(selectedCharacter.CharacterSchedule)
+                txtScheduleMode.Text = $"Currently follows {GetGlobalScheduleDisplayName(scheduleId)}."
+                MarkUnsavedChanges()
+            Catch ex As Exception
+                MessageBox.Show($"Could not assign global schedule: {ex.Message}", "Schedule Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub PopulateBulkScheduleCrew(shipSid As Integer)
+            bulkScheduleCrew = New ObservableCollection(Of BulkScheduleCrewItem)(
+                characters.
+                    Where(Function(character) character.ShipSid = shipSid).
+                    OrderBy(Function(character) character.CharacterName).
+                    Select(Function(character) New BulkScheduleCrewItem With {
+                        .Crew = character,
+                        .IsSelected = False,
+                        .ScheduleDisplayName = If(character.UsesGlobalSchedule,
+                                                  GetGlobalScheduleDisplayName(character.GlobalScheduleId),
+                                                  Nothing)
+                    }))
+            lstBulkScheduleCrew.ItemsSource = bulkScheduleCrew
+            lstBulkRecoveryCrew.ItemsSource = bulkScheduleCrew
+            PopulateGlobalScheduleComboBoxes()
+            UpdateBulkScheduleCounts()
+        End Sub
+
+        Private Sub UpdateBulkScheduleCounts()
+            If bulkScheduleCrew Is Nothing OrElse bulkScheduleCrew.Count = 0 Then
+                lblBulkScheduleCounts.Text = "Crew schedules: No crew loaded"
+                Return
+            End If
+
+            Dim parts As New List(Of String)
+            For Each optionItem In GetGlobalScheduleOptions()
+                Dim scheduleId = optionItem.Key
+                Dim count = bulkScheduleCrew.
+                    Where(Function(item)
+                              Return item.Crew IsNot Nothing AndAlso
+                                     item.Crew.UsesGlobalSchedule AndAlso
+                                     item.Crew.GlobalScheduleId = scheduleId
+                          End Function).
+                    Count()
+                parts.Add($"{optionItem.Value}: {count}")
+            Next
+
+            Dim customCount = bulkScheduleCrew.
+                Where(Function(item) item.Crew IsNot Nothing AndAlso Not item.Crew.UsesGlobalSchedule).
+                Count()
+            parts.Add($"Custom: {customCount}")
+            parts.Add($"Total: {bulkScheduleCrew.Count}")
+            lblBulkScheduleCounts.Text = String.Join("  |  ", parts)
+        End Sub
+
+        Private Sub btnBulkScheduleSelectAll_Click(sender As Object, e As RoutedEventArgs)
+            For Each item In bulkScheduleCrew
+                item.IsSelected = True
+            Next
+            lstBulkScheduleCrew.Items.Refresh()
+        End Sub
+
+        Private Sub btnBulkScheduleClear_Click(sender As Object, e As RoutedEventArgs)
+            For Each item In bulkScheduleCrew
+                item.IsSelected = False
+            Next
+            lstBulkScheduleCrew.Items.Refresh()
+        End Sub
+
+        Private Function ReadCrewIntegerAttribute(element As XElement,
+                                                  attributeName As String,
+                                                  fallback As Integer) As Integer
+            Dim value As Integer
+            If Integer.TryParse(element?.Attribute(attributeName)?.Value, value) Then Return value
+            Return fallback
+        End Function
+
+        Private Sub SetCrewStatToHealthyValue(propsNode As XElement, statName As String)
+            Dim statNode = propsNode?.Element(statName)
+            If statNode Is Nothing Then Return
+
+            Dim currentValue = ReadCrewIntegerAttribute(statNode, "v", 0)
+            Dim longTermValue = ReadCrewIntegerAttribute(statNode, "ltv", currentValue)
+            Dim healthyValue = Math.Max(100, Math.Max(currentValue, longTermValue))
+            statNode.SetAttributeValue("v", healthyValue)
+            If statNode.Attribute("ltv") IsNot Nothing Then
+                statNode.SetAttributeValue("ltv", healthyValue)
+            End If
+        End Sub
+
+        Private Sub RestoreCrewHealthAndNeeds(character As Character)
+            Dim characterNode = FindCharacterNode(character.CharacterEntityId)
+            If characterNode Is Nothing Then
+                Throw New InvalidDataException($"Crew member '{character.CharacterName}' was not found.")
+            End If
+
+            Dim propsNode = characterNode.Element("props")
+            If propsNode Is Nothing Then
+                Throw New InvalidDataException($"Crew member '{character.CharacterName}' has no <props> node.")
+            End If
+
+            For Each statName In {"Health", "Food", "Rest", "Comfort", "Mood", "Temperature"}
+                SetCrewStatToHealthyValue(propsNode, statName)
+            Next
+        End Sub
+
+        Private Sub RestoreCrewOxygen(character As Character)
+            Dim characterNode = FindCharacterNode(character.CharacterEntityId)
+            If characterNode Is Nothing Then
+                Throw New InvalidDataException($"Crew member '{character.CharacterName}' was not found.")
+            End If
+
+            Dim propsNode = characterNode.Element("props")
+            If propsNode Is Nothing Then
+                Throw New InvalidDataException($"Crew member '{character.CharacterName}' has no <props> node.")
+            End If
+
+            Dim oxygenNode = propsNode.Element("Oxygen")
+            If oxygenNode IsNot Nothing Then
+                oxygenNode.SetAttributeValue("v", 0)
+                oxygenNode.SetAttributeValue("oxs", Math.Max(1000, ReadCrewIntegerAttribute(oxygenNode, "oxs", 0)))
+            End If
+
+            For Each gasName In {"Co2Gas", "SmokeGas", "HazardousGas"}
+                propsNode.Element(gasName)?.SetAttributeValue("v", 0)
+            Next
+
+            RemoveCrewConditions(character, New HashSet(Of Integer) From {1112, 1118, 1119, 1120})
+        End Sub
+
+        Private Sub RemoveCrewConditions(character As Character, conditionIds As HashSet(Of Integer))
+            Dim characterNode = FindCharacterNode(character.CharacterEntityId)
+            Dim conditionsNode = characterNode?.Element("pers")?.Element("conditions")
+            If conditionsNode Is Nothing Then Return
+
+            For Each conditionNode In conditionsNode.Elements("c").ToList()
+                Dim conditionId As Integer
+                If Integer.TryParse(conditionNode.Attribute("id")?.Value, conditionId) AndAlso
+                   conditionIds.Contains(conditionId) Then
+                    conditionNode.Remove()
+                End If
+            Next
+            character.CharacterConditions.RemoveAll(Function(item) conditionIds.Contains(item.Id))
+        End Sub
+
+        Private Sub ClearCrewConditions(character As Character)
+            Dim characterNode = FindCharacterNode(character.CharacterEntityId)
+            characterNode?.Element("pers")?.Element("conditions")?.RemoveNodes()
+            character.CharacterConditions.Clear()
+        End Sub
+
+        Private Sub RecoverCrew(character As Character, clearConditions As Boolean)
+            RestoreCrewHealthAndNeeds(character)
+            RestoreCrewOxygen(character)
+            If clearConditions Then ClearCrewConditions(character)
+        End Sub
+
+        Private Function GetSelectedCrewForRecovery() As Character
+            Dim character = TryCast(lstCharacters.SelectedItem, Character)
+            If character Is Nothing Then
+                MessageBox.Show("Select a crew member first.", "Crew Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+            End If
+            Return character
+        End Function
+
+        Private Sub RefreshSelectedCrewConditions(character As Character)
+            If character Is Nothing Then Return
+            lstConditions.ItemsSource = New ObservableCollection(Of DataProp)(character.CharacterConditions)
+            RefreshCrewRecoverySummary(character)
+        End Sub
+
+        Private Sub AddCrewRecoveryVital(items As ObservableCollection(Of CrewRecoveryVital),
+                                         propsNode As XElement,
+                                         vitalName As String,
+                                         Optional details As String = "")
+            Dim vitalNode = propsNode?.Element(vitalName)
+            If vitalNode Is Nothing Then Return
+            items.Add(New CrewRecoveryVital With {
+                .VitalName = vitalName,
+                .CurrentValue = If(vitalNode.Attribute("v")?.Value, "-"),
+                .LongTermValue = If(vitalNode.Attribute("ltv")?.Value, "-"),
+                .Details = details
+            })
+        End Sub
+
+        Private Sub RefreshCrewRecoverySummary(character As Character)
+            If character Is Nothing Then
+                txtCrewRecoveryMember.Text = "Select a crew member to view recovery details."
+                dgvCrewRecoveryVitals.ItemsSource = Nothing
+                lblCrewRecoveryStatus.Text = ""
+                Return
+            End If
+
+            Dim characterNode = FindCharacterNode(character.CharacterEntityId)
+            Dim propsNode = characterNode?.Element("props")
+            Dim vitalItems As New ObservableCollection(Of CrewRecoveryVital)
+
+            For Each vitalName In {"Health", "Food", "Rest", "Comfort", "Mood", "Temperature"}
+                AddCrewRecoveryVital(vitalItems, propsNode, vitalName)
+            Next
+
+            Dim oxygenNode = propsNode?.Element("Oxygen")
+            If oxygenNode IsNot Nothing Then
+                AddCrewRecoveryVital(vitalItems, propsNode, "Oxygen",
+                                     $"Reserve: {If(oxygenNode.Attribute("oxs")?.Value, "0")}")
+            End If
+            AddCrewRecoveryVital(vitalItems, propsNode, "Co2Gas", "Exposure")
+            AddCrewRecoveryVital(vitalItems, propsNode, "SmokeGas", "Exposure")
+            AddCrewRecoveryVital(vitalItems, propsNode, "HazardousGas", "Exposure")
+
+            txtCrewRecoveryMember.Text = $"{character.CharacterName} (Crew ID {character.CharacterEntityId})"
+            dgvCrewRecoveryVitals.ItemsSource = vitalItems
+        End Sub
+
+        Private Sub btnRestoreSelectedCrew_Click(sender As Object, e As RoutedEventArgs)
+            Dim character = GetSelectedCrewForRecovery()
+            If character Is Nothing Then Return
+            Try
+                RestoreCrewHealthAndNeeds(character)
+                RefreshCrewRecoverySummary(character)
+                MarkUnsavedChanges()
+                lblCrewRecoveryStatus.Text = $"Restored health and needs for {character.CharacterName}."
+            Catch ex As Exception
+                MessageBox.Show($"Could not restore crew: {ex.Message}", "Recovery Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub btnRestoreSelectedOxygen_Click(sender As Object, e As RoutedEventArgs)
+            Dim character = GetSelectedCrewForRecovery()
+            If character Is Nothing Then Return
+            Try
+                RestoreCrewOxygen(character)
+                RefreshSelectedCrewConditions(character)
+                MarkUnsavedChanges()
+                lblCrewRecoveryStatus.Text = $"Restored oxygen reserve and cleared gas exposure for {character.CharacterName}."
+            Catch ex As Exception
+                MessageBox.Show($"Could not restore oxygen: {ex.Message}", "Recovery Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub btnClearSelectedCrewConditions_Click(sender As Object, e As RoutedEventArgs)
+            Dim character = GetSelectedCrewForRecovery()
+            If character Is Nothing Then Return
+            ClearCrewConditions(character)
+            RefreshSelectedCrewConditions(character)
+            MarkUnsavedChanges()
+            lblCrewRecoveryStatus.Text = $"Cleared all conditions from {character.CharacterName}."
+        End Sub
+
+        Private Sub btnFullRecoverySelectedCrew_Click(sender As Object, e As RoutedEventArgs)
+            Dim character = GetSelectedCrewForRecovery()
+            If character Is Nothing Then Return
+            Try
+                RecoverCrew(character, True)
+                RefreshSelectedCrewConditions(character)
+                MarkUnsavedChanges()
+                lblCrewRecoveryStatus.Text = $"Applied full recovery to {character.CharacterName}."
+            Catch ex As Exception
+                MessageBox.Show($"Could not recover crew: {ex.Message}", "Recovery Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub btnBulkRecoverySelectAll_Click(sender As Object, e As RoutedEventArgs)
+            For Each item In bulkScheduleCrew
+                item.IsSelected = True
+            Next
+            lstBulkRecoveryCrew.Items.Refresh()
+        End Sub
+
+        Private Sub btnBulkRecoveryClear_Click(sender As Object, e As RoutedEventArgs)
+            For Each item In bulkScheduleCrew
+                item.IsSelected = False
+            Next
+            lstBulkRecoveryCrew.Items.Refresh()
+        End Sub
+
+        Private Sub ApplyBulkRecovery(clearConditions As Boolean)
+            Dim selectedCrew = bulkScheduleCrew.
+                Where(Function(item) item.IsSelected AndAlso item.Crew IsNot Nothing).
+                Select(Function(item) item.Crew).
+                ToList()
+            If selectedCrew.Count = 0 Then
+                MessageBox.Show("Check at least one crew member.", "Crew Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Try
+                For Each character In selectedCrew
+                    RecoverCrew(character, clearConditions)
+                Next
+                Dim currentCharacter = TryCast(lstCharacters.SelectedItem, Character)
+                RefreshSelectedCrewConditions(currentCharacter)
+                MarkUnsavedChanges()
+                lblBulkRecoveryStatus.Text =
+                    $"{If(clearConditions, "Fully recovered", "Restored")} {selectedCrew.Count} crew member(s)."
+            Catch ex As Exception
+                MessageBox.Show($"Could not recover selected crew: {ex.Message}", "Bulk Recovery Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub btnRestoreBulkCrew_Click(sender As Object, e As RoutedEventArgs)
+            ApplyBulkRecovery(False)
+        End Sub
+
+        Private Sub btnFullRecoveryBulkCrew_Click(sender As Object, e As RoutedEventArgs)
+            ApplyBulkRecovery(True)
+        End Sub
+
+        Private Sub ApplyAllCrewRecovery(clearConditions As Boolean)
+            Dim playerCrew = characters.
+                Where(Function(character)
+                          Dim characterNode = FindCharacterNode(character.CharacterEntityId)
+                          Return String.Equals(characterNode?.Attribute("side")?.Value,
+                                               "Player",
+                                               StringComparison.OrdinalIgnoreCase)
+                      End Function).
+                ToList()
+            If playerCrew.Count = 0 Then
+                MessageBox.Show("No active player crew members are loaded.", "No Crew",
+                                MessageBoxButton.OK, MessageBoxImage.Information)
+                Return
+            End If
+
+            Dim actionName = If(clearConditions, "fully recover", "restore the vitals of")
+            If MessageBox.Show($"Are you sure you want to {actionName} all {playerCrew.Count} active player crew members?",
+                               "Confirm Global Recovery", MessageBoxButton.YesNo,
+                               MessageBoxImage.Question) <> MessageBoxResult.Yes Then Return
+
+            Try
+                For Each character In playerCrew
+                    RecoverCrew(character, clearConditions)
+                Next
+                Dim currentCharacter = TryCast(lstCharacters.SelectedItem, Character)
+                RefreshSelectedCrewConditions(currentCharacter)
+                MarkUnsavedChanges()
+                lblBulkRecoveryStatus.Text =
+                    $"{If(clearConditions, "Fully recovered", "Restored the vitals of")} all {playerCrew.Count} active player crew member(s)."
+            Catch ex As Exception
+                MessageBox.Show($"Could not recover all crew: {ex.Message}", "Global Recovery Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub btnRestoreAllCrew_Click(sender As Object, e As RoutedEventArgs)
+            ApplyAllCrewRecovery(False)
+        End Sub
+
+        Private Sub btnFullRecoveryAllCrew_Click(sender As Object, e As RoutedEventArgs)
+            ApplyAllCrewRecovery(True)
+        End Sub
+
+        Private Sub btnApplyBulkGlobalSchedule_Click(sender As Object, e As RoutedEventArgs)
+            Dim selectedCrew = bulkScheduleCrew.Where(Function(item) item.IsSelected).ToList()
+            If selectedCrew.Count = 0 OrElse cmbBulkGlobalSchedule.SelectedValue Is Nothing Then
+                MessageBox.Show("Check at least one crew member and select a global schedule.", "Selection Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Try
+                Dim scheduleId = CInt(cmbBulkGlobalSchedule.SelectedValue)
+                For Each item In selectedCrew
+                    ApplyGlobalScheduleToCharacter(item.Crew, scheduleId)
+                    item.ScheduleDisplayName = GetGlobalScheduleDisplayName(scheduleId)
+                Next
+                lblBulkScheduleStatus.Text = $"Assigned {GetGlobalScheduleDisplayName(scheduleId)} to {selectedCrew.Count} crew members."
+                lstBulkScheduleCrew.Items.Refresh()
+                UpdateBulkScheduleCounts()
+                MarkUnsavedChanges()
+
+                Dim currentCharacter = TryCast(lstCharacters.SelectedItem, Character)
+                If currentCharacter IsNot Nothing AndAlso selectedCrew.Any(Function(item) item.Crew.CharacterEntityId = currentCharacter.CharacterEntityId) Then
+                    cmbCrewGlobalSchedule.SelectedValue = scheduleId
+                    dgvCrewSchedule.ItemsSource = New ObservableCollection(Of CrewScheduleSlot)(currentCharacter.CharacterSchedule)
+                    txtScheduleMode.Text = $"Currently follows {GetGlobalScheduleDisplayName(scheduleId)}."
+                End If
+            Catch ex As Exception
+                MessageBox.Show($"Could not apply bulk schedule: {ex.Message}", "Bulk Schedule Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub PopulateRelationshipTargetCombo(sourceCharacter As Character)
+            If sourceCharacter Is Nothing Then
+                cmbRelationshipTarget.ItemsSource = Nothing
+                Return
+            End If
+
+            cmbRelationshipTarget.ItemsSource = characters.
+                Where(Function(character) character.CharacterEntityId <> sourceCharacter.CharacterEntityId).
+                OrderBy(Function(character) character.CharacterName).
+                ToList()
+            If cmbRelationshipTarget.Items.Count > 0 Then cmbRelationshipTarget.SelectedIndex = 0
         End Sub
 
 
@@ -1714,9 +4028,7 @@ Namespace SpaceHavenEditor2
                         End If
                     Next
 
-                    If container.Items.Any() Then
-                        currentShipStorageContainers.Add(container)
-                    End If
+                    currentShipStorageContainers.Add(container)
                 End If
 
                 containerIndex += 1
@@ -1728,6 +4040,55 @@ Namespace SpaceHavenEditor2
             Else
                 dgvStorage.ItemsSource = Nothing
             End If
+            RefreshConsolidatedInventory()
+        End Sub
+
+        Private Sub RefreshConsolidatedInventory()
+            consolidatedInventory = currentShipStorageContainers.
+                SelectMany(Function(container)
+                               Return container.Items.Select(Function(item) New With {
+                                   .Container = container,
+                                   .Item = item
+                               })
+                           End Function).
+                GroupBy(Function(entry) entry.Item.ElementId).
+                Select(Function(group)
+                           Return New ConsolidatedInventoryItem With {
+                               .ElementId = group.Key,
+                               .TotalQuantity = group.Sum(Function(entry) entry.Item.Quantity),
+                               .ContainerCount = group.Select(Function(entry) entry.Container.DisplayName).Distinct().Count(),
+                               .Locations = String.Join(", ", group.Select(Function(entry) entry.Container.DisplayName).Distinct().OrderBy(Function(name) name))
+                           }
+                       End Function).
+                OrderBy(Function(item) item.Name).
+                ToList()
+            ApplyInventorySearch()
+        End Sub
+
+        Private Sub ApplyInventorySearch()
+            If dgvConsolidatedInventory Is Nothing Then Return
+            Dim searchText = If(txtInventorySearch?.Text, "").Trim()
+            Dim visibleItems = consolidatedInventory.AsEnumerable()
+            If Not String.IsNullOrWhiteSpace(searchText) Then
+                visibleItems = visibleItems.Where(Function(item)
+                                                      Return item.Name.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                                                             item.ElementId.ToString().Contains(searchText) OrElse
+                                                             item.Locations.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0
+                                                  End Function)
+            End If
+
+            Dim results = visibleItems.ToList()
+            dgvConsolidatedInventory.ItemsSource = results
+            Dim totalUnits = results.Sum(Function(item) item.TotalQuantity)
+            lblInventorySummary.Text = $"{results.Count} item types | {totalUnits} total units | {currentShipStorageContainers.Count} containers"
+        End Sub
+
+        Private Sub txtInventorySearch_TextChanged(sender As Object, e As TextChangedEventArgs)
+            ApplyInventorySearch()
+        End Sub
+
+        Private Sub btnClearInventorySearch_Click(sender As Object, e As RoutedEventArgs)
+            txtInventorySearch.Text = ""
         End Sub
 
 
@@ -1907,6 +4268,7 @@ Namespace SpaceHavenEditor2
 
             ' Mark as unsaved
             MarkUnsavedChanges()
+            RefreshConsolidatedInventory()
             MessageBox.Show($"{quantity}x {itemName} added/updated in {selectedContainer.DisplayName} (in memory). Use File > Save to make permanent.", "Item Added/Updated", MessageBoxButton.OK, MessageBoxImage.Information)
         End Sub
 
@@ -1946,6 +4308,7 @@ Namespace SpaceHavenEditor2
                 dgvStorage.ItemsSource = Nothing : dgvStorage.ItemsSource = selectedContainer.Items.OrderBy(Function(item) item.Name).ToList() ' Refresh grid
                 ' Mark as unsaved
                 MarkUnsavedChanges()
+                RefreshConsolidatedInventory()
                 MessageBox.Show($"{selectedStorageItem.Name} removed from {selectedContainer.DisplayName} (in memory). Use File > Save to make permanent.", "Item Deleted", MessageBoxButton.OK, MessageBoxImage.Information)
             End If
         End Sub
@@ -1960,9 +4323,16 @@ Namespace SpaceHavenEditor2
             txtRelationshipPageInfo.Text = "Page 0 of 0" ' Clear Paging Label
             btnRelPrev.IsEnabled = False
             btnRelNext.IsEnabled = False
+            cmbRelationshipTarget.ItemsSource = Nothing
+            dgvCrewSchedule.ItemsSource = Nothing
+            txtScheduleMode.Text = ""
             cmb_addTrait.ItemsSource = Nothing
-
-
+            txtCrewRecoveryMember.Text = "Select a crew member to view recovery details."
+            dgvCrewRecoveryVitals.ItemsSource = Nothing
+            lblCrewRecoveryStatus.Text = ""
+            txtCrewLoadoutMember.Text = "Select a crew member to view their loadout."
+            PopulateLoadoutControls(New LoadoutTemplate(), True)
+            lblCrewLoadoutStatus.Text = ""
         End Sub
 
         Private Sub UpdateXmlWithShipSize(shipToUpdate As Ship)
@@ -2004,6 +4374,16 @@ Namespace SpaceHavenEditor2
                 Return
             End If
             Dim selectedShip = CType(cmb_ships.SelectedItem, Ship)
+            If selectedShip.IsStation Then
+                MessageBox.Show("Station dimensions are protected. Changing only sx/sy can damage the station map and tile data.",
+                                "Station Size Protected", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            If Not selectedShip.IsPlayerOwned Then
+                MessageBox.Show("NPC and derelict ship sizes are read-only.", "Structure Protected",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
 
             ' Pass current Sx and Sy to the constructor
             Dim updateWindow As New UpdateShipSizeWindow(selectedShip.Sx, selectedShip.Sy)
@@ -2210,11 +4590,132 @@ Namespace SpaceHavenEditor2
             PopulateAddTraitComboBox(selectedCharacter)
         End Sub
 
+        Private Sub PopulateBulkTraitOptions(shipSid As Integer)
+            If lstBulkTraits Is Nothing Then Return
+            lstBulkTraits.ItemsSource = IdCollection.DefaultTraitIDs.
+                OrderBy(Function(pair) pair.Value).
+                ToList()
+
+            Dim ship = ships.FirstOrDefault(Function(item) item.Sid = shipSid)
+            Dim crewCount = characters.Where(Function(character) character.ShipSid = shipSid).Count()
+            If ship Is Nothing OrElse shipSid = -1 Then
+                lblBulkTraitsShip.Text = "Select a ship or station in Crew Editor."
+            Else
+                lblBulkTraitsShip.Text = $"Target: {ship.DisplayName} ({crewCount} crew member(s))."
+            End If
+            lblBulkTraitsStatus.Text = ""
+        End Sub
+
+        Private Function GetBulkTraitTargetCrew() As List(Of Character)
+            Dim selectedShip = TryCast(cmbCrewShip.SelectedItem, Ship)
+            If selectedShip Is Nothing OrElse selectedShip.Sid = -1 Then Return New List(Of Character)
+            Return characters.
+                Where(Function(character) character.ShipSid = selectedShip.Sid).
+                OrderBy(Function(character) character.CharacterName).
+                ToList()
+        End Function
+
+        Private Function GetOrCreateTraitsNode(character As Character) As XElement
+            Dim characterNode = FindCharacterNode(character.CharacterEntityId)
+            Dim persNode = characterNode?.Element("pers")
+            If persNode Is Nothing Then Return Nothing
+
+            Dim traitsNode = persNode.Element("traits")
+            If traitsNode Is Nothing Then
+                traitsNode = New XElement("traits")
+                persNode.Add(traitsNode)
+            End If
+            Return traitsNode
+        End Function
+
+        Private Function AddTraitToCharacter(character As Character, traitId As Integer, traitName As String) As Boolean
+            If character Is Nothing Then Return False
+            If character.CharacterTraits.Any(Function(trait) trait.Id = traitId) Then Return False
+
+            character.CharacterTraits.Add(New DataProp With {.Id = traitId, .Name = traitName})
+            Dim traitsNode = GetOrCreateTraitsNode(character)
+            If traitsNode IsNot Nothing Then
+                traitsNode.Add(New XElement("t", New XAttribute("id", traitId)))
+            End If
+            Return True
+        End Function
+
+        Private Sub RefreshCurrentTraitEditorIfNeeded(targetCrew As IEnumerable(Of Character))
+            Dim selectedCharacter = TryCast(lstCharacters.SelectedItem, Character)
+            If selectedCharacter Is Nothing Then Return
+            If Not targetCrew.Any(Function(character) character.CharacterEntityId = selectedCharacter.CharacterEntityId) Then Return
+
+            dgvTraits.ItemsSource = Nothing
+            dgvTraits.ItemsSource = New ObservableCollection(Of DataProp)(selectedCharacter.CharacterTraits)
+            PopulateAddTraitComboBox(selectedCharacter)
+        End Sub
+
+        Private Sub btnBulkAddTraits_Click(sender As Object, e As RoutedEventArgs)
+            Dim targetCrew = GetBulkTraitTargetCrew()
+            If targetCrew.Count = 0 Then
+                MessageBox.Show("Select a ship or station with crew in Crew Editor first.", "No Crew",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            If lstBulkTraits.SelectedItems.Count = 0 Then
+                MessageBox.Show("Select one or more traits to add.", "No Traits Selected",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Dim selectedTraits = lstBulkTraits.SelectedItems.
+                Cast(Of KeyValuePair(Of Integer, String)).
+                ToList()
+            Dim additions = 0
+            For Each character In targetCrew
+                For Each selectedTrait In selectedTraits
+                    If AddTraitToCharacter(character, selectedTrait.Key, selectedTrait.Value) Then
+                        additions += 1
+                    End If
+                Next
+            Next
+
+            RefreshCurrentTraitEditorIfNeeded(targetCrew)
+            MarkUnsavedChanges()
+            lblBulkTraitsStatus.Text =
+                $"Added {selectedTraits.Count} selected trait(s) across {targetCrew.Count} crew member(s). New trait entries added: {additions}. Existing traits were skipped."
+        End Sub
+
+        Private Sub btnBulkClearTraits_Click(sender As Object, e As RoutedEventArgs)
+            Dim targetCrew = GetBulkTraitTargetCrew()
+            If targetCrew.Count = 0 Then
+                MessageBox.Show("Select a ship or station with crew in Crew Editor first.", "No Crew",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            If MessageBox.Show($"Clear all traits from {targetCrew.Count} crew member(s) on the selected ship/station?",
+                               "Confirm Clear Traits", MessageBoxButton.YesNo,
+                               MessageBoxImage.Warning) <> MessageBoxResult.Yes Then Return
+
+            Dim removed = 0
+            For Each character In targetCrew
+                removed += character.CharacterTraits.Count
+                character.CharacterTraits.Clear()
+                Dim traitsNode = GetOrCreateTraitsNode(character)
+                traitsNode?.RemoveNodes()
+            Next
+
+            RefreshCurrentTraitEditorIfNeeded(targetCrew)
+            MarkUnsavedChanges()
+            lblBulkTraitsStatus.Text =
+                $"Cleared {removed} trait entry/entries from {targetCrew.Count} crew member(s). Use File > Save to make it permanent."
+        End Sub
+
         ' --- Clear UI Helpers ---
         Private Sub ClearUI()
+            lbl_structureType.Text = "Structure Type: "
             lbl_owner.Text = "Owner: "
             lbl_shipSize.Text = "Size: "
             lbl_CanvasSize.Text = "Canvas Size: "
+            txtStructureName.Text = ""
+            btnRenameStructure.IsEnabled = False
+            btn_updateSize.IsEnabled = False
+            pnlStationInfo.Visibility = Visibility.Collapsed
             lstCharacters.ItemsSource = Nothing
             ClearDataGrids()
             txtCrewCount.Text = "Total Crew: N/A"
@@ -2230,9 +4731,12 @@ Namespace SpaceHavenEditor2
         Private Sub ClearStorageDisplay()
             cmbStorageContainers.ItemsSource = Nothing
             dgvStorage.ItemsSource = Nothing
+            dgvConsolidatedInventory.ItemsSource = Nothing
             currentShipStorageContainers.Clear() ' Clear internal list too
+            consolidatedInventory.Clear()
             CurrentContainerItems = Nothing
             txtContainerInfo.Text = "(Select Container)"
+            lblInventorySummary.Text = "0 item types | 0 total units | 0 containers"
         End Sub
         Private Sub ClearStorageGrid() ' Renamed from previous ambiguous name
             dgvStorage.ItemsSource = Nothing
@@ -2440,6 +4944,7 @@ Namespace SpaceHavenEditor2
 
                                                       ' Mark as unsaved
                                                       MarkUnsavedChanges()
+                                                      RefreshConsolidatedInventory()
 
                                                       ' --- ADDED: Update total count label ---
                                                       UpdateContainerInfoText(CurrentContainerItems)
@@ -2540,8 +5045,8 @@ Namespace SpaceHavenEditor2
         Private Function GenerateHelpText() As String
             Dim sb As New System.Text.StringBuilder()
 
-            sb.AppendLine("Moragar's Space Haven Save Editor - Help & Instructions")
-            sb.AppendLine("======================================================")
+            sb.AppendLine("Moragar's Space Haven Save Editor v2.1 - Help & Instructions")
+            sb.AppendLine("============================================================")
             sb.AppendLine() ' Blank line for spacing
 
             sb.AppendLine("*** DISCLAIMER ***")
@@ -2553,129 +5058,141 @@ Namespace SpaceHavenEditor2
             sb.AppendLine() ' Blank line for spacing
 
 
-            sb.AppendLine("--- Getting Started ---")
-            sb.AppendLine("- Three Editors in One: The application includes three separate editors accessible via tabs:")
-            sb.AppendLine("  - Save Game Editor: Edit existing save games (default tab)")
-            sb.AppendLine("  - Game Start Editor: Set difficulty settings for new game creation")
-            sb.AppendLine("  - Blueprint Manager: Clone and transfer ship blueprints between save games")
-            sb.AppendLine("- File -> Open: Use this to load your Space Haven save game.")
-            sb.AppendLine("  - Navigate to your save game folder. The typical path is:")
-            sb.AppendLine("    Steam\steamapps\common\SpaceHaven\savegames\[YourSaveGameName]\save\")
-            sb.AppendLine("  - Select the file named 'game' (it usually has no file extension).")
-            sb.AppendLine("  - NOTE: If you set a default save location in Settings, the file dialog will")
-            sb.AppendLine("    automatically open to that directory each time you use File -> Open.")
-            sb.AppendLine("- Backups: If enabled in Settings, a timestamped backup of your save folder")
-            sb.AppendLine("    (e.g., '[YourSaveGameName]_backup_YYYYMMDDHHMMSS') will be created")
-            sb.AppendLine("    automatically in the 'savegames' directory *each time* you open a file.")
-            sb.AppendLine("    This is highly recommended to prevent data loss!")
-            sb.AppendLine("- File -> Save: IMPORTANT! Click this after making edits to permanently write")
-            sb.AppendLine("    your changes back to the 'game' file.")
-            sb.AppendLine("- File -> Exit: Closes the editor. Any unsaved changes will be lost.")
-            sb.AppendLine("- Edit -> Settings: Opens the Settings window where you can:")
-            sb.AppendLine("    - Toggle automatic backups")
-            sb.AppendLine("    - Set a default 'open' save location directory")
-            sb.AppendLine("- Help -> Help / Instructions: Shows this information again.")
-            sb.AppendLine("- Help -> About: Shows application version and credits.")
+            sb.AppendLine("--- Core Workflow ---")
+            sb.AppendLine("- File -> Open loads a Space Haven save file named 'game'.")
+            sb.AppendLine("- File -> Save writes the loaded save back to disk. Most editor pages change memory first.")
+            sb.AppendLine("- Edit -> Settings controls automatic backups, default save folder, and scenario folder behavior.")
+            sb.AppendLine("- Watch the Unsaved Changes indicators at the top of the window.")
+            sb.AppendLine("- Run Save Integrity after large edits, bulk actions, or ship imports.")
             sb.AppendLine()
 
-            sb.AppendLine("--- Editing Your Save ---")
-            sb.AppendLine("- Global Settings (Top Section):")
-            sb.AppendLine("  - Player Credits: Enter the desired amount of credits.")
-            sb.AppendLine("  - Sandbox Mode: Check or uncheck to enable/disable sandbox mode.")
-            sb.AppendLine("  - Player Prestige Points: Enter the desired amount of Exodus Fleet Prestige Points")
-            sb.AppendLine("  - NOTE: Changes here are applied to memory only when you click File -> Save.")
-            sb.AppendLine("- Ship Selection (Middle Section):")
-            sb.AppendLine("  - Use the dropdown to select the specific ship you want to view or edit.")
-            sb.AppendLine("  - Basic info like Owner and Size is shown below the dropdown.")
-            sb.AppendLine("  - Update Size Button: Allows changing the selected ship's dimensions (Sx, Sy values).")
-            sb.AppendLine("      - The 'Canvas Size' shows the size in buildable grid squares (Sx/28 x Sy/28).")
-            sb.AppendLine("      - Max recommended Canvas Size is 8W x 8H squares (Sx=224, Sy=224).")
-            sb.AppendLine() ' Blank line for spacing
-            sb.AppendLine("      - **WARNING:** Significantly increasing ship size might cause graphical glitches")
-            sb.AppendLine("        or conflicts with other ships/stations in-game. Use with caution!")
-            sb.AppendLine("      - Ship size changes save immediately to memory and require File -> Save.")
-            sb.AppendLine("- Main Tabs (Crew / Storage):")
-            sb.AppendLine("  - Select the 'Crew' or 'Storage' tab to edit details for the currently selected ship.")
+            sb.AppendLine("--- Left Navigation Overview ---")
+            sb.AppendLine("- GLOBAL: Save Settings, Difficulty and World Rules, Research, Datalog Unlocks, and Factions.")
+            sb.AppendLine("- SHIPS AND STATIONS: Structures, Storage, and Ship Import and Export.")
+            sb.AppendLine("- CREW: Crew Editor, Global Schedule Designer, New Crew Member, and Bulk Operations.")
+            sb.AppendLine("- ADVANCED: Save Integrity.")
+            sb.AppendLine("- GAME START: Game Start Editor for custom start-template XML files.")
             sb.AppendLine()
 
-            sb.AppendLine("--- Crew Tab Details ---")
-            sb.AppendLine("- Crew List (Left): Select a crew member. The list shows names; total count is above.")
-            sb.AppendLine("- Create New Crew Member: Button below the list opens a window to add a new character.")
-            sb.AppendLine("    You can customize their name, stats, and traits before creation.")
-            sb.AppendLine("    - You can now pick the crew member that is being cloned (template user).")
-            sb.AppendLine("    - NOTE: Right now, cloning a current crew member and assigning a new ID for it is")
-            sb.AppendLine("      the most reliable way to make this work.")
-            sb.AppendLine("- Bulk Operations (Menu -> Bulk):")
-            sb.AppendLine("  - Create X amount of crew from a template crew member:")
-            sb.AppendLine("    * Select a crew member to use as the template")
-            sb.AppendLine("    * All crew members created this way will be the same as the template crew,")
-            sb.AppendLine("      except for name and attributes")
-            sb.AppendLine("    * Names are pulled from an AI-generated list of Sci-Fi names")
-            sb.AppendLine("  - Bulk Attributes: Set X amount of attributes for all crew on the selected ship")
-            sb.AppendLine("    to the same amount")
-            sb.AppendLine("  - Bulk Skills: Set X amount of skills for all crew on the selected ship")
-            sb.AppendLine("    to the same amount")
-            sb.AppendLine("- Editing Tabs (Right - Attributes, Skills, Traits, Conditions, Relationships):")
-            sb.AppendLine("  - Attributes/Skills: Double-click a cell in the 'Value' or 'Level' column to edit.")
-            sb.AppendLine("      Type the new number and press Enter or click another row to confirm the change.")
-            sb.AppendLine("      Use the 'Set All...' buttons for quick presets (these affect ALL characters")
-            sb.AppendLine("      and save immediately to memory - use File -> Save to make permanent).")
-            sb.AppendLine("  - Traits: Select a trait from the dropdown, click 'Add Trait'. To remove, select a trait")
-            sb.AppendLine("      in the grid above, then click 'Delete Trait'.")
-            sb.AppendLine("  - Conditions: Shows current status effects/injuries. Select one and click")
-            sb.AppendLine("      'Delete Selected Condition' to remove it.")
-            sb.AppendLine("  - Relationships: Shows how the selected character feels about others. Edit the")
-            sb.AppendLine("      Friendship, Attraction, or Compatibility values by double-clicking the cell,")
-            sb.AppendLine("      typing a new number, and pressing Enter or changing rows.")
-            sb.AppendLine("  - NOTE: Adding crew, editing grids (Attributes, Skills, Relationships), or changing")
-            sb.AppendLine("      Traits/Conditions requires using File -> Save to make permanent.")
+            sb.AppendLine("--- Save Settings ---")
+            sb.AppendLine("- Edit Player Credits, Prestige Points, and Sandbox Mode for the loaded save.")
+            sb.AppendLine("- Click Update Global Settings to place those values into memory.")
+            sb.AppendLine("- Use File -> Save to make the changes permanent.")
             sb.AppendLine()
 
-            sb.AppendLine("--- Storage Tab Details ---")
-            sb.AppendLine("- Container Selection: Choose a specific storage container (e.g., 'Storage (Type: storageMedium) - 1')")
-            sb.AppendLine("    from the dropdown. The 'Total Items' count for that container is shown next to it.")
-            sb.AppendLine("- Item Grid: Shows items in the selected container.")
-            sb.AppendLine("- Edit Quantity: Double-click a cell in the 'Quantity' column, type the new amount,")
-            sb.AppendLine("    and press Enter or change row to confirm. Setting quantity to 0 removes the stack on save.")
-            sb.AppendLine("- Add Item: Below the grid, select an item category, then the specific item. Enter the")
-            sb.AppendLine("    desired quantity and click 'Add to Container'.")
-            sb.AppendLine("- Delete Item Stack: Select a row in the grid and click 'Delete Selected'.")
-            sb.AppendLine("- NOTE: All storage changes (adding, deleting, editing quantity) require File -> Save.")
+            sb.AppendLine("--- Difficulty and World Rules ---")
+            sb.AppendLine("- Adjust save-level difficulty values such as Mood Difficulty, NPC Targeting, and Quest Difficulty.")
+            sb.AppendLine("- Toggle relationship/world flags such as Enemies, Friends, Lovers, Wear and Tear, and Rebuilding Costs.")
+            sb.AppendLine("- Edit world frequencies and abundance values such as Monster, Robot, Solar Flare, Meteor, Derelict, Derelict Loot, Asteroid / Resource Abundance, and Travel Threat Level.")
+            sb.AppendLine("- Existing or modded values are preserved in the dropdowns when possible.")
+            sb.AppendLine("- Click Update Difficulty and World Rules, then use File -> Save.")
+            sb.AppendLine()
+
+            sb.AppendLine("--- Research ---")
+            sb.AppendLine("- The Research page shows every technology state found in the loaded save.")
+            sb.AppendLine("- Stages shows completed research stages, such as 1/2.")
+            sb.AppendLine("- Progress Level 1/2/3 shows raw Space Haven research block counters, not percentages.")
+            sb.AppendLine("- Complete Selected finishes one technology and removes it from the queue.")
+            sb.AppendLine("- Reset Selected clears a technology's stage, block, and task progress.")
+            sb.AppendLine("- Complete All Research marks every listed technology complete and clears the queue.")
+            sb.AppendLine("- Use Move Up, Move Down, Remove, Add Selected Technology to Queue, and Clear Queue to manage the research queue.")
+            sb.AppendLine()
+
+            sb.AppendLine("--- Datalog Unlocks ---")
+            sb.AppendLine("- Lists datalog IDs known to the editor plus additional IDs already present in the loaded save.")
+            sb.AppendLine("- Select All and Clear Selection manage checked rows.")
+            sb.AppendLine("- Unlock Selected makes checked logs available in the save.")
+            sb.AppendLine("- Reset Selected removes checked logs from the unlocked list.")
+            sb.AppendLine("- Unlock All Logs unlocks every listed datalog.")
+            sb.AppendLine("- Resetting a datalog does not delete world objects or cryo-log names.")
+            sb.AppendLine()
+
+            sb.AppendLine("--- Factions ---")
+            sb.AppendLine("- Shows player-facing faction reputation rows.")
+            sb.AppendLine("- Edit Reputation, Stance, Patience, access flags, and Settlement Debt.")
+            sb.AppendLine("- Enemy Preset, Neutral Preset, Friendly Preset, and Full Access quickly fill common values.")
+            sb.AppendLine("- Click Apply Selected Faction for the selected row, then use File -> Save.")
+            sb.AppendLine()
+
+            sb.AppendLine("--- Structures ---")
+            sb.AppendLine("- Select ships and stations in the current sector.")
+            sb.AppendLine("- Enable Show NPC and derelict ships if you need to inspect non-player structures.")
+            sb.AppendLine("- View structure type, owner, raw size, and canvas size.")
+            sb.AppendLine("- Rename changes the selected ship or station name.")
+            sb.AppendLine("- Update Size changes ship dimensions. Station size settings are protected because changing them can damage the save.")
+            sb.AppendLine("**WARNING:** Large ship sizes can cause graphics, pathing, docking, and placement problems in-game.")
+            sb.AppendLine()
+
+            sb.AppendLine("--- Storage ---")
+            sb.AppendLine("- Inventory Overview searches all containers on the selected ship or station and summarizes total item quantities and locations.")
+            sb.AppendLine("- Containers lets you choose a specific container, edit item quantities, add items, or delete selected stacks.")
+            sb.AppendLine("- Setting a quantity to 0 removes that stack when saved.")
+            sb.AppendLine("- All storage changes require File -> Save.")
+            sb.AppendLine()
+
+            sb.AppendLine("--- Ship Import and Export ---")
+            sb.AppendLine("- Export Ship Blueprint reads a source save, lets you select a ship, and writes a blueprint XML file.")
+            sb.AppendLine("- Delete Selected Ship removes the selected source ship from the source save workflow when used.")
+            sb.AppendLine("- Import Ship Blueprint uses a blueprint XML file and a target save file.")
+            sb.AppendLine("- Import as Blueprint keeps the hull plan and excludes facilities, crew, robots, and items.")
+            sb.AppendLine("- Importing full ships into crowded sectors can cause in-game space conflicts. Back up first.")
+            sb.AppendLine()
+
+            sb.AppendLine("--- Crew Editor ---")
+            sb.AppendLine("- Select a ship or station, then select a crew member.")
+            sb.AppendLine("- Attributes: edit attribute values or use Set All Attributes for the current character.")
+            sb.AppendLine("- Skills: edit current and max skill levels, or set all current/max skills for the current character.")
+            sb.AppendLine("- Traits: add traits from the list or delete selected traits.")
+            sb.AppendLine("- Conditions: delete selected injuries, buffs, debuffs, or other active conditions.")
+            sb.AppendLine("- Recovery: restore health and needs, restore oxygen, clear all conditions, or run Full Recovery for the selected crew member.")
+            sb.AppendLine("- Loadout: assign headgear, armor, weapons, attachment, and pocket items; optionally use best available armor or primary weapon quality.")
+            sb.AppendLine("- Relationships: add or update directional Friendship, Attraction, and Compatibility values between -100 and 100.")
+            sb.AppendLine("- Schedules: assign a global schedule or apply a custom 24-hour schedule to the selected crew member.")
+            sb.AppendLine()
+
+            sb.AppendLine("--- Global Schedule Designer ---")
+            sb.AppendLine("- Create or duplicate reusable global schedules.")
+            sb.AppendLine("- Rename schedules and edit each hour's activity as Work, Leisure, or Sleep.")
+            sb.AppendLine("- Click Apply Schedule Changes, then use File -> Save.")
+            sb.AppendLine()
+
+            sb.AppendLine("--- New Crew Member ---")
+            sb.AppendLine("- Select a target ship or station and a template crew member.")
+            sb.AppendLine("- Enter the new crew name, then adjust Attributes, Skills, and Traits.")
+            sb.AppendLine("- The template supplies required XML structure; conditions, relationships, and bed assignment are cleared.")
+            sb.AppendLine("- Click Create Crew Member, then use File -> Save.")
+            sb.AppendLine()
+
+            sb.AppendLine("--- Bulk Operations ---")
+            sb.AppendLine("- Add Bulk Crew creates multiple crew members from a selected template crew member.")
+            sb.AppendLine("- Bulk Character Stats sets attributes, current skills, max skills, or current skills to max for all characters.")
+            sb.AppendLine("- Bulk Traits adds selected traits to all crew on the current ship or station, or clears all traits from that crew.")
+            sb.AppendLine("- Bulk Schedules assigns a selected global schedule to checked crew.")
+            sb.AppendLine("- Bulk Recovery restores checked crew, fully recovers checked crew, restores all active player crew vitals, or fully recovers all active player crew.")
+            sb.AppendLine("- Bulk Loadouts creates, saves, renames, and deletes named loadout configurations, then applies a selected configuration to checked crew.")
+            sb.AppendLine()
+
+            sb.AppendLine("--- Save Integrity ---")
+            sb.AppendLine("- Scans primary IDs, relationships, global schedules, known ship references, and ID counters.")
+            sb.AppendLine("- Critical findings block saving until reviewed.")
+            sb.AppendLine("- Use Select Repairable, Clear Selection, and Apply Selected Repairs to control exactly which fixes are applied.")
+            sb.AppendLine("- Repairs are applied only when you select and approve them.")
             sb.AppendLine()
 
             sb.AppendLine("--- Game Start Editor ---")
-            sb.AppendLine("- Accessible via the tab at the top of the editor")
-            sb.AppendLine("- Allows you to set difficulty settings parameters at the start of new game creation")
-            sb.AppendLine("- Step-by-step instructions:")
-            sb.AppendLine("  1. Go through the start game process in Space Haven")
-            sb.AppendLine("  2. Click 'Save Custom Game Template' in the difficulty start settings")
-            sb.AppendLine("  3. Open that XML file using File -> Open in the Game Start Editor tab")
-            sb.AppendLine("  4. Change the parameters as desired")
-            sb.AppendLine("  5. Save your changes using File -> Save")
-            sb.AppendLine()
-
-            sb.AppendLine("--- Blueprint Manager ---")
-            sb.AppendLine("- Accessible via the tab at the top of the editor")
-            sb.AppendLine("- Allows you to clone a ship blueprint to transfer between save games")
-            sb.AppendLine("- Export Options:")
-            sb.AppendLine("  - Export with items: Includes the ship blueprint along with all items on the ship")
-            sb.AppendLine("  - Export blueprint only: Just the ship blueprint structure without items")
-            sb.AppendLine("- Step-by-step instructions:")
-            sb.AppendLine("  1. Open your current save game in the Save Game Editor tab")
-            sb.AppendLine("  2. Switch to the Blueprint Manager tab")
-            sb.AppendLine("  3. Select the ship you want to export from the dropdown")
-            sb.AppendLine("  4. Choose whether to export with items or blueprint only")
-            sb.AppendLine("  5. Click 'Export Blueprint' and save the file")
-            sb.AppendLine("  6. Open your new save game (or a different save) in the Save Game Editor tab")
-            sb.AppendLine("  7. Switch back to the Blueprint Manager tab")
-            sb.AppendLine("  8. Click 'Import Blueprint' and select the exported file")
-            sb.AppendLine("  - WARNING: Be careful on import - if you have 2 big ships, you may run into space")
-            sb.AppendLine("    issues in the game world.")
+            sb.AppendLine("- In Space Haven, start a new game, choose mode and difficulty, then save the difficulty file as a custom template.")
+            sb.AppendLine("- Click Load File to open that custom Game Start XML file.")
+            sb.AppendLine("- Set Scenario Folder if you want the editor to remember where those templates live.")
+            sb.AppendLine("- Edit relationships, sandbox mode, crew count, max crew, max resources, max items, and hangar population.")
+            sb.AppendLine("- Use the Resources and Items tabs to add, edit, or delete starting resources and items.")
+            sb.AppendLine("- Click Save Changes to write the custom template XML.")
             sb.AppendLine()
 
             sb.AppendLine("--- Final Reminder ---")
-            sb.AppendLine("- Don't forget File -> Save! Most edits only change the data in memory until saved.")
-            sb.AppendLine("- Keep backups of your original save files just in case!")
+            sb.AppendLine("- Keep manual backups of saves before experimenting.")
+            sb.AppendLine("- File -> Save is required for loaded-save edits.")
+            sb.AppendLine("- Game Start Editor uses Save Changes for custom template XML files.")
+            sb.AppendLine("- After blueprint imports, bulk changes, or repairs, run Save Integrity before loading the save in Space Haven.")
 
             Return sb.ToString()
         End Function
@@ -2927,8 +5444,15 @@ Namespace SpaceHavenEditor2
         ' --- ADDED: Handler for Create New Crew Button ---
 
         Private Sub btnAddNewCrew_Click(sender As Object, e As RoutedEventArgs)
+            Dim selectedCrewShip = TryCast(cmbCrewShip.SelectedItem, Ship)
+            mainNavigationTabs.SelectedItem = navNewCrewMember
+            If selectedCrewShip IsNot Nothing AndAlso selectedCrewShip.Sid <> -1 Then
+                cmbNewCrewShip.SelectedValue = selectedCrewShip.Sid
+            End If
+            Return
+
             ' Ensure a ship is selected and XML is loaded
-            If cmb_ships.SelectedItem Is Nothing OrElse TryCast(cmb_ships.SelectedItem, Ship)?.Sid = -1 Then
+            If cmbCrewShip.SelectedItem Is Nothing OrElse TryCast(cmbCrewShip.SelectedItem, Ship)?.Sid = -1 Then
                 MessageBox.Show("Please select a ship first before adding crew.", "No Ship Selected", MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -2937,7 +5461,7 @@ Namespace SpaceHavenEditor2
                 Return
             End If
 
-            Dim selectedShip = TryCast(cmb_ships.SelectedItem, Ship)
+            Dim selectedShip = TryCast(cmbCrewShip.SelectedItem, Ship)
             Dim shipElement = xmlDoc.Descendants("ship").FirstOrDefault(Function(s) s.Attribute("sid")?.Value = selectedShip.Sid.ToString())
             Dim charactersNode = shipElement?.Element("characters")
 
@@ -3152,58 +5676,297 @@ Namespace SpaceHavenEditor2
             End Try
         End Sub
 
+        Private Function FindCharacterNode(entityId As Integer) As XElement
+            Return xmlDoc?.Root?.Element("ships")?.
+                Elements("ship").
+                Elements("characters").
+                Elements("c").
+                FirstOrDefault(Function(characterNode) characterNode.Attribute("entId")?.Value = entityId.ToString())
+        End Function
+
+        Private Function ValuesAreValid(friendship As Integer, attraction As Integer, compatibility As Integer) As Boolean
+            Return friendship >= -100 AndAlso friendship <= 100 AndAlso
+                   attraction >= -100 AndAlso attraction <= 100 AndAlso
+                   compatibility >= -100 AndAlso compatibility <= 100
+        End Function
+
+        Private Function GetOrCreateRelationshipsNode(characterNode As XElement) As XElement
+            Dim persNode = characterNode?.Element("pers")
+            If persNode Is Nothing Then Return Nothing
+
+            Dim socialityNode = persNode.Element("sociality")
+            If socialityNode Is Nothing Then
+                socialityNode = New XElement("sociality")
+                persNode.Add(socialityNode)
+            End If
+
+            Dim relationshipsNode = socialityNode.Element("relationships")
+            If relationshipsNode Is Nothing Then
+                relationshipsNode = New XElement("relationships")
+                socialityNode.Add(relationshipsNode)
+            End If
+            Return relationshipsNode
+        End Function
+
+        Private Sub WriteRelationshipToXml(sourceCharacter As Character, relationship As RelationshipInfo)
+            If sourceCharacter Is Nothing OrElse relationship Is Nothing Then Return
+            If Not ValuesAreValid(relationship.Friendship, relationship.Attraction, relationship.Compatibility) Then
+                Throw New ArgumentOutOfRangeException("relationship", "Relationship values must be between -100 and 100.")
+            End If
+
+            Dim characterNode = FindCharacterNode(sourceCharacter.CharacterEntityId)
+            Dim relationshipsNode = GetOrCreateRelationshipsNode(characterNode)
+            If relationshipsNode Is Nothing Then Throw New InvalidOperationException("Could not locate the selected character's <pers> node.")
+
+            Dim relElement = relationshipsNode.Elements("l").
+                FirstOrDefault(Function(node) node.Attribute("targetId")?.Value = relationship.TargetId.ToString())
+            If relElement Is Nothing Then
+                relElement = New XElement("l", New XAttribute("targetId", relationship.TargetId))
+                relationshipsNode.Add(relElement)
+            End If
+
+            relElement.SetAttributeValue("friendship", relationship.Friendship)
+            relElement.SetAttributeValue("attraction", relationship.Attraction)
+            relElement.SetAttributeValue("compatibility", relationship.Compatibility)
+        End Sub
+
+        Private Sub cmbNewCrewShip_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+            RefreshEmbeddedNewCrewTemplates()
+        End Sub
+
+        Private Sub RefreshEmbeddedNewCrewTemplates()
+            If cmbNewCrewTemplate Is Nothing Then Return
+            Dim selectedShip = TryCast(cmbNewCrewShip.SelectedItem, Ship)
+            Dim availableCharacters As List(Of Character) = If(
+                selectedShip Is Nothing OrElse selectedShip.Sid = -1,
+                New List(Of Character)(),
+                characters.Where(Function(character) character.ShipSid = selectedShip.Sid).
+                           OrderBy(Function(character) character.CharacterName).
+                           ToList())
+
+            cmbNewCrewTemplate.ItemsSource = availableCharacters
+            If availableCharacters.Count > 0 Then cmbNewCrewTemplate.SelectedIndex = 0
+            lblEmbeddedNewCrewStatus.Text = If(
+                selectedShip Is Nothing OrElse selectedShip.Sid = -1,
+                "Select a target ship or station.",
+                If(availableCharacters.Count = 0,
+                   "This structure has no crew member available to use as a template.",
+                   $"{availableCharacters.Count} template crew member(s) available."))
+        End Sub
+
+        Private Sub btnSetEmbeddedNewAttributes_Click(sender As Object, e As RoutedEventArgs)
+            For Each attribute In embeddedNewCrewAttributes
+                attribute.Value = 10
+            Next
+            dgvEmbeddedNewAttributes.Items.Refresh()
+        End Sub
+
+        Private Sub btnSetEmbeddedNewSkills_Click(sender As Object, e As RoutedEventArgs)
+            For Each skill In embeddedNewCrewSkills
+                skill.Value = 10
+            Next
+            dgvEmbeddedNewSkills.Items.Refresh()
+        End Sub
+
+        Private Sub btnAddEmbeddedNewTrait_Click(sender As Object, e As RoutedEventArgs)
+            If cmbEmbeddedAvailableTraits.SelectedValue Is Nothing Then Return
+            Dim traitId = CInt(cmbEmbeddedAvailableTraits.SelectedValue)
+            If embeddedNewCrewTraits.Any(Function(trait) trait.Id = traitId) Then Return
+            Dim selectedTrait = DirectCast(cmbEmbeddedAvailableTraits.SelectedItem, KeyValuePair(Of Integer, String))
+            embeddedNewCrewTraits.Add(New DataProp With {.Id = traitId, .Name = selectedTrait.Value})
+        End Sub
+
+        Private Sub btnRemoveEmbeddedNewTrait_Click(sender As Object, e As RoutedEventArgs)
+            Dim selectedTrait = TryCast(lstEmbeddedNewTraits.SelectedItem, DataProp)
+            If selectedTrait IsNot Nothing Then embeddedNewCrewTraits.Remove(selectedTrait)
+        End Sub
+
+        Private Sub btnCreateEmbeddedCrew_Click(sender As Object, e As RoutedEventArgs)
+            Dim selectedShip = TryCast(cmbNewCrewShip.SelectedItem, Ship)
+            Dim templateCharacter = TryCast(cmbNewCrewTemplate.SelectedItem, Character)
+            Dim newName = txtEmbeddedNewCrewName.Text.Trim()
+
+            If xmlDoc Is Nothing OrElse xmlDoc.Root Is Nothing Then
+                MessageBox.Show("Load a save file first.", "No Save Loaded", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            If selectedShip Is Nothing OrElse selectedShip.Sid = -1 Then
+                MessageBox.Show("Select a target ship or station.", "Target Required", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            If templateCharacter Is Nothing Then
+                MessageBox.Show("Select a template crew member.", "Template Required", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            If String.IsNullOrWhiteSpace(newName) Then
+                MessageBox.Show("Enter a name for the new crew member.", "Name Required", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            If embeddedNewCrewAttributes.Any(Function(item) item.Value < 0) OrElse
+               embeddedNewCrewSkills.Any(Function(item) item.Value < 0) Then
+                MessageBox.Show("Attribute and skill values must be non-negative.", "Invalid Values", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Try
+                CreateCrewMemberFromTemplate(
+                    selectedShip,
+                    templateCharacter.CharacterEntityId,
+                    newName,
+                    embeddedNewCrewAttributes,
+                    embeddedNewCrewSkills,
+                    embeddedNewCrewTraits)
+
+                MarkUnsavedChanges()
+                LoadCharacters()
+                cmbCrewShip.SelectedValue = selectedShip.Sid
+                LoadCrewForShip(selectedShip.Sid)
+                RefreshEmbeddedNewCrewTemplates()
+                txtEmbeddedNewCrewName.Text = "New Recruit"
+                embeddedNewCrewTraits.Clear()
+                lblEmbeddedNewCrewStatus.Text = $"Crew member '{newName}' added. Use File > Save to make permanent."
+            Catch ex As Exception
+                MessageBox.Show($"Error creating crew: {ex.Message}", "Creation Error", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub CreateCrewMemberFromTemplate(selectedShip As Ship,
+                                                  templateCharacterId As Integer,
+                                                  newName As String,
+                                                  newAttributes As IEnumerable(Of DataProp),
+                                                  newSkills As IEnumerable(Of DataProp),
+                                                  newTraits As IEnumerable(Of DataProp))
+            Dim shipElement = xmlDoc.Descendants("ship").
+                FirstOrDefault(Function(ship) ship.Attribute("sid")?.Value = selectedShip.Sid.ToString())
+            Dim charactersNode = shipElement?.Element("characters")
+            If charactersNode Is Nothing Then Throw New InvalidDataException("The target structure has no <characters> node.")
+
+            Dim templateCharacterNode = xmlDoc.Descendants("c").
+                FirstOrDefault(Function(character) character.Attribute("entId")?.Value = templateCharacterId.ToString())
+            If templateCharacterNode Is Nothing Then Throw New InvalidDataException($"Template crew ID {templateCharacterId} was not found.")
+
+            Dim masterDataNode = xmlDoc.Root.Element("masterData")
+            Dim idCounterAttribute = masterDataNode?.Attribute("idCounter")
+            Dim nextId As Long
+            If idCounterAttribute Is Nothing OrElse Not Long.TryParse(idCounterAttribute.Value, nextId) Then
+                Throw New InvalidDataException("The save has no valid masterData idCounter.")
+            End If
+            nextId += 1
+            idCounterAttribute.Value = nextId.ToString()
+
+            Dim newCharacterNode As New XElement(templateCharacterNode)
+            newCharacterNode.SetAttributeValue("name", newName)
+            newCharacterNode.SetAttributeValue("entId", nextId)
+            If newCharacterNode.Attribute("origName") IsNot Nothing Then newCharacterNode.SetAttributeValue("origName", newName)
+            newCharacterNode.Element("state")?.SetAttributeValue("bedLink", Nothing)
+
+            Dim persNode = newCharacterNode.Element("pers")
+            If persNode Is Nothing Then Throw New InvalidDataException("The template crew member has no <pers> node.")
+
+            Dim attributesNode = persNode.Element("attr")
+            If attributesNode IsNot Nothing Then
+                For Each newAttribute In newAttributes
+                    Dim target = attributesNode.Elements("a").
+                        FirstOrDefault(Function(item) item.Attribute("id")?.Value = newAttribute.Id.ToString())
+                    If target Is Nothing Then
+                        attributesNode.Add(New XElement("a",
+                            New XAttribute("id", newAttribute.Id),
+                            New XAttribute("points", newAttribute.Value)))
+                    Else
+                        target.SetAttributeValue("points", newAttribute.Value)
+                    End If
+                Next
+            End If
+
+            Dim skillsNode = persNode.Element("skills")
+            If skillsNode IsNot Nothing Then
+                For Each newSkill In newSkills
+                    Dim target = skillsNode.Elements("s").
+                        FirstOrDefault(Function(item) item.Attribute("sk")?.Value = newSkill.Id.ToString())
+                    If target Is Nothing Then
+                        skillsNode.Add(New XElement("s",
+                            New XAttribute("sk", newSkill.Id),
+                            New XAttribute("level", newSkill.Value),
+                            New XAttribute("mxn", newSkill.Value)))
+                    Else
+                        target.SetAttributeValue("level", newSkill.Value)
+                        target.SetAttributeValue("mxn", newSkill.Value)
+                    End If
+                Next
+            End If
+
+            Dim traitsNode = persNode.Element("traits")
+            If traitsNode IsNot Nothing Then
+                traitsNode.RemoveNodes()
+                For Each newTrait In newTraits
+                    traitsNode.Add(New XElement("t", New XAttribute("id", newTrait.Id)))
+                Next
+            End If
+
+            persNode.Element("conditions")?.RemoveNodes()
+            persNode.Element("sociality")?.Element("relationships")?.RemoveNodes()
+            charactersNode.Add(newCharacterNode)
+        End Sub
+
+        Private Sub btnAddUpdateRelationship_Click(sender As Object, e As RoutedEventArgs)
+            Dim sourceCharacter = TryCast(lstCharacters.SelectedItem, Character)
+            Dim targetCharacter = TryCast(cmbRelationshipTarget.SelectedItem, Character)
+            If sourceCharacter Is Nothing OrElse targetCharacter Is Nothing Then
+                MessageBox.Show("Select both a crew member and a relationship target.", "Selection Required",
+                                MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Dim friendship, attraction, compatibility As Integer
+            If Not Integer.TryParse(txtRelationshipFriendship.Text, friendship) OrElse
+               Not Integer.TryParse(txtRelationshipAttraction.Text, attraction) OrElse
+               Not Integer.TryParse(txtRelationshipCompatibility.Text, compatibility) OrElse
+               Not ValuesAreValid(friendship, attraction, compatibility) Then
+                MessageBox.Show("Friendship, attraction, and compatibility must be whole numbers between -100 and 100.",
+                                "Invalid Relationship Values", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Dim relationship = sourceCharacter.CharacterRelationships.
+                FirstOrDefault(Function(item) item.TargetId = targetCharacter.CharacterEntityId)
+            If relationship Is Nothing Then
+                relationship = New RelationshipInfo(targetCharacter.CharacterEntityId, targetCharacter.CharacterName,
+                                                    friendship, attraction, compatibility)
+                sourceCharacter.CharacterRelationships.Add(relationship)
+            Else
+                relationship.Friendship = friendship
+                relationship.Attraction = attraction
+                relationship.Compatibility = compatibility
+            End If
+
+            Try
+                WriteRelationshipToXml(sourceCharacter, relationship)
+                MarkUnsavedChanges()
+                LoadRelationshipsPage()
+            Catch ex As Exception
+                MessageBox.Show($"Could not update relationship: {ex.Message}", "Relationship Error",
+                                MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
         Private Sub dgvRelationships_RowEditEnding(sender As Object, e As DataGridRowEditEndingEventArgs) Handles dgvRelationships.RowEditEnding
             If e.EditAction <> DataGridEditAction.Commit Then Exit Sub
 
-            ' Use Dispatcher to ensure data object is updated by binding first
-            Dispatcher.BeginInvoke(New Action(Sub()
-                                                  Dim editedRel As RelationshipInfo = TryCast(e.Row.Item, RelationshipInfo)
-                                                  If editedRel Is Nothing Then Exit Sub
+            Dispatcher.BeginInvoke(New Action(
+                Sub()
+                    Dim editedRel = TryCast(e.Row.Item, RelationshipInfo)
+                    Dim sourceCharacter = TryCast(lstCharacters.SelectedItem, Character)
+                    If editedRel Is Nothing OrElse sourceCharacter Is Nothing Then Return
 
-                                                  Dim currentCharacter As Character = TryCast(lstCharacters.SelectedItem, Character)
-                                                  If currentCharacter Is Nothing OrElse xmlDoc Is Nothing Then Exit Sub ' Need context
-
-                                                  ' Optional: Validate new values (e.g., ensure they are within -100 to 100 or other game limits)
-                                                  ' Example:
-                                                  ' If editedRel.Friendship < -100 OrElse editedRel.Friendship > 100 Then ' Adjust range as needed
-                                                  '      MessageBox.Show("Friendship value must be between -100 and 100.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning)
-                                                  '      ' TODO: Revert Change - This is tricky without full MVVM/Undo
-                                                  '      Exit Sub
-                                                  ' End If
-                                                  ' (Add similar validation for Attraction, Compatibility if needed)
-
-                                                  ' Find the XML nodes
-                                                  Dim characterNode = xmlDoc.Descendants("c").FirstOrDefault(Function(c) c.Attribute("entId")?.Value = currentCharacter.CharacterEntityId.ToString())
-                                                  Dim relationshipsNode = characterNode?.Element("pers")?.Element("sociality")?.Element("relationships")
-
-                                                  If relationshipsNode Is Nothing Then
-                                                      MessageBox.Show("Could not find <relationships> node in XML.", "XML Error", MessageBoxButton.OK, MessageBoxImage.Error)
-                                                      Exit Sub
-                                                  End If
-
-                                                  ' Find the specific relationship <l> element
-                                                  Dim relElement As XElement = relationshipsNode.Elements("l").FirstOrDefault(Function(l) l.Attribute("targetId")?.Value = editedRel.TargetId.ToString())
-
-                                                  If relElement Is Nothing Then
-                                                      MessageBox.Show($"Could not find relationship XML node for target ID {editedRel.TargetId}.", "XML Error", MessageBoxButton.OK, MessageBoxImage.Error)
-                                                      Exit Sub
-                                                  End If
-
-                                                  ' Update attributes in the in-memory XML
-                                                  Try
-                                                      relElement.SetAttributeValue("friendship", editedRel.Friendship.ToString())
-                                                      relElement.SetAttributeValue("attraction", editedRel.Attraction.ToString())
-                                                      relElement.SetAttributeValue("compatibility", editedRel.Compatibility.ToString())
-
-                                                      ' Mark as unsaved
-                                                      MarkUnsavedChanges()
-                                                      MessageBox.Show($"Relationship with {editedRel.TargetName} updated (in memory). Use File > Save to make permanent.", "Relationship Updated", MessageBoxButton.OK, MessageBoxImage.Information)
-
-                                                  Catch ex As Exception
-                                                      MessageBox.Show($"Error updating relationship XML: {ex.Message}", "XML Update Error", MessageBoxButton.OK, MessageBoxImage.Error)
-                                                  End Try
-
-                                              End Sub), DispatcherPriority.Background)
+                    Try
+                        WriteRelationshipToXml(sourceCharacter, editedRel)
+                        MarkUnsavedChanges()
+                    Catch ex As Exception
+                        MessageBox.Show($"Could not update relationship: {ex.Message}", "Relationship Error",
+                                        MessageBoxButton.OK, MessageBoxImage.Error)
+                        LoadRelationshipsPage()
+                    End Try
+                End Sub), DispatcherPriority.Background)
         End Sub
 
         Private Sub AboutMenu_Click(sender As Object, e As RoutedEventArgs)
@@ -3745,10 +6508,46 @@ Namespace SpaceHavenEditor2
                 ' Bulk Crew tab
                 bulkCrewPanel.Visibility = Visibility.Visible
                 bulkStatsPanel.Visibility = Visibility.Collapsed
+                bulkTraitsPanel.Visibility = Visibility.Collapsed
+                bulkSchedulePanel.Visibility = Visibility.Collapsed
+                bulkRecoveryPanel.Visibility = Visibility.Collapsed
+                bulkLoadoutPanel.Visibility = Visibility.Collapsed
             ElseIf tabControl.SelectedIndex = 1 Then
                 ' Bulk Character Stats tab (combined attributes and skills)
                 bulkCrewPanel.Visibility = Visibility.Collapsed
                 bulkStatsPanel.Visibility = Visibility.Visible
+                bulkTraitsPanel.Visibility = Visibility.Collapsed
+                bulkSchedulePanel.Visibility = Visibility.Collapsed
+                bulkRecoveryPanel.Visibility = Visibility.Collapsed
+                bulkLoadoutPanel.Visibility = Visibility.Collapsed
+            ElseIf tabControl.SelectedIndex = 2 Then
+                bulkCrewPanel.Visibility = Visibility.Collapsed
+                bulkStatsPanel.Visibility = Visibility.Collapsed
+                bulkTraitsPanel.Visibility = Visibility.Visible
+                bulkSchedulePanel.Visibility = Visibility.Collapsed
+                bulkRecoveryPanel.Visibility = Visibility.Collapsed
+                bulkLoadoutPanel.Visibility = Visibility.Collapsed
+            ElseIf tabControl.SelectedIndex = 3 Then
+                bulkCrewPanel.Visibility = Visibility.Collapsed
+                bulkStatsPanel.Visibility = Visibility.Collapsed
+                bulkTraitsPanel.Visibility = Visibility.Collapsed
+                bulkSchedulePanel.Visibility = Visibility.Visible
+                bulkRecoveryPanel.Visibility = Visibility.Collapsed
+                bulkLoadoutPanel.Visibility = Visibility.Collapsed
+            ElseIf tabControl.SelectedIndex = 4 Then
+                bulkCrewPanel.Visibility = Visibility.Collapsed
+                bulkStatsPanel.Visibility = Visibility.Collapsed
+                bulkTraitsPanel.Visibility = Visibility.Collapsed
+                bulkSchedulePanel.Visibility = Visibility.Collapsed
+                bulkRecoveryPanel.Visibility = Visibility.Visible
+                bulkLoadoutPanel.Visibility = Visibility.Collapsed
+            ElseIf tabControl.SelectedIndex = 5 Then
+                bulkCrewPanel.Visibility = Visibility.Collapsed
+                bulkStatsPanel.Visibility = Visibility.Collapsed
+                bulkTraitsPanel.Visibility = Visibility.Collapsed
+                bulkSchedulePanel.Visibility = Visibility.Collapsed
+                bulkRecoveryPanel.Visibility = Visibility.Collapsed
+                bulkLoadoutPanel.Visibility = Visibility.Visible
             End If
         End Sub
 
@@ -4179,13 +6978,13 @@ Namespace SpaceHavenEditor2
         Private Function GetGameStartScenarioDirectory() As String
             Try
                 ' First try to use saved scenario directory setting
-                Dim scenarioDir As String = My.Settings.DefaultScenarioDirectory
+                Dim scenarioDir As String = Global.SpaceHavenEditor2.My.Settings.Default.DefaultScenarioDirectory
                 If Not String.IsNullOrEmpty(scenarioDir) AndAlso Directory.Exists(scenarioDir) Then
                     Return scenarioDir
                 End If
 
                 ' Try to find scenario directory based on save directory
-                Dim saveDir As String = My.Settings.DefaultSaveDirectory
+                Dim saveDir As String = Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory
                 If Not String.IsNullOrEmpty(saveDir) AndAlso Directory.Exists(saveDir) Then
                     ' Scenario folder is typically in the same parent directory as saves
                     Dim parentDir As String = Directory.GetParent(saveDir).FullName
@@ -4224,8 +7023,8 @@ Namespace SpaceHavenEditor2
 
             If folderDialog.ShowDialog() = System.Windows.Forms.DialogResult.OK Then
                 Try
-                    My.Settings.DefaultScenarioDirectory = folderDialog.SelectedPath
-                    My.Settings.Save()
+                    Global.SpaceHavenEditor2.My.Settings.Default.DefaultScenarioDirectory = folderDialog.SelectedPath
+                    Global.SpaceHavenEditor2.My.Settings.Default.Save()
                     UpdateGameStartScenarioFolderDisplay()
                     MessageBox.Show($"Scenario folder set to:{vbCrLf}{folderDialog.SelectedPath}", "Scenario Folder Set", MessageBoxButton.OK, MessageBoxImage.Information)
                 Catch ex As Exception
@@ -5074,6 +7873,69 @@ Namespace SpaceHavenEditor2
         End Sub
 
 #End Region
+
+        Private Sub ArrangeMainNavigation()
+            If mainNavigationTabs.Items.Contains(navGlobalSchedules) Then
+                mainNavigationTabs.Items.Remove(navGlobalSchedules)
+            End If
+            If Not crewDetailsTabs.Items.Contains(navGlobalSchedules) Then
+                crewDetailsTabs.Items.Add(navGlobalSchedules)
+            End If
+
+            If mainNavigationTabs.Items.Contains(navLegacyBlueprint) Then
+                mainNavigationTabs.Items.Remove(navLegacyBlueprint)
+            End If
+
+            Dim orderedItems As TabItem() = {
+                navGlobalHeader,
+                navSaveSettings,
+                navDifficultyRules,
+                navResearch,
+                navDatalogs,
+                navFactions,
+                navShipsHeader,
+                navStructures,
+                navStorage,
+                navShipTransfer,
+                navCrewHeader,
+                navCrewEditor,
+                navScheduleDesigner,
+                navNewCrewMember,
+                navBulkOperations,
+                navAdvancedHeader,
+                navSaveIntegrity,
+                navGameStartHeader,
+                navGameStartEditor
+            }
+
+            For Each item In orderedItems
+                If mainNavigationTabs.Items.Contains(item) Then
+                    mainNavigationTabs.Items.Remove(item)
+                End If
+            Next
+
+            For Each item In orderedItems
+                mainNavigationTabs.Items.Add(item)
+            Next
+
+            mainNavigationTabs.SelectedItem = navSaveSettings
+        End Sub
+
+        Private Sub MainNavigationTabs_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+            If Not ReferenceEquals(e.OriginalSource, mainNavigationTabs) Then Return
+
+            Dim selectedTab = TryCast(mainNavigationTabs.SelectedItem, TabItem)
+            Dim selectedHeader = TryCast(selectedTab?.Header, String)
+
+            Select Case selectedHeader
+                Case "Ship Import and Export"
+                    txtMainEditorTitle.Text = "Ship Blueprint Manager"
+                Case "Game Start Editor"
+                    txtMainEditorTitle.Text = "Game Start & Difficulty Editor"
+                Case Else
+                    txtMainEditorTitle.Text = "Moragar's Space Haven Save Game Editor"
+            End Select
+        End Sub
 
     End Class
 

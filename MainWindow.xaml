@@ -10,21 +10,49 @@
 
     <Window.Resources>
         <Style x:Key="CardBorderStyle" TargetType="Border">
-            <Setter Property="Background" Value="WhiteSmoke"/>
+            <Setter Property="Background" Value="#302E2B"/>
             <Setter Property="CornerRadius" Value="5"/>
             <Setter Property="Padding" Value="15"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="BorderBrush" Value="LightGray"/>
+            <Setter Property="BorderBrush" Value="#4D4943"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect ShadowDepth="1" Direction="270" Color="Gray" Opacity="0.3" BlurRadius="5"/>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+        </Style>
+
+        <Style x:Key="CardTitleStyle" TargetType="TextBlock">
+            <Setter Property="Background" Value="#3C3934"/>
+            <Setter Property="Foreground" Value="#F2EDE5"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,10"/>
+            <Setter Property="Margin" Value="-15,-15,-15,12"/>
+        </Style>
+
+        <Style x:Key="DirectionsCardStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
+            <Setter Property="Background" Value="#35312C"/>
+            <Setter Property="BorderBrush" Value="#6A5845"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+
+        <Style x:Key="DirectionsExpanderStyle" TargetType="Expander">
+            <Setter Property="Foreground" Value="#E9E4DC"/>
+            <Setter Property="IsExpanded" Value="False"/>
+        </Style>
+
+        <Style x:Key="DirectionsContentStyle" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,10,0,0"/>
+        </Style>
+
+        <Style x:Key="DirectionsTextStyle" TargetType="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="LineHeight" Value="18"/>
+            <Setter Property="Foreground" Value="#E9E4DC"/>
         </Style>
 
         <Style x:Key="ModernButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF007ACC"/>
+            <Setter Property="Background" Value="#9B663B"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Padding" Value="10,5"/>
             <Setter Property="Margin" Value="5"/>
@@ -42,10 +70,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF009AFF"/>
+                                <Setter Property="Background" Value="#B77B48"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#FF005A9E"/>
+                                <Setter Property="Background" Value="#784B2B"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Background" Value="Gray"/>
@@ -60,7 +88,7 @@
         <Style x:Key="ModernTabControlStyle" TargetType="{x:Type TabControl}">
             <Setter Property="Padding" Value="0"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Background" Value="#22211F"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type TabControl}">
@@ -69,7 +97,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <Border Grid.Row="0" Background="#F0F0F0" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Margin="0,0,0,0">
+                            <Border Grid.Row="0" Background="#292825" BorderBrush="#4D4943" BorderThickness="0,0,0,1" Margin="0,0,0,0">
                                 <TabPanel x:Name="HeaderPanel" Panel.ZIndex="1" Margin="5,5,5,0" IsItemsHost="True" KeyboardNavigation.TabIndex="1"/>
                             </Border>
                             <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1" Margin="0,5,0,0"
@@ -87,7 +115,7 @@
                     <Style TargetType="{x:Type TabItem}">
                         <Setter Property="Padding" Value="12,6"/>
                         <Setter Property="Margin" Value="2,0,2,0"/>
-                        <Setter Property="Foreground" Value="#666666"/>
+                        <Setter Property="Foreground" Value="#CFC5B9"/>
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="BorderThickness" Value="0,0,0,3"/>
                         <Setter Property="BorderBrush" Value="Transparent"/>
@@ -111,13 +139,14 @@
                         </Setter>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Foreground" Value="#FF007ACC"/>
-                                <Setter Property="BorderBrush" Value="#FF007ACC"/>
+                                <Setter Property="Foreground" Value="#FFF8EF"/>
+                                <Setter Property="BorderBrush" Value="#D39A55"/>
                                 <Setter Property="FontWeight" Value="Bold"/>
-                                <Setter Property="Background" Value="White"/>
+                                <Setter Property="Background" Value="#4B4034"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#E8E8E8"/>
+                                <Setter Property="Background" Value="#37312B"/>
+                                <Setter Property="Foreground" Value="#FFF8EF"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -137,7 +166,11 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <TabPanel x:Name="HeaderPanel" Grid.Row="0" Panel.ZIndex="1" Margin="0,0,0,0" IsItemsHost="True" KeyboardNavigation.TabIndex="1" Background="Transparent"/>
+                            <Border Grid.Row="0" Background="#292825" BorderBrush="#4D4943"
+                                    BorderThickness="0,0,0,1">
+                                <TabPanel x:Name="HeaderPanel" Panel.ZIndex="1" Margin="5,5,5,0"
+                                          IsItemsHost="True" KeyboardNavigation.TabIndex="1"/>
+                            </Border>
                             <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1" Margin="0,5,0,0"
                                               Content="{TemplateBinding SelectedContent}"
                                               ContentTemplate="{TemplateBinding SelectedContentTemplate}"
@@ -152,10 +185,10 @@
                 <Setter.Value>
                     <Style TargetType="{x:Type TabItem}">
                         <Setter Property="Padding" Value="12,6"/>
-                        <Setter Property="Margin" Value="0,0,2,0"/>
-                        <Setter Property="Foreground" Value="Gray"/>
+                        <Setter Property="Margin" Value="2,0,2,0"/>
+                        <Setter Property="Foreground" Value="#CFC5B9"/>
                         <Setter Property="Background" Value="Transparent"/>
-                        <Setter Property="BorderThickness" Value="0,0,0,2"/>
+                        <Setter Property="BorderThickness" Value="0,0,0,3"/>
                         <Setter Property="BorderBrush" Value="Transparent"/>
                         <Setter Property="Template">
                             <Setter.Value>
@@ -164,7 +197,8 @@
                                             BorderBrush="{TemplateBinding BorderBrush}"
                                             BorderThickness="{TemplateBinding BorderThickness}"
                                             Padding="{TemplateBinding Padding}"
-                                            Margin="{TemplateBinding Margin}">
+                                            Margin="{TemplateBinding Margin}"
+                                            CornerRadius="3,3,0,0">
                                         <ContentPresenter ContentSource="Header"
                                                           HorizontalAlignment="Center"
                                                           VerticalAlignment="Center"
@@ -175,9 +209,117 @@
                         </Setter>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Foreground" Value="#FFF8EF"/>
+                                <Setter Property="BorderBrush" Value="#D39A55"/>
+                                <Setter Property="Background" Value="#4B4034"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#37312B"/>
+                                <Setter Property="Foreground" Value="#FFF8EF"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <DataTemplate x:Key="NavigationSectionHeaderTemplate">
+            <Grid Width="209" HorizontalAlignment="Stretch">
+                <TextBlock Text="{Binding}" HorizontalAlignment="Left" TextAlignment="Left"
+                           Margin="0" FontSize="11" FontWeight="Bold"/>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="NavigationItemHeaderTemplate">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding Tag, RelativeSource={RelativeSource AncestorType=TabItem}}"
+                           FontFamily="Segoe MDL2 Assets" FontSize="15" Width="24"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <Style x:Key="LeftSideTabControlStyle" TargetType="{x:Type TabControl}">
+            <Setter Property="TabStripPlacement" Value="Left"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="#22211F"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabControl}">
+                        <Grid Background="{TemplateBinding Background}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="245"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Background="#1C1B19" BorderBrush="#3D3934" BorderThickness="0,0,1,0"
+                                    CornerRadius="5,0,0,5">
+                                <Grid>
+                                    <TabPanel x:Name="HeaderPanel" IsItemsHost="True" Margin="8,8,8,8"
+                                              KeyboardNavigation.TabIndex="1"/>
+                                </Grid>
+                            </Border>
+                            <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Column="1" Margin="10,10,0,0"
+                                              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                              TextElement.Foreground="#E9E4DC"
+                                              SnapsToDevicePixels="True"
+                                              Content="{TemplateBinding SelectedContent}"
+                                              ContentTemplate="{TemplateBinding SelectedContentTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding SelectedContentTemplateSelector}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="{x:Type TabItem}">
+                        <Setter Property="Width" Value="229"/>
+                        <Setter Property="Padding" Value="15,12"/>
+                        <Setter Property="Margin" Value="0,0,0,4"/>
+                        <Setter Property="Foreground" Value="#DED5CA"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="4,0,0,0"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                        <Setter Property="HeaderTemplate" Value="{StaticResource NavigationItemHeaderTemplate}"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="{x:Type TabItem}">
+                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}"
+                                            Margin="{TemplateBinding Margin}" CornerRadius="4">
+                                        <ContentPresenter ContentSource="Header"
+                                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                          VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="Tag" Value="SectionHeader">
+                                <Setter Property="Padding" Value="10,18,10,6"/>
+                                <Setter Property="Margin" Value="0"/>
+                                <Setter Property="Foreground" Value="#BCAF9F"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderBrush" Value="Transparent"/>
+                                <Setter Property="FontSize" Value="11"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                <Setter Property="IsHitTestVisible" Value="False"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="#FFF8EF"/>
+                                <Setter Property="BorderBrush" Value="#D39A55"/>
+                                <Setter Property="Background" Value="#4B4034"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#37312B"/>
+                                <Setter Property="Foreground" Value="#FFF8EF"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -186,13 +328,16 @@
         </Style>
 
         <Style x:Key="ModernDataGridStyle" TargetType="DataGrid">
+            <Setter Property="Background" Value="#292825"/>
+            <Setter Property="Foreground" Value="#ECE7DF"/>
+            <Setter Property="RowBackground" Value="#2F2D2A"/>
             <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="LightGray"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#49453F"/>
             <Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
-            <Setter Property="AlternatingRowBackground" Value="#F9F9F9"/>
+            <Setter Property="AlternatingRowBackground" Value="#373430"/>
             <Setter Property="RowHeaderWidth" Value="0"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="LightGray"/>
+            <Setter Property="BorderBrush" Value="#4D4943"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="CanUserResizeRows" Value="False"/>
             <Setter Property="AutoGenerateColumns" Value="False"/>
@@ -201,27 +346,29 @@
         </Style>
 
         <Style x:Key="ModernDataGridColumnHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="WhiteSmoke"/>
-            <Setter Property="Foreground" Value="#FF444444"/>
+            <Setter Property="Background" Value="#3C3934"/>
+            <Setter Property="Foreground" Value="#F2EDE5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="8,5"/>
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
-            <Setter Property="BorderBrush" Value="LightGray"/>
+            <Setter Property="BorderBrush" Value="#575149"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
         </Style>
 
         <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
             <Setter Property="Padding" Value="5,3"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
-            <Setter Property="BorderBrush" Value="Gray"/>
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#756D63"/>
+            <Setter Property="Background" Value="#262522"/>
+            <Setter Property="Foreground" Value="#F2EDE5"/>
+            <Setter Property="CaretBrush" Value="#F2EDE5"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Style.Triggers>
                 <Trigger Property="IsKeyboardFocused" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                    <Setter Property="BorderBrush" Value="#D39A55"/>
                 </Trigger>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="Black"/>
+                    <Setter Property="BorderBrush" Value="#B9AA98"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -229,23 +376,122 @@
         <Style x:Key="ModernCheckBoxStyle" TargetType="CheckBox">
             <Setter Property="Padding" Value="5,0,0,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="Gray"/>
+            <Setter Property="Foreground" Value="#E9E4DC"/>
+            <Setter Property="BorderBrush" Value="#756D63"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="#262522"/>
             <Style.Triggers>
                 <Trigger Property="IsChecked" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
-                    <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                    <Setter Property="Background" Value="#9B663B"/>
+                    <Setter Property="BorderBrush" Value="#D39A55"/>
                 </Trigger>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="Black"/>
+                    <Setter Property="BorderBrush" Value="#B9AA98"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="DarkMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Background" Value="#242320"/>
+            <Setter Property="Foreground" Value="#E9E4DC"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Grid>
+                            <Border x:Name="MenuItemBorder"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Padding="{TemplateBinding Padding}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="18"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="18"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ContentPresenter x:Name="IconHost" Grid.Column="0" ContentSource="Icon"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <ContentPresenter Grid.Column="1" ContentSource="Header"
+                                                      RecognizesAccessKey="True" VerticalAlignment="Center"
+                                                      TextElement.Foreground="{TemplateBinding Foreground}"/>
+                                    <Path x:Name="SubmenuArrow" Grid.Column="2" Data="M 0 0 L 5 5 L 0 10 Z"
+                                          Fill="{TemplateBinding Foreground}" HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" Visibility="Collapsed"/>
+                                </Grid>
+                            </Border>
+                            <Popup x:Name="PART_Popup"
+                                   Placement="Right"
+                                   HorizontalOffset="-2"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   PopupAnimation="Fade">
+                                <Border Background="#242320" BorderBrush="#575149" BorderThickness="1"
+                                        Padding="3" MinWidth="175">
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Role" Value="TopLevelHeader">
+                                <Setter TargetName="PART_Popup" Property="Placement" Value="Bottom"/>
+                                <Setter TargetName="IconHost" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                            <Trigger Property="Role" Value="TopLevelItem">
+                                <Setter TargetName="IconHost" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                            <Trigger Property="Role" Value="SubmenuHeader">
+                                <Setter TargetName="SubmenuArrow" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="MenuItemBorder" Property="Background" Value="#4B4034"/>
+                                <Setter TargetName="MenuItemBorder" Property="BorderBrush" Value="#D39A55"/>
+                                <Setter Property="Foreground" Value="#FFF8EF"/>
+                            </Trigger>
+                            <Trigger Property="IsSubmenuOpen" Value="True">
+                                <Setter TargetName="MenuItemBorder" Property="Background" Value="#4B4034"/>
+                                <Setter Property="Foreground" Value="#FFF8EF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="#80786F"/>
+                                <Setter Property="Opacity" Value="0.65"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DarkMenuSeparatorStyle" TargetType="Separator">
+            <Setter Property="Background" Value="#575149"/>
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Margin" Value="6,3"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Background="{TemplateBinding Background}" Height="{TemplateBinding Height}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <DockPanel>
-        <Menu DockPanel.Dock="Top">
+    <DockPanel Background="#1C1B19">
+        <Menu DockPanel.Dock="Top" Background="#242320" Foreground="#E9E4DC"
+              BorderBrush="#4D4943" BorderThickness="0,0,0,1"
+              ItemContainerStyle="{StaticResource DarkMenuItemStyle}">
+            <Menu.Resources>
+                <Style TargetType="MenuItem" BasedOn="{StaticResource DarkMenuItemStyle}"/>
+                <Style TargetType="Separator" BasedOn="{StaticResource DarkMenuSeparatorStyle}"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#242320"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#E9E4DC"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#4B4034"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFF8EF"/>
+            </Menu.Resources>
             <MenuItem Header="File">
                 <MenuItem Header="Open" Click="OpenFileMenu_Click" />
                 <MenuItem Header="Save" Click="SaveFileMenu_Click" />
@@ -263,66 +509,202 @@
             </MenuItem>
         </Menu>
 
-        <TabControl Style="{StaticResource ModernTabControlStyle}">
-            <TabItem Header="Save Game Editor">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <Grid Margin="10">
+        <Grid Margin="10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="51*"/>
                     <ColumnDefinition Width="8*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" CornerRadius="5" Margin="0,0,0,5" Grid.ColumnSpan="2">
+                <Border Grid.Row="0" CornerRadius="5,5,0,0" Margin="0" Grid.ColumnSpan="2">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="#FF4A5A6A" Offset="0"/>
-                            <GradientStop Color="#FF607080" Offset="1"/>
+                            <GradientStop Color="#2A2926" Offset="0"/>
+                            <GradientStop Color="#49443E" Offset="1"/>
                         </LinearGradientBrush>
                     </Border.Background>
                     <Border.Effect>
                         <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.4" BlurRadius="5"/>
                     </Border.Effect>
-                    <TextBlock Text="Moragar's Space Haven Save Game Editor"
-                           FontSize="24"
-                           FontWeight="Bold"
-                           Foreground="White" VerticalAlignment="Center"
-                           HorizontalAlignment="Center"
-                           Margin="0,10"/>
-                </Border>
-
-                <Grid Grid.Row="1" Grid.ColumnSpan="2" Height="30" Margin="0,0,0,5">
+                    <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="txtUnsavedIndicator" 
-                           Text="⚠ Unsaved Changes" 
-                           FontSize="16"
-                           FontWeight="Bold"
-                           Foreground="#FFFF0000" 
-                           Background="#FFFFE4B5"
-                           Padding="8,4"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Right"
-                           Margin="0,0,15,0"
-                           Grid.Column="1"
-                           Visibility="Collapsed">
+                    <TextBlock x:Name="txtMainEditorTitle" Grid.Column="0" Text="Moragar's Space Haven Save Game Editor"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               Foreground="White" VerticalAlignment="Center"
+                               HorizontalAlignment="Center"
+                               Margin="15,10"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
+                                HorizontalAlignment="Right" Margin="0,0,12,0">
+                    <TextBlock x:Name="txtUnsavedIndicator"
+                               Text="Unsaved Changes"
+                               FontSize="13"
+                               FontWeight="Bold"
+                               Foreground="#FFF8EF"
+                               Background="#9B663B"
+                               Padding="10,5"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"
+                               Margin="0,0,6,0"
+                               Visibility="Collapsed">
                         <TextBlock.Effect>
                             <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.5" BlurRadius="3"/>
                         </TextBlock.Effect>
                     </TextBlock>
-                </Grid>
+                    <TextBlock x:Name="txtGameStartUnsavedIndicator"
+                               Text="Game Start Unsaved"
+                               FontSize="13"
+                               FontWeight="Bold"
+                               Foreground="#FFF8EF"
+                               Background="#9B663B"
+                               Padding="10,5"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"
+                               Visibility="Collapsed"/>
+                    </StackPanel>
+                    </Grid>
+                </Border>
 
-                <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" Grid.ColumnSpan="2" Margin="0,0,0,5">
+                <TabControl x:Name="mainNavigationTabs" Grid.Row="1" Grid.ColumnSpan="2"
+                            Style="{StaticResource LeftSideTabControlStyle}"
+                            SelectionChanged="MainNavigationTabs_SelectionChanged">
+                    <TabControl.Resources>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#E9E4DC"/>
+                        </Style>
+                        <Style TargetType="Label">
+                            <Setter Property="Foreground" Value="#E9E4DC"/>
+                        </Style>
+                        <Style x:Key="DarkComboBoxToggleStyle" TargetType="ToggleButton">
+                            <Setter Property="Focusable" Value="False"/>
+                            <Setter Property="ClickMode" Value="Press"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="ToggleBorder" Background="#292825" BorderBrush="#625C54"
+                                                BorderThickness="1" CornerRadius="3">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="28"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="1" Background="#373430" CornerRadius="0,3,3,0"/>
+                                                <Path Grid.Column="1" Data="M 0 0 L 5 5 L 10 0 Z" Fill="#E9E4DC"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="#D39A55"/>
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="#D39A55"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                        <Style TargetType="ComboBox">
+                            <Setter Property="Background" Value="#292825"/>
+                            <Setter Property="Foreground" Value="#F2EDE5"/>
+                            <Setter Property="BorderBrush" Value="#625C54"/>
+                            <Setter Property="Padding" Value="5,3"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ComboBox">
+                                        <Grid>
+                                            <ToggleButton Style="{StaticResource DarkComboBoxToggleStyle}"
+                                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"/>
+                                            <ContentPresenter Margin="8,3,32,3" VerticalAlignment="Center"
+                                                              HorizontalAlignment="Left"
+                                                              Content="{TemplateBinding SelectionBoxItem}"
+                                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                              ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                                              TextElement.Foreground="#F2EDE5"
+                                                              IsHitTestVisible="False"/>
+                                            <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True"
+                                                   Focusable="False" IsOpen="{TemplateBinding IsDropDownOpen}"
+                                                   PopupAnimation="Fade">
+                                                <Border Background="#292825" BorderBrush="#625C54" BorderThickness="1"
+                                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                                    <ScrollViewer CanContentScroll="True" VerticalScrollBarVisibility="Auto">
+                                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                                    </ScrollViewer>
+                                                </Border>
+                                            </Popup>
+                                        </Grid>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter Property="Opacity" Value="0.55"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                        <Style TargetType="ComboBoxItem">
+                            <Setter Property="Background" Value="#292825"/>
+                            <Setter Property="Foreground" Value="#F2EDE5"/>
+                            <Setter Property="Padding" Value="6,4"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ComboBoxItem">
+                                        <Border x:Name="ItemBorder" Background="{TemplateBinding Background}"
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsHighlighted" Value="True">
+                                                <Setter TargetName="ItemBorder" Property="Background" Value="#4B4034"/>
+                                                <Setter Property="Foreground" Value="#FFF8EF"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="ItemBorder" Property="Background" Value="#684E35"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter Property="Opacity" Value="0.55"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                        <Style TargetType="ListBox">
+                            <Setter Property="Background" Value="#292825"/>
+                            <Setter Property="Foreground" Value="#E9E4DC"/>
+                            <Setter Property="BorderBrush" Value="#4D4943"/>
+                        </Style>
+                        <Style TargetType="ListView">
+                            <Setter Property="Background" Value="#292825"/>
+                            <Setter Property="Foreground" Value="#E9E4DC"/>
+                            <Setter Property="BorderBrush" Value="#4D4943"/>
+                        </Style>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="Foreground" Value="#E9E4DC"/>
+                        </Style>
+                        <Style TargetType="RadioButton">
+                            <Setter Property="Foreground" Value="#E9E4DC"/>
+                        </Style>
+                    </TabControl.Resources>
+                    <TabItem x:Name="navGlobalHeader" Header="GLOBAL" Tag="SectionHeader" IsEnabled="False"
+                             HeaderTemplate="{StaticResource NavigationSectionHeaderTemplate}"/>
+                    <TabItem x:Name="navSaveSettings" Header="Save Settings" Tag="&#xE713;">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Margin="5">
+                <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,5">
                     <StackPanel>
-                        <TextBlock Text="Global Save Settings" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <TextBlock Text="Global Save Settings" Style="{StaticResource CardTitleStyle}"/>
                         <WrapPanel Orientation="Horizontal">
                             <StackPanel Orientation="Horizontal" Margin="0,0,20,5">
                                 <TextBlock Text="Player Credits:" VerticalAlignment="Center" Margin="0,0,5,0" FontSize="12"/>
@@ -344,25 +726,393 @@
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Row="3" Style="{StaticResource CardBorderStyle}" Grid.ColumnSpan="2" Margin="0,0,0,5">
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem x:Name="navSaveIntegrity" Header="Save Integrity" Tag="&#xE9D9;">
+                        <Grid Margin="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Style="{StaticResource DirectionsCardStyle}" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="Save Integrity Scanner" Style="{StaticResource CardTitleStyle}"/>
+                                    <TextBlock Text="Checks primary IDs, relationships, global schedules, known ship references, and ID counters. Critical findings block saving. Repairs are applied only when you select and approve them."
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="lblIntegritySummary" Text="Load a save to run the scanner."
+                                               FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                                <DataGrid x:Name="dgvIntegrityFindings" AutoGenerateColumns="False" IsReadOnly="False"
+                                          CanUserAddRows="False" CanUserDeleteRows="False"
+                                          Style="{StaticResource ModernDataGridStyle}"
+                                          ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Header="Repair" Binding="{Binding IsSelected, Mode=TwoWay}"
+                                                                Width="60" IsReadOnly="False"/>
+                                        <DataGridTextColumn Header="Severity" Binding="{Binding SeverityText}" Width="85" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="135" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="Affected Object" Binding="{Binding AffectedObject}" Width="170" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="Finding" Binding="{Binding Description}" Width="2*" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="Available Repair" Binding="{Binding RepairText}" Width="180" IsReadOnly="True"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Border>
+                            <StackPanel Grid.Row="2" Margin="0,10,0,0">
+                                <WrapPanel>
+                                    <Button Content="Scan Save" Width="120" Click="btnScanIntegrity_Click"
+                                            Style="{StaticResource ModernButtonStyle}"/>
+                                    <Button Content="Select Repairable" Width="155" Click="btnSelectRepairableIntegrity_Click"
+                                            Style="{StaticResource ModernButtonStyle}"/>
+                                    <Button Content="Clear Selection" Width="135" Click="btnClearIntegritySelection_Click"
+                                            Style="{StaticResource ModernButtonStyle}"/>
+                                    <Button Content="Apply Selected Repairs" Width="185" Click="btnApplyIntegrityRepairs_Click"
+                                            Style="{StaticResource ModernButtonStyle}"/>
+                                </WrapPanel>
+                                <TextBlock x:Name="lblIntegrityStatus" Margin="5,8,5,0" FontStyle="Italic" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+                    </TabItem>
+                    <TabItem x:Name="navDifficultyRules" Header="Difficulty and World Rules" Tag="&#xE9D9;">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Margin="5">
+                                <Border Style="{StaticResource CardBorderStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Difficulty and World Rules" Style="{StaticResource CardTitleStyle}"/>
+                                        <TextBlock Text="Changes apply to the loaded save in memory. Existing or modded values are preserved in the dropdowns."
+                                                   FontStyle="Italic" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="Core Difficulty" Style="{StaticResource CardTitleStyle}"/>
+                                            <TextBlock Grid.Row="1" Text="Mood difficulty:" VerticalAlignment="Center" Margin="0,4"/>
+                                            <ComboBox Grid.Row="1" Grid.Column="1" x:Name="cmbMoodDifficulty" Margin="0,4"/>
+                                            <TextBlock Grid.Row="2" Text="NPC targeting:" VerticalAlignment="Center" Margin="0,4"/>
+                                            <ComboBox Grid.Row="2" Grid.Column="1" x:Name="cmbNpcTargeting" Margin="0,4"/>
+                                            <TextBlock Grid.Row="3" Text="Quest difficulty:" VerticalAlignment="Center" Margin="0,4"/>
+                                            <ComboBox Grid.Row="3" Grid.Column="1" x:Name="cmbQuestDifficulty" Margin="0,4"/>
+                                            <CheckBox Grid.Row="4" Grid.ColumnSpan="2" x:Name="chkRulesEnemiesEnabled" Content="Enemies enabled" Margin="0,8,0,3"/>
+                                            <CheckBox Grid.Row="5" Grid.ColumnSpan="2" x:Name="chkRulesFriendsEnabled" Content="Friends enabled" Margin="0,3"/>
+                                            <CheckBox Grid.Row="6" Grid.ColumnSpan="2" x:Name="chkRulesLoversEnabled" Content="Lovers enabled" Margin="0,3"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="205"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="World Rules" Style="{StaticResource CardTitleStyle}"/>
+                                            <TextBlock Grid.Row="1" Text="Wear and tear:" VerticalAlignment="Center" Margin="0,4"/>
+                                            <ComboBox Grid.Row="1" Grid.Column="1" x:Name="cmbWearAndTear" Margin="0,4"/>
+                                            <CheckBox Grid.Row="2" Grid.ColumnSpan="2" x:Name="chkRebuildingCosts" Content="Rebuilding costs enabled" Margin="0,8,0,5"/>
+                                            <TextBlock Grid.Row="3" Text="Monster frequency:" VerticalAlignment="Center" Margin="0,4"/>
+                                            <ComboBox Grid.Row="3" Grid.Column="1" x:Name="cmbMonsterFrequency" Margin="0,4"/>
+                                            <TextBlock Grid.Row="4" Text="Robot frequency:" VerticalAlignment="Center" Margin="0,4"/>
+                                            <ComboBox Grid.Row="4" Grid.Column="1" x:Name="cmbRobotFrequency" Margin="0,4"/>
+                                            <TextBlock Grid.Row="5" Text="Solar flare frequency:" VerticalAlignment="Center" Margin="0,4"/>
+                                            <ComboBox Grid.Row="5" Grid.Column="1" x:Name="cmbSolarFlareFrequency" Margin="0,4"/>
+                                            <TextBlock Grid.Row="6" Text="Meteor frequency:" VerticalAlignment="Center" Margin="0,4"/>
+                                            <ComboBox Grid.Row="6" Grid.Column="1" x:Name="cmbMeteorFrequency" Margin="0,4"/>
+                                            <TextBlock Grid.Row="7" Text="Derelict frequency:" VerticalAlignment="Center" Margin="0,4"/>
+                                            <ComboBox Grid.Row="7" Grid.Column="1" x:Name="cmbDerelictFrequency" Margin="0,4"/>
+                                            <TextBlock Grid.Row="8" Text="Derelict loot:" VerticalAlignment="Center" Margin="0,4"/>
+                                            <ComboBox Grid.Row="8" Grid.Column="1" x:Name="cmbDerelictLoot" Margin="0,4"/>
+                                            <TextBlock Grid.Row="9" Text="Asteroid / resource abundance:" VerticalAlignment="Center" Margin="0,4"/>
+                                            <ComboBox Grid.Row="9" Grid.Column="1" x:Name="cmbAsteroidAbundance" Margin="0,4"/>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+
+                                <Border Style="{StaticResource CardBorderStyle}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="205"/>
+                                            <ColumnDefinition Width="300"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Travel threat level:" VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Column="1" x:Name="cmbTravelThreat" Margin="0,0,10,0"/>
+                                        <Button Grid.Column="2" x:Name="btnUpdateDifficultyRules"
+                                                Content="Update Difficulty and World Rules"
+                                                Width="250" HorizontalAlignment="Right"
+                                                IsEnabled="False"
+                                                Click="btnUpdateDifficultyRules_Click"
+                                                Style="{StaticResource ModernButtonStyle}"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem x:Name="navStructures" Header="Structures" Tag="&#xE709;">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Margin="5">
+                <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,5">
                     <StackPanel Orientation="Vertical">
-                        <TextBlock Text="Selected Ship" FontSize="16" FontWeight="Bold" Margin="0,0,0,5" />
-                        <ComboBox x:Name="cmb_ships" Width="300" Height="30" SelectionChanged="cmb_ships_SelectionChanged" HorizontalAlignment="Left" />
+                        <Border Background="#3C3934" Margin="-15,-15,-15,12" Padding="15,10">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Ships and Stations in Current Sector" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <Border x:Name="pnlStationSaveBadge" Background="#C77D22" CornerRadius="4" Padding="9,3" Margin="12,0,0,0" Visibility="Collapsed">
+                                    <TextBlock Text="Station Save" Foreground="White" FontWeight="Bold"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                        <CheckBox x:Name="chkShowNpcShips" Content="Show NPC and derelict ships" Margin="0,0,0,6"
+                                  Checked="chkShowNpcShips_Changed" Unchecked="chkShowNpcShips_Changed"/>
+                        <ComboBox x:Name="cmb_ships" Width="360" Height="30" SelectionChanged="cmb_ships_SelectionChanged" HorizontalAlignment="Left" />
+                        <TextBlock x:Name="lbl_structureType" Margin="0,8,0,0" Text="Structure Type: " FontSize="12" FontWeight="SemiBold"/>
                         <TextBlock x:Name="lbl_owner" Margin="0,10,0,0" Text="Owner: " FontSize="12"/>
                         <TextBlock x:Name="lbl_shipSize" Margin="0,5,0,0" Text="Size: " FontSize="12"/>
                         <TextBlock x:Name="lbl_CanvasSize" Margin="0,5,0,0" Text="Canvas Size: " FontSize="12"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <TextBox x:Name="txtStructureName" Width="240" Style="{StaticResource ModernTextBoxStyle}"/>
+                            <Button x:Name="btnRenameStructure" Content="Rename" Width="100" Margin="8,0,0,0"
+                                    Click="btnRenameStructure_Click" Style="{StaticResource ModernButtonStyle}"/>
+                        </StackPanel>
                         <Button x:Name="btn_updateSize" Content="Update Size" Width="150" HorizontalAlignment="Left" Click="btn_updateSize_Click" Style="{StaticResource ModernButtonStyle}" Margin="0,10,0,0"/>
+                        <Border x:Name="pnlStationInfo" BorderBrush="#C77D22" BorderThickness="1" CornerRadius="4"
+                                Padding="10" Margin="0,10,0,0" Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock Text="Station Information (read-only)" FontWeight="Bold"/>
+                                <TextBlock x:Name="lblStationType" Margin="0,5,0,0"/>
+                                <TextBlock x:Name="lblStationPopulation" Margin="0,3,0,0"/>
+                                <TextBlock Text="Station size settings are protected because changing them can damage the save."
+                                           Margin="0,6,0,0" FontStyle="Italic" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Border>
 
-                <TabControl Grid.Row="4" Style="{StaticResource ModernTabControlStyle}" Grid.ColumnSpan="2">
-                    <TabItem Header="Crew">
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem x:Name="navResearch" Header="Research" Tag="&#xE82D;">
+                        <Grid Margin="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Style="{StaticResource DirectionsCardStyle}">
+                                <Expander Header="Directions and Progress Help" Style="{StaticResource DirectionsExpanderStyle}">
+                                    <StackPanel Style="{StaticResource DirectionsContentStyle}">
+                                        <TextBlock Style="{StaticResource DirectionsTextStyle}">
+                                            <Run Text="The Research Editor shows every technology state stored in the loaded save."/>
+                                            <LineBreak/>
+                                            <Run Text="Stages shows how many research stages are completed, such as 1/2."/>
+                                            <LineBreak/>
+                                            <Run Text="Progress Level 1/2/3 shows the three internal research-block counters saved by Space Haven for each stage. For example, 150/40/10 means 150 Level 1 blocks, 40 Level 2 blocks, and 10 Level 3 blocks have been credited."/>
+                                            <LineBreak/>
+                                            <Run Text="These values are raw counters, not percentages. Different technologies require different amounts, and some task-based stages do not use block counters."/>
+                                            <LineBreak/>
+                                            <Run Text="Complete Selected marks every stage of the chosen technology complete. Reset Selected clears its stage, block, and task progress. Complete All affects every technology."/>
+                                            <LineBreak/>
+                                            <Run Text="The Research Queue controls the order technologies are scheduled for research. Use File &gt; Save after making changes."
+                                                 FontWeight="SemiBold" Foreground="#D39A55"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Expander>
+                            </Border>
+                            <Grid Grid.Row="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="330"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Text="Research Technologies" Style="{StaticResource CardTitleStyle}"/>
+                                        <DataGrid Grid.Row="1" x:Name="dgvResearchTechnologies" AutoGenerateColumns="False"
+                                                  CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
+                                                  SelectionMode="Single"
+                                                  Style="{StaticResource ModernDataGridStyle}"
+                                                  ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Technology" Binding="{Binding TechnologyName}" Width="190"/>
+                                                <DataGridTextColumn Header="ID" Binding="{Binding TechId}" Width="65"/>
+                                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="95"/>
+                                                <DataGridTextColumn Header="Stages" Binding="{Binding StageSummary}" Width="65"/>
+                                                <DataGridTextColumn Header="Progress (Level 1/2/3)" Binding="{Binding ProgressSummary}" Width="*"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                        <WrapPanel Grid.Row="2" Margin="0,10,0,0">
+                                            <Button Content="Complete Selected" Width="165" Click="btnCompleteSelectedResearch_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button Content="Reset Selected" Width="145" Click="btnResetSelectedResearch_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button Content="Complete All Research" Width="185" Click="btnCompleteAllResearch_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                        </WrapPanel>
+                                    </Grid>
+                                </Border>
+                                <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Text="Research Queue" Style="{StaticResource CardTitleStyle}"/>
+                                        <ListBox Grid.Row="1" x:Name="lstResearchQueue" DisplayMemberPath="DisplayName"/>
+                                        <WrapPanel Grid.Row="2" Margin="0,10,0,0">
+                                            <Button Content="Move Up" Width="95" Click="btnResearchQueueUp_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button Content="Move Down" Width="95" Click="btnResearchQueueDown_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button Content="Remove" Width="95" Click="btnRemoveResearchQueue_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                        </WrapPanel>
+                                        <StackPanel Grid.Row="3" Margin="0,8,0,0">
+                                            <Button Content="Add Selected Technology to Queue"
+                                                    Click="btnAddResearchQueue_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button Content="Clear Queue" Click="btnClearResearchQueue_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                            <TextBlock Grid.Row="2" x:Name="lblResearchStatus" Margin="5,0,5,0"
+                                       FontStyle="Italic" TextWrapping="Wrap"/>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem x:Name="navDatalogs" Header="Datalog Unlocks" Tag="&#xE8A5;">
+                        <Grid Margin="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Style="{StaticResource DirectionsCardStyle}">
+                                <Expander Header="Directions" Style="{StaticResource DirectionsExpanderStyle}">
+                                    <StackPanel Style="{StaticResource DirectionsContentStyle}">
+                                        <TextBlock Style="{StaticResource DirectionsTextStyle}">
+                                            <Run Text="Datalogs are story and lore logs found while exploring the world, derelicts, and other locations."/>
+                                            <LineBreak/>
+                                            <Run Text="This page lists the datalog IDs known to the editor, plus any additional IDs already found in the loaded save."/>
+                                            <LineBreak/>
+                                            <Run Text="Unlock Selected makes the checked logs available in the save. Unlock All Logs unlocks every listed datalog. Reset Selected removes the checked logs from the unlocked list."/>
+                                            <LineBreak/>
+                                            <Run Text="Resetting a datalog does not delete world objects or cryo-log names. Use File &gt; Save after making changes."
+                                                 FontWeight="SemiBold" Foreground="#D39A55"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Expander>
+                            </Border>
+                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="Datalog Unlocks" Style="{StaticResource CardTitleStyle}"/>
+                                    <TextBlock Grid.Row="1"
+                                               Text="Select individual logs to unlock or reset. Unlock All uses every datalog ID known to the editor."
+                                               Margin="0,0,0,10" FontStyle="Italic" TextWrapping="Wrap"/>
+                                    <DataGrid Grid.Row="2" x:Name="dgvDatalogUnlocks" AutoGenerateColumns="False"
+                                              CanUserAddRows="False" CanUserDeleteRows="False"
+                                              SelectionMode="Extended"
+                                              Style="{StaticResource ModernDataGridStyle}"
+                                              ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                        <DataGrid.Columns>
+                                            <DataGridCheckBoxColumn Header="Select"
+                                                                    Binding="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    Width="70"/>
+                                            <DataGridTextColumn Header="Datalog" Binding="{Binding DatalogName}" Width="*"
+                                                                IsReadOnly="True"/>
+                                            <DataGridTextColumn Header="ID" Binding="{Binding DatalogId}" Width="90"
+                                                                IsReadOnly="True"/>
+                                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="110"
+                                                                IsReadOnly="True"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                    <WrapPanel Grid.Row="3" Margin="0,10,0,0">
+                                        <Button Content="Select All" Width="110" Click="btnSelectAllDatalogs_Click"
+                                                Style="{StaticResource ModernButtonStyle}"/>
+                                        <Button Content="Clear Selection" Width="135" Click="btnClearDatalogSelection_Click"
+                                                Style="{StaticResource ModernButtonStyle}"/>
+                                        <Button Content="Unlock Selected" Width="150" Click="btnUnlockSelectedDatalogs_Click"
+                                                Style="{StaticResource ModernButtonStyle}"/>
+                                        <Button Content="Reset Selected" Width="145" Click="btnResetSelectedDatalogs_Click"
+                                                Style="{StaticResource ModernButtonStyle}"/>
+                                        <Button Content="Unlock All Logs" Width="145" Click="btnUnlockAllDatalogs_Click"
+                                                Style="{StaticResource ModernButtonStyle}"/>
+                                    </WrapPanel>
+                                    <TextBlock Grid.Row="4" x:Name="lblDatalogStatus" Margin="0,8,0,0"
+                                               FontStyle="Italic" TextWrapping="Wrap"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem x:Name="navCrewHeader" Header="CREW" Tag="SectionHeader" IsEnabled="False"
+                             HeaderTemplate="{StaticResource NavigationSectionHeaderTemplate}"/>
+                    <TabItem x:Name="navCrewEditor" Header="Crew Editor" Tag="&#xE716;">
                         <Grid Margin="5">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0" MinWidth="200">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Grid.ColumnSpan="2" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Crew Selection" Style="{StaticResource CardTitleStyle}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Ship / Station:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                        <ComboBox x:Name="cmbCrewShip" Width="360" DisplayMemberPath="DisplayName"
+                                                  SelectionChanged="cmbCrewShip_SelectionChanged"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0" MinWidth="200">
                                 <StackPanel>
                                     <TextBlock Text="Crew Members" FontSize="14" FontWeight="Bold" Margin="0,0,0,2" />
                                     <TextBlock x:Name="txtCrewCount" Text="Total Crew: 0" FontSize="11" FontStyle="Italic" Margin="0,0,0,10"/>
@@ -370,7 +1120,7 @@
                                     <Button x:Name="btnAddNewCrew" Content="Create New Crew Member..." HorizontalAlignment="Center" Width="200" Click="btnAddNewCrew_Click" Style="{StaticResource ModernButtonStyle}" Margin="0,10,0,0"/>
                                 </StackPanel>
                             </Border>
-                            <TabControl Grid.Column="1" Style="{StaticResource ModernTabControlStyle}">
+                            <TabControl x:Name="crewDetailsTabs" Grid.Row="1" Grid.Column="1" Style="{StaticResource ModernTabControlStyle}">
                                 <TabItem Header="Attributes">
                                     <Border Style="{StaticResource CardBorderStyle}">
                                         <StackPanel>
@@ -440,6 +1190,121 @@
                                         </StackPanel>
                                     </Border>
                                 </TabItem>
+                                <TabItem Header="Recovery">
+                                    <Border Style="{StaticResource CardBorderStyle}">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Crew Recovery" Style="{StaticResource CardTitleStyle}"/>
+                                            <TextBlock Grid.Row="1" x:Name="txtCrewRecoveryMember"
+                                                       Text="Select a crew member to view recovery details."
+                                                       FontWeight="Bold" Margin="0,0,0,8"/>
+                                            <Grid Grid.Row="2">
+                                                <DataGrid x:Name="dgvCrewRecoveryVitals"
+                                                          AutoGenerateColumns="False" IsReadOnly="True"
+                                                          CanUserAddRows="False" CanUserDeleteRows="False"
+                                                          Style="{StaticResource ModernDataGridStyle}"
+                                                          ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                                    <DataGrid.Columns>
+                                                        <DataGridTextColumn Header="Vital" Binding="{Binding VitalName}" Width="*"/>
+                                                        <DataGridTextColumn Header="Current" Binding="{Binding CurrentValue}" Width="85"/>
+                                                        <DataGridTextColumn Header="Long-Term" Binding="{Binding LongTermValue}" Width="90"/>
+                                                        <DataGridTextColumn Header="Details" Binding="{Binding Details}" Width="145"/>
+                                                    </DataGrid.Columns>
+                                                </DataGrid>
+                                            </Grid>
+                                            <TextBlock Grid.Row="3" Text="Recovery keeps enhanced health above 100, restores normal needs, clears oxygen and gas exposure, and can remove conditions through the recovery actions below."
+                                                       TextWrapping="Wrap" Margin="0,10,0,5"/>
+                                            <StackPanel Grid.Row="4">
+                                            <WrapPanel>
+                                                <Button Content="Restore Health and Needs" Width="190"
+                                                        Click="btnRestoreSelectedCrew_Click"
+                                                        Style="{StaticResource ModernButtonStyle}"/>
+                                                <Button Content="Restore Oxygen" Width="145"
+                                                        Click="btnRestoreSelectedOxygen_Click"
+                                                        Style="{StaticResource ModernButtonStyle}"/>
+                                                <Button Content="Clear All Conditions" Width="170"
+                                                        Click="btnClearSelectedCrewConditions_Click"
+                                                        Style="{StaticResource ModernButtonStyle}"/>
+                                                <Button Content="Full Recovery" Width="145"
+                                                        Click="btnFullRecoverySelectedCrew_Click"
+                                                        Style="{StaticResource ModernButtonStyle}"/>
+                                            </WrapPanel>
+                                            <TextBlock x:Name="lblCrewRecoveryStatus" Margin="5,10,5,0"
+                                                       FontStyle="Italic" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </TabItem>
+                                <TabItem Header="Loadout">
+                                    <Border Style="{StaticResource CardBorderStyle}">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Crew Loadout" Style="{StaticResource CardTitleStyle}"/>
+                                            <TextBlock Grid.Row="1" x:Name="txtCrewLoadoutMember"
+                                                       Text="Select a crew member to view their loadout."
+                                                       FontWeight="Bold" Margin="0,0,0,10"/>
+                                            <Grid Grid.Row="2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="260"/>
+                                                    <ColumnDefinition Width="25"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="260"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Headgear:" VerticalAlignment="Center" Margin="0,4,8,4"/>
+                                                <ComboBox Grid.Row="0" Grid.Column="1" x:Name="cmbCrewLoadoutHeadgear" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Armor:" VerticalAlignment="Center" Margin="0,4,8,4"/>
+                                                <ComboBox Grid.Row="1" Grid.Column="1" x:Name="cmbCrewLoadoutArmor" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Primary weapon:" VerticalAlignment="Center" Margin="0,4,8,4"/>
+                                                <ComboBox Grid.Row="2" Grid.Column="1" x:Name="cmbCrewLoadoutPrimary" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Attachment:" VerticalAlignment="Center" Margin="0,4,8,4"/>
+                                                <ComboBox Grid.Row="3" Grid.Column="1" x:Name="cmbCrewLoadoutAttachment" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Secondary weapon:" VerticalAlignment="Center" Margin="0,4,8,4"/>
+                                                <ComboBox Grid.Row="4" Grid.Column="1" x:Name="cmbCrewLoadoutSecondary" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+
+                                                <TextBlock Grid.Row="0" Grid.Column="3" Text="Pocket 1:" VerticalAlignment="Center" Margin="0,4,8,4"/>
+                                                <ComboBox Grid.Row="0" Grid.Column="4" x:Name="cmbCrewLoadoutPocket1" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="3" Text="Pocket 2:" VerticalAlignment="Center" Margin="0,4,8,4"/>
+                                                <ComboBox Grid.Row="1" Grid.Column="4" x:Name="cmbCrewLoadoutPocket2" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="3" Text="Pocket 3:" VerticalAlignment="Center" Margin="0,4,8,4"/>
+                                                <ComboBox Grid.Row="2" Grid.Column="4" x:Name="cmbCrewLoadoutPocket3" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <CheckBox Grid.Row="3" Grid.Column="3" Grid.ColumnSpan="2" x:Name="chkCrewBestQualityArmor"
+                                                          Content="Use best available armor quality" Margin="0,6,0,4"/>
+                                                <CheckBox Grid.Row="4" Grid.Column="3" Grid.ColumnSpan="2" x:Name="chkCrewBestQualityPrimary"
+                                                          Content="Use best available primary weapon quality" Margin="0,4,0,4"/>
+                                            </Grid>
+                                            <StackPanel Grid.Row="3" Margin="0,12,0,0">
+                                                <WrapPanel>
+                                                    <Button Content="Apply Loadout to Selected Crew" Width="220"
+                                                            Click="btnApplyCrewLoadout_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                                    <Button Content="Clear Loadout" Width="130"
+                                                            Click="btnClearCrewLoadout_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                                    <Button Content="Save as New Template..." Width="190"
+                                                            Click="btnSaveCrewLoadoutTemplate_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                                </WrapPanel>
+                                                <TextBlock x:Name="lblCrewLoadoutStatus" Margin="5,8,5,0" TextWrapping="Wrap" FontStyle="Italic"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </TabItem>
                                 <TabItem Header="Relationships">
                                     <Border Style="{StaticResource CardBorderStyle}">
                                         <Grid>
@@ -448,22 +1313,80 @@
                                                 <RowDefinition Height="*"/>
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
                                             <TextBlock Grid.Row="0" Text="Current Relationships:" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                                            <DataGrid Grid.Row="1" x:Name="dgvRelationships" Style="{StaticResource ModernDataGridStyle}" ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}" RowEditEnding="dgvRelationships_RowEditEnding" IsReadOnly="False">
+                                            <DataGrid Grid.Row="1" x:Name="dgvRelationships" Style="{StaticResource ModernDataGridStyle}" ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}" RowEditEnding="dgvRelationships_RowEditEnding" IsReadOnly="False" CanUserAddRows="False">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="Target" Binding="{Binding TargetName}" Width="300" IsReadOnly="True" />
-                                                    <DataGridTextColumn Header="Friendship" Binding="{Binding Friendship}" Width="Auto" IsReadOnly="False"/>
-                                                    <DataGridTextColumn Header="Attraction" Binding="{Binding Attraction}" Width="Auto" IsReadOnly="False"/>
-                                                    <DataGridTextColumn Header="Compatability" Binding="{Binding Compatibility}" Width="Auto" IsReadOnly="False"/>
+                                                    <DataGridTextColumn Header="Friendship" Binding="{Binding Friendship, UpdateSourceTrigger=PropertyChanged}" Width="Auto" IsReadOnly="False"/>
+                                                    <DataGridTextColumn Header="Attraction" Binding="{Binding Attraction, UpdateSourceTrigger=PropertyChanged}" Width="Auto" IsReadOnly="False"/>
+                                                    <DataGridTextColumn Header="Compatibility" Binding="{Binding Compatibility, UpdateSourceTrigger=PropertyChanged}" Width="Auto" IsReadOnly="False"/>
                                                 </DataGrid.Columns>
                                             </DataGrid>
-                                            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+                                            <WrapPanel Grid.Row="2" Margin="0,8,0,0">
+                                                <TextBlock Text="Target:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                                <ComboBox x:Name="cmbRelationshipTarget" Width="190" DisplayMemberPath="CharacterName"/>
+                                                <TextBlock Text="Friendship:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                                                <TextBox x:Name="txtRelationshipFriendship" Width="45" Text="0" Style="{StaticResource ModernTextBoxStyle}"/>
+                                                <TextBlock Text="Attraction:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                                                <TextBox x:Name="txtRelationshipAttraction" Width="45" Text="0" Style="{StaticResource ModernTextBoxStyle}"/>
+                                                <TextBlock Text="Compatibility:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                                                <TextBox x:Name="txtRelationshipCompatibility" Width="45" Text="0" Style="{StaticResource ModernTextBoxStyle}"/>
+                                                <Button x:Name="btnAddUpdateRelationship" Content="Add / Update" Width="120" Margin="10,0,0,0"
+                                                        Click="btnAddUpdateRelationship_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            </WrapPanel>
+                                            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
                                                 <Button x:Name="btnRelPrev" Content="Previous" Width="100" Style="{StaticResource ModernButtonStyle}" Click="btnRelPrev_Click" IsEnabled="False"/>
                                                 <TextBlock x:Name="txtRelationshipPageInfo" Text="Page 0 of 0" Margin="15,0" VerticalAlignment="Center"/>
                                                 <Button x:Name="btnRelNext" Content="Next >" Width="100" Style="{StaticResource ModernButtonStyle}" Click="btnRelNext_Click" IsEnabled="False"/>
                                             </StackPanel>
-                                            <TextBlock Grid.Row="3" Text="Edit values in grid. Commit w/ Enter/focus change. Save file." FontStyle="Italic" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                                            <TextBlock Grid.Row="4" Text="Relationships are directional. Values must be between -100 and 100. Use File > Save to make changes permanent." FontStyle="Italic" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                                        </Grid>
+                                    </Border>
+                                </TabItem>
+                                <TabItem x:Name="navGlobalSchedules" Header="Schedules">
+                                    <Border Style="{StaticResource CardBorderStyle}">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                                                <TextBlock Text="Crew Schedule" FontWeight="SemiBold"/>
+                                                <TextBlock x:Name="txtScheduleMode" Margin="0,3,0,0" FontStyle="Italic"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+                                                <TextBlock Text="Assign global schedule:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <ComboBox x:Name="cmbCrewGlobalSchedule" Width="190" DisplayMemberPath="Value" SelectedValuePath="Key"/>
+                                                <Button x:Name="btnApplyCrewGlobalSchedule" Content="Use Selected Global Schedule" Width="220" Margin="10,0,0,0"
+                                                        Click="btnApplyCrewGlobalSchedule_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            </StackPanel>
+                                            <DataGrid Grid.Row="2" x:Name="dgvCrewSchedule" AutoGenerateColumns="False"
+                                                      CanUserAddRows="False" CanUserDeleteRows="False"
+                                                      Style="{StaticResource ModernDataGridStyle}"
+                                                      ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="Hour" Binding="{Binding HourLabel}" Width="*" IsReadOnly="True"/>
+                                                    <DataGridTemplateColumn Header="Activity" Width="180">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <ComboBox ItemsSource="{Binding DataContext.ScheduleActivities, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                          DisplayMemberPath="Value" SelectedValuePath="Key"
+                                                                          SelectedValue="{Binding Activity, UpdateSourceTrigger=PropertyChanged}"/>
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,0">
+                                                <Button x:Name="btnApplyCrewSchedule" Content="Apply Custom Schedule" Width="190"
+                                                        Click="btnApplyCrewSchedule_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                                <TextBlock Text="Applying creates an individual schedule for this crew member. Use File > Save afterward."
+                                                           Margin="12,0,0,0" VerticalAlignment="Center" FontStyle="Italic" TextWrapping="Wrap"/>
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                 </TabItem>
@@ -471,55 +1394,227 @@
                         </Grid>
                     </TabItem>
 
-                    <TabItem Header="Storage">
-                        <Border Style="{StaticResource CardBorderStyle}">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                                    <TextBlock Text="Select Container:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0"/>
-                                    <ComboBox x:Name="cmbStorageContainers" Width="300" DisplayMemberPath="DisplayName" SelectionChanged="cmbStorageContainers_SelectionChanged"/>
-                                    <TextBlock x:Name="txtContainerInfo" Text="(Select Container)" VerticalAlignment="Center" Margin="15,0,0,0" FontStyle="Italic"/>
+                    <TabItem x:Name="navStorage" Header="Storage" Tag="&#xE7B8;">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="5,0,5,10">
+                                <StackPanel>
+                                    <TextBlock Text="Storage Selection" Style="{StaticResource CardTitleStyle}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Ship / Station:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                        <ComboBox x:Name="cmbStorageShip" Width="360" DisplayMemberPath="DisplayName"
+                                                  SelectionChanged="cmbStorageShip_SelectionChanged"/>
+                                    </StackPanel>
                                 </StackPanel>
-                                <DataGrid Grid.Row="1" x:Name="dgvStorage" AutoGenerateColumns="False" Margin="0,0,0,10" CanUserAddRows="False" CanUserDeleteRows="False" SelectionMode="Single" IsReadOnly="False" RowEditEnding="dgvStorage_RowEditEnding" Style="{StaticResource ModernDataGridStyle}" ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Item Name" Binding="{Binding Name}" Width="*" IsReadOnly="True" />
-                                        <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="Auto" IsReadOnly="False" />
-                                        <DataGridTextColumn Header="Item ID" Binding="{Binding ElementId}" Width="Auto" IsReadOnly="True" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
-                                    <TextBlock Text="Add Item:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                    <ComboBox x:Name="cmbAddItem" Width="250" SelectedValuePath="ItemId" Margin="5,0,10,0" Height="30" VerticalContentAlignment="Center">
-                                        <ComboBox.GroupStyle>
-                                            <GroupStyle>
-                                                <GroupStyle.HeaderTemplate>
+                            </Border>
+                        <TabControl Grid.Row="1" Style="{StaticResource NestedTabControlStyle}">
+                            <TabItem Header="Inventory Overview">
+                                <Border Style="{StaticResource CardBorderStyle}">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                                            <TextBlock Text="Search all containers:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                            <TextBox x:Name="txtInventorySearch" Width="300" TextChanged="txtInventorySearch_TextChanged"
+                                                     Style="{StaticResource ModernTextBoxStyle}"/>
+                                            <Button Content="Clear Search" Width="110" Margin="8,0,0,0"
+                                                    Click="btnClearInventorySearch_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Row="1" x:Name="lblInventorySummary" Margin="0,0,0,8" FontStyle="Italic"/>
+                                        <DataGrid Grid.Row="2" x:Name="dgvConsolidatedInventory" AutoGenerateColumns="False"
+                                                  IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                                                  Style="{StaticResource ModernDataGridStyle}"
+                                                  ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Item" Binding="{Binding Name}" Width="*"/>
+                                                <DataGridTextColumn Header="Total Quantity" Binding="{Binding TotalQuantity}" Width="110"/>
+                                                <DataGridTextColumn Header="Containers" Binding="{Binding ContainerCount}" Width="90"/>
+                                                <DataGridTextColumn Header="Item ID" Binding="{Binding ElementId}" Width="80"/>
+                                                <DataGridTextColumn Header="Locations" Binding="{Binding Locations}" Width="2*"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </Grid>
+                                </Border>
+                            </TabItem>
+                            <TabItem Header="Containers">
+                                <Border Style="{StaticResource CardBorderStyle}">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                                            <TextBlock Text="Select Container:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                                            <ComboBox x:Name="cmbStorageContainers" Width="360" DisplayMemberPath="DisplayName" SelectionChanged="cmbStorageContainers_SelectionChanged"/>
+                                            <TextBlock x:Name="txtContainerInfo" Text="(Select Container)" VerticalAlignment="Center" Margin="15,0,0,0" FontStyle="Italic"/>
+                                        </StackPanel>
+                                        <DataGrid Grid.Row="1" x:Name="dgvStorage" AutoGenerateColumns="False" Margin="0,0,0,10"
+                                                  CanUserAddRows="False" CanUserDeleteRows="False" SelectionMode="Single"
+                                                  IsReadOnly="False" RowEditEnding="dgvStorage_RowEditEnding"
+                                                  Style="{StaticResource ModernDataGridStyle}"
+                                                  ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Item Name" Binding="{Binding Name}" Width="*" IsReadOnly="True" />
+                                                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="Auto" IsReadOnly="False" />
+                                                <DataGridTextColumn Header="Item ID" Binding="{Binding ElementId}" Width="Auto" IsReadOnly="True" />
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                        <WrapPanel Grid.Row="2" Margin="0,0,0,5">
+                                            <TextBlock Text="Add Item:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                            <ComboBox x:Name="cmbAddItem" Width="250" SelectedValuePath="ItemId" Margin="5,0,10,0" Height="30" VerticalContentAlignment="Center">
+                                                <ComboBox.GroupStyle>
+                                                    <GroupStyle>
+                                                        <GroupStyle.HeaderTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock FontWeight="Bold" Text="{Binding Name}" Margin="0,5,0,2"/>
+                                                            </DataTemplate>
+                                                        </GroupStyle.HeaderTemplate>
+                                                    </GroupStyle>
+                                                </ComboBox.GroupStyle>
+                                                <ComboBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <TextBlock FontWeight="Bold" Text="{Binding Name}" Margin="0,5,0,2"/>
+                                                        <TextBlock Text="{Binding ItemName}" Margin="10,0,0,0"/>
                                                     </DataTemplate>
-                                                </GroupStyle.HeaderTemplate>
-                                            </GroupStyle>
-                                        </ComboBox.GroupStyle>
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding ItemName}" Margin="10,0,0,0"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                    <TextBlock Text="Quantity:" VerticalAlignment="Center" Margin="10,0,5,0"/>
-                                    <TextBox x:Name="txtAddQuantity" Width="60" VerticalAlignment="Center" Text="1"/>
-                                    <Button x:Name="btnAddItem" Content="Add to Container" Width="140" Click="btnAddItem_Click" Style="{StaticResource ModernButtonStyle}"/>
-                                    <Rectangle Width="10"/>
-                                    <Button x:Name="btnDeleteItem" Content="Delete Selected" Width="130" Click="btnDeleteItem_Click" Style="{StaticResource ModernButtonStyle}" Background="IndianRed"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                            <TextBlock Text="Quantity:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                                            <TextBox x:Name="txtAddQuantity" Width="60" VerticalAlignment="Center" Text="1"/>
+                                            <Button x:Name="btnAddItem" Content="Add to Container" Width="140" Click="btnAddItem_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button x:Name="btnDeleteItem" Content="Delete Selected" Width="130" Click="btnDeleteItem_Click" Style="{StaticResource ModernButtonStyle}" Background="IndianRed"/>
+                                        </WrapPanel>
+                                    </Grid>
+                                </Border>
+                            </TabItem>
+                        </TabControl>
+                        </Grid>
+                    </TabItem>
+                    <TabItem x:Name="navNewCrewMember" Header="New Crew Member" Tag="&#xE710;">
+                        <Grid Margin="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="360"/>
+                                        <ColumnDefinition Width="25"/>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.ColumnSpan="5" Text="Create New Crew Member" Style="{StaticResource CardTitleStyle}"/>
+                                    <TextBlock Grid.Row="1" Text="Target ship / station:" VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Row="1" Grid.Column="1" x:Name="cmbNewCrewShip" DisplayMemberPath="DisplayName"
+                                              SelectionChanged="cmbNewCrewShip_SelectionChanged"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="3" Text="Template crew:" VerticalAlignment="Center"/>
+                                    <ComboBox Grid.Row="1" Grid.Column="4" x:Name="cmbNewCrewTemplate" DisplayMemberPath="CharacterName"
+                                              SelectedValuePath="CharacterEntityId"/>
+                                    <TextBlock Grid.Row="2" Text="New crew name:" VerticalAlignment="Center" Margin="0,10,0,0"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="txtEmbeddedNewCrewName" Text="New Recruit"
+                                             Margin="0,10,0,0" Style="{StaticResource ModernTextBoxStyle}"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="3" Grid.ColumnSpan="2"
+                                               Text="The selected crew member supplies required XML structure. Conditions, relationships, and bed assignment are cleared."
+                                               Margin="0,10,0,0" FontStyle="Italic" TextWrapping="Wrap"/>
+                                </Grid>
+                            </Border>
+
+                            <TabControl Grid.Row="1" Style="{StaticResource ModernTabControlStyle}">
+                                <TabItem Header="Attributes">
+                                    <Border Style="{StaticResource CardBorderStyle}">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+                                            <Button Grid.Row="0" Content="Set All Attributes to 10" Width="185" HorizontalAlignment="Left"
+                                                    Click="btnSetEmbeddedNewAttributes_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            <DataGrid Grid.Row="1" x:Name="dgvEmbeddedNewAttributes" Margin="0,8,0,0"
+                                                      Style="{StaticResource ModernDataGridStyle}"
+                                                      ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" IsReadOnly="True" Width="80"/>
+                                                    <DataGridTextColumn Header="Attribute" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
+                                                    <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="100"/>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </Grid>
+                                    </Border>
+                                </TabItem>
+                                <TabItem Header="Skills">
+                                    <Border Style="{StaticResource CardBorderStyle}">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+                                            <Button Grid.Row="0" Content="Set All Skills to 10" Width="170" HorizontalAlignment="Left"
+                                                    Click="btnSetEmbeddedNewSkills_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            <DataGrid Grid.Row="1" x:Name="dgvEmbeddedNewSkills" Margin="0,8,0,0"
+                                                      Style="{StaticResource ModernDataGridStyle}"
+                                                      ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" IsReadOnly="True" Width="80"/>
+                                                    <DataGridTextColumn Header="Skill" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
+                                                    <DataGridTextColumn Header="Level" Binding="{Binding Value}" Width="100"/>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </Grid>
+                                    </Border>
+                                </TabItem>
+                                <TabItem Header="Traits">
+                                    <Border Style="{StaticResource CardBorderStyle}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="30"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="Available Traits" FontWeight="Bold" Margin="0,0,0,8"/>
+                                                <ComboBox x:Name="cmbEmbeddedAvailableTraits" DisplayMemberPath="Value" SelectedValuePath="Key"/>
+                                                <Button Content="Add Trait" Width="120" HorizontalAlignment="Left"
+                                                        Click="btnAddEmbeddedNewTrait_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="Selected Traits" FontWeight="Bold" Margin="0,0,0,8"/>
+                                                <ListBox x:Name="lstEmbeddedNewTraits" Height="250" DisplayMemberPath="Name"/>
+                                                <Button Content="Remove Selected" Width="140" HorizontalAlignment="Left" Background="IndianRed"
+                                                        Click="btnRemoveEmbeddedNewTrait_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </TabItem>
+                            </TabControl>
+
+                            <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="lblEmbeddedNewCrewStatus" VerticalAlignment="Center" FontStyle="Italic"/>
+                                    <Button Grid.Column="1" Content="Create Crew Member" Width="180"
+                                            Click="btnCreateEmbeddedCrew_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
                     </TabItem>
 
-                    <TabItem Header="Bulk">
+                    <TabItem x:Name="navBulkOperations" Header="Bulk Operations" Tag="&#xE8B7;">
                         <Grid Margin="5">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -532,6 +1627,10 @@
                             <TabControl Grid.Row="0" Style="{StaticResource NestedTabControlStyle}" Margin="0,0,0,10" SelectionChanged="BulkTabControl_SelectionChanged">
                                 <TabItem Header="Add Bulk Crew"/>
                                 <TabItem Header="Bulk Character Stats"/>
+                                <TabItem Header="Bulk Traits"/>
+                                <TabItem Header="Bulk Schedules"/>
+                                <TabItem Header="Bulk Recovery"/>
+                                <TabItem Header="Bulk Loadouts"/>
                             </TabControl>
 
                             <!-- Sub-Tab Content in Detached Card -->
@@ -584,16 +1683,390 @@
                                         </StackPanel>
                                         <TextBlock x:Name="lblBulkSkillStatus" Text="" Margin="0,5,0,0" FontSize="12"/>
                                     </StackPanel>
+
+                                    <StackPanel x:Name="bulkTraitsPanel" Visibility="Collapsed">
+                                        <TextBlock Text="Bulk Traits for Current Ship / Station" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+                                        <TextBlock x:Name="lblBulkTraitsShip" Text="Select a ship or station in Crew Editor."
+                                                   FontStyle="Italic" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                        <TextBlock Text="Select one or more traits to add. Existing traits are skipped, not duplicated."
+                                                   TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                        <ListBox x:Name="lstBulkTraits" Height="260" DisplayMemberPath="Value"
+                                                 SelectionMode="Extended"/>
+                                        <WrapPanel Margin="0,10,0,0">
+                                            <Button Content="Add Selected Trait(s) to Ship Crew" Width="250"
+                                                    Click="btnBulkAddTraits_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button Content="Clear All Traits from Ship Crew" Width="240"
+                                                    Click="btnBulkClearTraits_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                        </WrapPanel>
+                                        <TextBlock x:Name="lblBulkTraitsStatus" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+
+                                    <StackPanel x:Name="bulkSchedulePanel" Visibility="Collapsed">
+                                        <TextBlock Text="Assign Global Schedule to Selected Crew" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+                                        <TextBlock Text="Crew shown here belong to the currently selected ship or station." FontStyle="Italic" Margin="0,0,0,8"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <Button Content="Select All" Width="110" Height="32" Padding="8,2" Click="btnBulkScheduleSelectAll_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button Content="Clear" Width="110" Height="32" Padding="8,2" Margin="8,0,0,0" Click="btnBulkScheduleClear_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="lblBulkScheduleCounts" FontWeight="SemiBold" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                        <ListBox x:Name="lstBulkScheduleCrew" Height="280">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="3" Width="500">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="30"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="180"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding CurrentSchedule}" VerticalAlignment="Center" FontStyle="Italic"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <TextBlock Text="Global schedule:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <ComboBox x:Name="cmbBulkGlobalSchedule" Width="190" DisplayMemberPath="Value" SelectedValuePath="Key"/>
+                                            <Button Content="Apply to Checked Crew" Width="190" Margin="10,0,0,0"
+                                                    Click="btnApplyBulkGlobalSchedule_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="lblBulkScheduleStatus" Margin="0,8,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel x:Name="bulkRecoveryPanel" Visibility="Collapsed">
+                                        <TextBlock Text="Recover Selected Crew" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+                                        <TextBlock Text="Crew shown here belong to the ship or station selected in Crew Editor. Restore keeps enhanced health values, and Full Recovery also clears all conditions."
+                                                   FontStyle="Italic" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <Button Content="Select All" Width="110" Height="32" Padding="8,2"
+                                                    Click="btnBulkRecoverySelectAll_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button Content="Clear" Width="110" Height="32" Padding="8,2" Margin="8,0,0,0"
+                                                    Click="btnBulkRecoveryClear_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                        </StackPanel>
+                                        <ListBox x:Name="lstBulkRecoveryCrew" Height="300">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="3" Width="500">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="30"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <CheckBox Grid.Column="0"
+                                                                  IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <WrapPanel Margin="0,10,0,0">
+                                            <Button Content="Restore Checked Crew" Width="180"
+                                                    Click="btnRestoreBulkCrew_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button Content="Full Recovery for Checked Crew" Width="225"
+                                                    Click="btnFullRecoveryBulkCrew_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button Content="Restore All Active Player Crew Vitals" Width="245"
+                                                    Click="btnRestoreAllCrew_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                            <Button Content="Full Recovery for All Active Player Crew" Width="285"
+                                                    Click="btnFullRecoveryAllCrew_Click"
+                                                    Style="{StaticResource ModernButtonStyle}"/>
+                                        </WrapPanel>
+                                        <TextBlock x:Name="lblBulkRecoveryStatus" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+
+                                    <Grid x:Name="bulkLoadoutPanel" Visibility="Collapsed">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="310"/>
+                                            <ColumnDefinition Width="15"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid Grid.Column="0">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Named Loadout Configurations" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+                                            <ComboBox Grid.Row="1" x:Name="cmbBulkLoadoutTemplate" DisplayMemberPath="Name"
+                                                      SelectionChanged="cmbBulkLoadoutTemplate_SelectionChanged" Margin="0,0,0,8"/>
+                                            <Grid Grid.Row="2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Text="Headgear:" VerticalAlignment="Center" Margin="0,3,6,3"/>
+                                                <ComboBox Grid.Row="0" Grid.Column="1" x:Name="cmbTemplateHeadgear" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="1" Text="Armor:" VerticalAlignment="Center" Margin="0,3,6,3"/>
+                                                <ComboBox Grid.Row="1" Grid.Column="1" x:Name="cmbTemplateArmor" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="2" Text="Primary:" VerticalAlignment="Center" Margin="0,3,6,3"/>
+                                                <ComboBox Grid.Row="2" Grid.Column="1" x:Name="cmbTemplatePrimary" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="3" Text="Attachment:" VerticalAlignment="Center" Margin="0,3,6,3"/>
+                                                <ComboBox Grid.Row="3" Grid.Column="1" x:Name="cmbTemplateAttachment" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="4" Text="Secondary:" VerticalAlignment="Center" Margin="0,3,6,3"/>
+                                                <ComboBox Grid.Row="4" Grid.Column="1" x:Name="cmbTemplateSecondary" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="5" Text="Pocket 1:" VerticalAlignment="Center" Margin="0,3,6,3"/>
+                                                <ComboBox Grid.Row="5" Grid.Column="1" x:Name="cmbTemplatePocket1" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="6" Text="Pocket 2:" VerticalAlignment="Center" Margin="0,3,6,3"/>
+                                                <ComboBox Grid.Row="6" Grid.Column="1" x:Name="cmbTemplatePocket2" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <TextBlock Grid.Row="7" Text="Pocket 3:" VerticalAlignment="Center" Margin="0,3,6,3"/>
+                                                <ComboBox Grid.Row="7" Grid.Column="1" x:Name="cmbTemplatePocket3" DisplayMemberPath="DisplayName" SelectedValuePath="ItemId"/>
+                                                <CheckBox Grid.Row="8" Grid.ColumnSpan="2" x:Name="chkTemplateBestQualityArmor"
+                                                          Content="Use best available armor quality" Margin="0,5,0,2"/>
+                                                <CheckBox Grid.Row="9" Grid.ColumnSpan="2" x:Name="chkTemplateBestQualityPrimary"
+                                                          Content="Use best available primary quality" Margin="0,2,0,2"/>
+                                            </Grid>
+                                            <WrapPanel Grid.Row="3" Margin="0,8,0,0">
+                                                <Button Content="New" Width="72" Click="btnNewLoadoutTemplate_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                                <Button Content="Save" Width="72" Click="btnSaveLoadoutTemplate_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                                <Button Content="Rename" Width="82" Click="btnRenameLoadoutTemplate_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                                <Button Content="Delete" Width="72" Click="btnDeleteLoadoutTemplate_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            </WrapPanel>
+                                        </Grid>
+                                        <Grid Grid.Column="2">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Apply Configuration to Crew" FontSize="14" FontWeight="Bold" Margin="0,0,0,4"/>
+                                            <TextBlock Grid.Row="1" Text="Crew shown here belong to the ship or station selected in Crew Editor."
+                                                       FontStyle="Italic" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                            <ListBox Grid.Row="2" x:Name="lstBulkLoadoutCrew">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="3" Width="500">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="30"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="250"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding CurrentLoadout}" VerticalAlignment="Center" FontStyle="Italic"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                            <WrapPanel Grid.Row="3" Margin="0,8,0,0">
+                                                <Button Content="Select All" Width="110" Click="btnBulkLoadoutSelectAll_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                                <Button Content="Clear" Width="110" Click="btnBulkLoadoutClear_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                                <Button Content="Apply Template to Checked Crew" Width="235"
+                                                        Click="btnApplyBulkLoadout_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                            </WrapPanel>
+                                            <TextBlock Grid.Row="4" x:Name="lblBulkLoadoutStatus" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                                        </Grid>
+                                    </Grid>
                                 </StackPanel>
                             </Border>
                         </Grid>
                     </TabItem>
-                </TabControl>
-                    </Grid>
-                </ScrollViewer>
-            </TabItem>
 
-            <TabItem Header="Game Start Editor">
+                    <TabItem x:Name="navScheduleDesigner" Header="Global Schedule Designer" Tag="&#xE787;">
+                        <Grid Margin="5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="280"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="Global Schedules" Style="{StaticResource CardTitleStyle}"/>
+                                    <ListBox Grid.Row="1" x:Name="lstGlobalScheduleDesigner"
+                                             DisplayMemberPath="DisplayName"
+                                             SelectionChanged="lstGlobalScheduleDesigner_SelectionChanged"/>
+                                    <WrapPanel Grid.Row="2" Margin="0,10,0,0">
+                                        <Button Content="Create" Width="105" Click="btnCreateGlobalSchedule_Click"
+                                                Style="{StaticResource ModernButtonStyle}"/>
+                                        <Button Content="Duplicate" Width="105" Click="btnDuplicateGlobalSchedule_Click"
+                                                Style="{StaticResource ModernButtonStyle}"/>
+                                    </WrapPanel>
+                                </Grid>
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="Schedule Designer" Style="{StaticResource CardTitleStyle}"/>
+                                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Schedule name:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBox Grid.Column="1" x:Name="txtGlobalScheduleName" Style="{StaticResource ModernTextBoxStyle}"/>
+                                        <Button Grid.Column="2" Content="Rename" Width="105" Margin="10,0,0,0"
+                                                Click="btnRenameGlobalSchedule_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                    </Grid>
+                                    <DataGrid Grid.Row="2" x:Name="dgvGlobalScheduleDesigner" AutoGenerateColumns="False"
+                                              CanUserAddRows="False" CanUserDeleteRows="False"
+                                              Style="{StaticResource ModernDataGridStyle}"
+                                              ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Hour" Binding="{Binding HourLabel}" Width="*" IsReadOnly="True"/>
+                                            <DataGridTemplateColumn Header="Activity" Width="240">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <ComboBox ItemsSource="{Binding DataContext.ScheduleActivities, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                  DisplayMemberPath="Value" SelectedValuePath="Key"
+                                                                  SelectedValue="{Binding Activity, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                    <Grid Grid.Row="3" Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="lblGlobalScheduleDesignerStatus" VerticalAlignment="Center"
+                                                   FontStyle="Italic" TextWrapping="Wrap"/>
+                                        <Button Grid.Column="1" Content="Apply Schedule Changes" Width="205"
+                                                Click="btnApplyGlobalScheduleChanges_Click"
+                                                Style="{StaticResource ModernButtonStyle}"/>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem x:Name="navFactions" Header="Factions" Tag="&#xE909;">
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="5">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                                    <TextBlock Text="Faction Reputation" Style="{StaticResource CardTitleStyle}"/>
+                                    <TextBlock Text="Player-facing factions only. Edit a row, then click Apply Selected Faction."
+                                               Margin="0,3,0,0" FontStyle="Italic"/>
+                                </StackPanel>
+                                <DataGrid Grid.Row="1" x:Name="dgvFactionReputation" AutoGenerateColumns="False"
+                                          CanUserAddRows="False" CanUserDeleteRows="False" SelectionMode="Single"
+                                          Style="{StaticResource ModernDataGridStyle}"
+                                          ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Faction" Binding="{Binding FactionName}" Width="150" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="Reputation" Binding="{Binding Relationship, UpdateSourceTrigger=PropertyChanged}" Width="85"/>
+                                        <DataGridComboBoxColumn Header="Stance" Width="100"
+                                                                SelectedItemBinding="{Binding Stance, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <DataGridTextColumn Header="Patience" Binding="{Binding Patience, UpdateSourceTrigger=PropertyChanged}" Width="75"/>
+                                        <DataGridCheckBoxColumn Header="Trade" Binding="{Binding AccessTrade}" Width="60"/>
+                                        <DataGridCheckBoxColumn Header="Ship" Binding="{Binding AccessShip}" Width="55"/>
+                                        <DataGridCheckBoxColumn Header="Vision" Binding="{Binding AccessVision}" Width="60"/>
+                                        <DataGridCheckBoxColumn Header="Services" Binding="{Binding AccessServices}" Width="70"/>
+                                        <DataGridCheckBoxColumn Header="Hire" Binding="{Binding AccessHire}" Width="55"/>
+                                        <DataGridTextColumn Header="Settlement Debt" Binding="{Binding SettlementDebt, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <WrapPanel Grid.Row="2" Margin="0,10,0,0">
+                                    <Button Content="Enemy Preset" Width="165" Height="34" Padding="8,2" Click="btnFactionEnemy_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                    <Button Content="Neutral Preset" Width="165" Height="34" Padding="8,2" Margin="8,0,0,0" Click="btnFactionNeutral_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                    <Button Content="Friendly Preset" Width="165" Height="34" Padding="8,2" Margin="8,0,0,0" Click="btnFactionFriendly_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                    <Button Content="Full Access" Width="165" Height="34" Padding="8,2" Margin="8,0,0,0" Click="btnFactionFullAccess_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                    <Button Content="Apply Selected Faction" Width="165" Height="34" Padding="8,2" Margin="8,0,0,0"
+                                            Click="btnApplyFaction_Click" Style="{StaticResource ModernButtonStyle}"/>
+                                </WrapPanel>
+                                <TextBlock Grid.Row="3" x:Name="lblFactionStatus" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                            </Grid>
+                        </Border>
+                    </TabItem>
+
+                    <TabItem x:Name="navShipsHeader" Header="SHIPS AND STATIONS" Tag="SectionHeader" IsEnabled="False"
+                             HeaderTemplate="{StaticResource NavigationSectionHeaderTemplate}"/>
+                    <TabItem x:Name="navShipTransfer" Header="Ship Import and Export" Tag="&#xE8B5;">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <Grid Margin="5">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Export Ship Blueprint" Style="{StaticResource CardTitleStyle}"/>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="btnSelectSourceSave" Content="Select Source Save ('game')..." Width="200" Style="{StaticResource ModernButtonStyle}"/>
+                                            <TextBlock Grid.Column="1" x:Name="txtSourceSavePath" Text="(No source save selected)" FontStyle="Italic" Foreground="Gray" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <TextBlock Text="Select Ship to Export:" Margin="0,5,0,5"/>
+                                        <ComboBox x:Name="cmbShipsToExport" Height="25" Margin="0,0,0,10" DisplayMemberPath="Sname" SelectedValuePath="Sid" IsEnabled="False"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Button x:Name="btnExportBlueprint" Content="Export Selected Ship Blueprint" Width="220" Style="{StaticResource ModernButtonStyle}" IsEnabled="False"/>
+                                            <Button x:Name="btnDeleteSourceShip" Content="Delete Selected Ship" Width="170" Style="{StaticResource ModernButtonStyle}" Background="IndianRed" IsEnabled="False"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Import Ship Blueprint" Style="{StaticResource CardTitleStyle}"/>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="btnSelectBlueprintFile" Content="Select Blueprint File (.xml)..." Width="200" Style="{StaticResource ModernButtonStyle}"/>
+                                            <TextBlock Grid.Column="1" x:Name="txtBlueprintFilePath" Text="(No blueprint selected)" FontStyle="Italic" Foreground="Gray" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="btnSelectTargetSave" Content="Select Target Save ('game')..." Width="200" Style="{StaticResource ModernButtonStyle}"/>
+                                            <TextBlock Grid.Column="1" x:Name="txtTargetSavePath" Text="(No target save selected)" FontStyle="Italic" Foreground="Gray" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <CheckBox x:Name="chkImportAsBlueprint" Margin="0,0,0,10" Content="Import as Blueprint (keeps the hull plan; excludes facilities, crew, robots, and items)" IsChecked="False"/>
+                                        <Button x:Name="btnImportBlueprint" Content="Import Blueprint to Target Save" HorizontalAlignment="Center" Width="220" Style="{StaticResource ModernButtonStyle}" IsEnabled="False"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <StatusBar Grid.Row="3" VerticalAlignment="Bottom" Background="#292825" Foreground="#E9E4DC">
+                                    <StatusBarItem>
+                                        <TextBlock x:Name="txtBlueprintStatus" Text="Ready"/>
+                                    </StatusBarItem>
+                                </StatusBar>
+                            </Grid>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <TabItem x:Name="navAdvancedHeader" Header="ADVANCED" Tag="SectionHeader" IsEnabled="False"
+                             HeaderTemplate="{StaticResource NavigationSectionHeaderTemplate}"/>
+
+                    <TabItem x:Name="navGameStartHeader" Header="GAME START" Tag="SectionHeader" IsEnabled="False"
+                             HeaderTemplate="{StaticResource NavigationSectionHeaderTemplate}"/>
+            <TabItem x:Name="navGameStartEditor" Header="Game Start Editor" Tag="&#xE7C3;">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <Grid Margin="10">
                         <Grid.RowDefinitions>
@@ -607,30 +2080,11 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
-                        <!-- Title Banner -->
-                        <Border Grid.Row="0" CornerRadius="5" Margin="0,0,0,10">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                    <GradientStop Color="#FF4A5A6A" Offset="0"/>
-                                    <GradientStop Color="#FF607080" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                            <Border.Effect>
-                                <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.4" BlurRadius="5"/>
-                            </Border.Effect>
-                            <TextBlock Text="Game Start &amp; Difficulty Editor"
-                                   FontSize="24"
-                                   FontWeight="Bold"
-                                   Foreground="White" VerticalAlignment="Center"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,10"/>
-                        </Border>
-
                         <!-- Instructions Card (Collapsible) -->
-                        <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Background="#E8F4FD" BorderBrush="#B0D8F0" Margin="0,0,0,10">
-                            <Expander Header="Instructions" IsExpanded="False">
-                                <StackPanel Margin="0,10,0,0">
-                                    <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="18">
+                        <Border Grid.Row="1" Style="{StaticResource DirectionsCardStyle}">
+                            <Expander Header="Instructions" Style="{StaticResource DirectionsExpanderStyle}">
+                                <StackPanel Style="{StaticResource DirectionsContentStyle}">
+                                    <TextBlock Style="{StaticResource DirectionsTextStyle}">
                                         <Run Text="1. In Space Haven: Start Game, pick Game Mode, pick Difficulty, then save the difficulty file as a custom one"/>
                                         <LineBreak/>
                                         <Run Text="2. Click 'Load File' to open your custom Game Start XML file from the scenario directory"/>
@@ -641,7 +2095,7 @@
                                         <LineBreak/>
                                         <Run Text="5. Click 'Save Changes' to save your modifications to the file"/>
                                         <LineBreak/>
-                                        <Run Text="Note: Remember to click 'Save Changes' after making any modifications!" FontWeight="SemiBold" Foreground="#CC0000"/>
+                                        <Run Text="Note: Remember to click 'Save Changes' after making any modifications!" FontWeight="SemiBold" Foreground="#D39A55"/>
                                     </TextBlock>
                                 </StackPanel>
                             </Expander>
@@ -655,22 +2109,7 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="File" FontSize="16" FontWeight="Bold" Grid.Column="0"/>
-                                    <TextBlock x:Name="txtGameStartUnsavedIndicator" 
-                                           Text="⚠ Unsaved Changes - Click 'Save Changes' to save!" 
-                                           FontSize="14"
-                                           FontWeight="Bold"
-                                           Foreground="#FFFF0000" 
-                                           Background="#FFFFE4B5"
-                                           Padding="10,5"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"
-                                           Grid.Column="1"
-                                           Visibility="Collapsed">
-                                        <TextBlock.Effect>
-                                            <DropShadowEffect ShadowDepth="2" Direction="270" Color="Black" Opacity="0.5" BlurRadius="3"/>
-                                        </TextBlock.Effect>
-                                    </TextBlock>
+                                    <TextBlock Text="File" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource CardTitleStyle}"/>
                                 </Grid>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                     <Button x:Name="btnGameStartLoadFile" Content="Load File" Width="100" Height="30" 
@@ -743,7 +2182,7 @@
                             <TabItem Header="Resources">
                                 <Border Style="{StaticResource CardBorderStyle}" Margin="0">
                                     <StackPanel>
-                                        <TextBlock Text="Resources" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <TextBlock Text="Resources" Style="{StaticResource CardTitleStyle}"/>
                                         <DataGrid x:Name="dgGameStartResources" Style="{StaticResource ModernDataGridStyle}" 
                                                   ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}"
                                                   Height="300" SelectionChanged="dgGameStartResources_SelectionChanged"
@@ -802,7 +2241,7 @@
                             <TabItem Header="Items">
                                 <Border Style="{StaticResource CardBorderStyle}" Margin="0">
                                     <StackPanel>
-                                        <TextBlock Text="Items (Weapons, Armor, Medical, etc.)" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <TextBlock Text="Items (Weapons, Armor, Medical, etc.)" Style="{StaticResource CardTitleStyle}"/>
                                         <DataGrid x:Name="dgGameStartItems" Style="{StaticResource ModernDataGridStyle}" 
                                                   ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}"
                                                   Height="300" SelectionChanged="dgGameStartItems_SelectionChanged"
@@ -872,7 +2311,9 @@
                 </ScrollViewer>
             </TabItem>
 
-            <TabItem Header="Blueprint Manager">
+            <TabItem x:Name="navLegacyBlueprint" Header="Blueprint Manager" Visibility="Collapsed">
+                <TabItem.ContentTemplate>
+                    <DataTemplate>
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <Grid Margin="10">
                         <Grid.RowDefinitions>
@@ -883,11 +2324,11 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <Border Grid.Row="0" CornerRadius="5" Margin="0,0,0,10">
+                        <Border Grid.Row="0" CornerRadius="5,5,0,0" Margin="0">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                    <GradientStop Color="#FF4A5A6A" Offset="0"/>
-                                    <GradientStop Color="#FF607080" Offset="1"/>
+                                    <GradientStop Color="#2A2926" Offset="0"/>
+                                    <GradientStop Color="#49443E" Offset="1"/>
                                 </LinearGradientBrush>
                             </Border.Background>
                             <Border.Effect>
@@ -914,7 +2355,10 @@
                                 </Grid>
                                 <TextBlock Text="Select Ship to Export:" Margin="0,5,0,5"/>
                                 <ComboBox x:Name="cmbShipsToExport" Height="25" Margin="0,0,0,10" DisplayMemberPath="Sname" SelectedValuePath="Sid" IsEnabled="False"/>
-                                <Button x:Name="btnExportBlueprint" Content="Export Selected Ship Blueprint" HorizontalAlignment="Center" Width="220" Style="{StaticResource ModernButtonStyle}" IsEnabled="False"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button x:Name="btnExportBlueprint" Content="Export Selected Ship Blueprint" Width="220" Style="{StaticResource ModernButtonStyle}" IsEnabled="False"/>
+                                    <Button x:Name="btnDeleteSourceShip" Content="Delete Selected Ship" Width="170" Style="{StaticResource ModernButtonStyle}" Background="IndianRed" IsEnabled="False"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
@@ -937,7 +2381,7 @@
                                     <Button x:Name="btnSelectTargetSave" Content="Select Target Save ('game')..." Width="200" Style="{StaticResource ModernButtonStyle}"/>
                                     <TextBlock Grid.Column="1" x:Name="txtTargetSavePath" Text="(No target save selected)" FontStyle="Italic" Foreground="Gray" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="10,0,0,0" VerticalAlignment="Center"/>
                                 </Grid>
-                                <CheckBox x:Name="chkImportAsBlueprint" Margin="0,0,0,10" Content="Import as Blueprint (excludes crew, inventory, and built structures - keeps planning sketch)" IsChecked="False"/>
+                                <CheckBox x:Name="chkImportAsBlueprint" Margin="0,0,0,10" Content="Import as Blueprint (keeps the hull plan; excludes facilities, crew, robots, and items)" IsChecked="False"/>
                                 <Button x:Name="btnImportBlueprint" Content="Import Blueprint to Target Save" HorizontalAlignment="Center" Width="220" Style="{StaticResource ModernButtonStyle}" IsEnabled="False"/>
                             </StackPanel>
                         </Border>
@@ -949,7 +2393,10 @@
                         </StatusBar>
                     </Grid>
                 </ScrollViewer>
+                    </DataTemplate>
+                </TabItem.ContentTemplate>
             </TabItem>
         </TabControl>
+        </Grid>
     </DockPanel>
 </Window>

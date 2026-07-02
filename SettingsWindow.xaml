@@ -7,26 +7,26 @@
         mc:Ignorable="d"
         Title="Editor Settings" Height="250" Width="650"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ResizeMode="NoResize"
-        Background="WhiteSmoke" WindowStyle="None"
+        Background="#1C1B19" Foreground="#E9E4DC" WindowStyle="None"
         Loaded="Window_Loaded">
 
     <Window.Resources>
         <Style x:Key="CardBorderStyle" TargetType="Border">
-            <Setter Property="Background" Value="WhiteSmoke"/>
+            <Setter Property="Background" Value="#302E2B"/>
             <Setter Property="CornerRadius" Value="5"/>
             <Setter Property="Padding" Value="20"/>
             <Setter Property="Margin" Value="10"/>
-            <Setter Property="BorderBrush" Value="LightGray"/>
+            <Setter Property="BorderBrush" Value="#4D4943"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect ShadowDepth="1" Direction="270" Color="Gray" Opacity="0.3" BlurRadius="5"/>
+                    <DropShadowEffect ShadowDepth="1" Direction="270" Color="Black" Opacity="0.4" BlurRadius="5"/>
                 </Setter.Value>
             </Setter>
         </Style>
 
         <Style x:Key="ModernButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF007ACC"/>
+            <Setter Property="Background" Value="#9B663B"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Margin" Value="5"/>
@@ -46,10 +46,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF009AFF"/>
+                                <Setter Property="Background" Value="#B77B48"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#FF005A9E"/>
+                                <Setter Property="Background" Value="#784B2B"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Background" Value="Gray"/>
@@ -64,15 +64,16 @@
         <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
             <Setter Property="Padding" Value="5,3"/>
             <Setter Property="BorderThickness" Value="0,0,0,1"/>
-            <Setter Property="BorderBrush" Value="Gray"/>
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#756D63"/>
+            <Setter Property="Background" Value="#262522"/>
+            <Setter Property="Foreground" Value="#F2EDE5"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Style.Triggers>
                 <Trigger Property="IsKeyboardFocused" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                    <Setter Property="BorderBrush" Value="#D39A55"/>
                 </Trigger>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="Black"/>
+                    <Setter Property="BorderBrush" Value="#B9AA98"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -91,15 +92,15 @@
 
             <!-- Row 0: Backup Checkbox -->
             <CheckBox x:Name="chkBackup" Grid.Row="0" VerticalAlignment="Center" Margin="5,5,5,10">
-                <TextBlock Text="Create timestamped backup when opening save file" FontWeight="Bold"/>
+                <TextBlock Text="Create timestamped backup when opening save file" FontWeight="Bold" Foreground="#E9E4DC"/>
             </CheckBox>
 
             <!-- Row 1: Default Directory + Browse -->
             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5,10,5,15">
-                <TextBlock Text="Default Save Directory:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,15,0"/>
+                <TextBlock Text="Default Save Directory:" VerticalAlignment="Center" FontWeight="Bold" Foreground="#E9E4DC" Margin="0,0,15,0"/>
                 <TextBox x:Name="txtDefaultDirectory" Width="300" VerticalAlignment="Center" IsReadOnly="True" 
                          Style="{StaticResource ModernTextBoxStyle}"/>
-                <Button x:Name="btnBrowseDirectory" Content="Browse…" Margin="10,0,0,0" Background="Red" 
+                <Button x:Name="btnBrowseDirectory" Content="Browse…" Margin="10,0,0,0"
                         Style="{StaticResource ModernButtonStyle}" Click="btnBrowseDirectory_Click"/>
             </StackPanel>
 
@@ -109,7 +110,7 @@
                     <Button x:Name="btnOK" Content="OK" IsDefault="True" Click="btnOK_Click" 
                             Style="{StaticResource ModernButtonStyle}" Margin="0,0,5,0"/>
                     <Button x:Name="btnCancel" Content="Cancel" IsCancel="True" Click="btnCancel_Click" 
-                            Style="{StaticResource ModernButtonStyle}" Background="#FFAAAAAA" Margin="5,0,0,0"/>
+                            Style="{StaticResource ModernButtonStyle}" Background="#625C54" Margin="5,0,0,0"/>
                 </UniformGrid>
             </Grid>
         </Grid>

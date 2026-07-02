@@ -27,7 +27,7 @@ Namespace SpaceHavenEditor2
             InitializeComponent()
 
             ' Load the saved default directory or set a fallback
-            Dim savedDirectory As String = My.Settings.DefaultSaveDirectory
+            Dim savedDirectory As String = Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory
             If String.IsNullOrEmpty(savedDirectory) OrElse Not Directory.Exists(savedDirectory) Then
                 txtDefaultDirectory.Text = GetDefaultSpaceHavenDirectory()
             Else
@@ -35,7 +35,7 @@ Namespace SpaceHavenEditor2
             End If
 
             ' Load the backup setting
-            chkBackup.IsChecked = My.Settings.BackupOnOpen
+            chkBackup.IsChecked = Global.SpaceHavenEditor2.My.Settings.Default.BackupOnOpen
         End Sub
 
         ' Method for MainWindow to set the initial value for the backup setting
@@ -83,7 +83,7 @@ Namespace SpaceHavenEditor2
                 txtDefaultDirectory.Text = dlg.SelectedPath
             Else
                 ' Revert to a valid directory if cancelled or invalid
-                Dim saved As String = My.Settings.DefaultSaveDirectory
+                Dim saved As String = Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory
                 txtDefaultDirectory.Text = If(Directory.Exists(saved),
                                            saved,
                                            GetDefaultSpaceHavenDirectory())
@@ -93,21 +93,21 @@ Namespace SpaceHavenEditor2
         ' OK Button Click Handler
         Private Sub btnOK_Click(sender As Object, e As RoutedEventArgs)
             ' Save backup setting
-            My.Settings.BackupOnOpen = chkBackup.IsChecked.GetValueOrDefault(False)
+            Global.SpaceHavenEditor2.My.Settings.Default.BackupOnOpen = chkBackup.IsChecked.GetValueOrDefault(False)
 
             ' Save default directory if valid, otherwise use fallback
             If Directory.Exists(txtDefaultDirectory.Text) Then
-                My.Settings.DefaultSaveDirectory = txtDefaultDirectory.Text
+                Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory = txtDefaultDirectory.Text
             Else
-                My.Settings.DefaultSaveDirectory = GetDefaultSpaceHavenDirectory()
-                txtDefaultDirectory.Text = My.Settings.DefaultSaveDirectory
+                Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory = GetDefaultSpaceHavenDirectory()
+                txtDefaultDirectory.Text = Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory
                 MessageBox.Show("The selected directory is invalid. Reverted to default Space Haven save directory.",
                               "Invalid Directory",
                               MessageBoxButton.OK,
                               MessageBoxImage.Warning)
             End If
 
-            My.Settings.Save()
+            Global.SpaceHavenEditor2.My.Settings.Default.Save()
             Me.DialogResult = True
             Me.Close()
         End Sub

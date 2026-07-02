@@ -9,7 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="1db97379-38ff-4578-b895-3f7433504527.png" />
     <None Remove="b1a65345-8f16-4e38-87d8-0066a0f6d95c.png" />
   </ItemGroup>
 
@@ -26,14 +25,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MaterialDesignColors" Version="5.2.1" />
-    <PackageReference Include="MaterialDesignThemes" Version="5.2.1" />
-    <PackageReference Include="MaterialDesignThemes.Wpf" Version="1.0.1" />
     <PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="1db97379-38ff-4578-b895-3f7433504527.png" />
     <Resource Include="b1a65345-8f16-4e38-87d8-0066a0f6d95c.png" />
   </ItemGroup>
 
