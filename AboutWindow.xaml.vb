@@ -5,6 +5,18 @@ Namespace SpaceHavenEditor2
 
     Public Sub New()
         InitializeComponent()
+        AddHandler Loaded, Sub(sender, e) ApplyCredits()
+        AddHandler Localization.LanguageChanged, AddressOf ApplyCredits
+        AddHandler Closed, Sub(sender, e) RemoveHandler Localization.LanguageChanged, AddressOf ApplyCredits
+    End Sub
+
+    Private Sub ApplyCredits()
+        Title = Localization.T("About Space Haven Editor")
+        txtProductName.Text = Localization.T("Moragar's Space Haven Save Game Editor")
+        txtAuthor.Text = Localization.T("Created by Moragar")
+        txtLocalization.Text = Localization.T("Localization by GuguguBear")
+        txtVersion.Text = Localization.T("v2.1 - Last Updated - 07/02/2026")
+        btnClose.Content = Localization.T("OK")
     End Sub
 
     ' Handler to allow dragging the borderless window

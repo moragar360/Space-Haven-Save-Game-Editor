@@ -72,7 +72,7 @@ Namespace SpaceHavenEditor2
 
             ' Instantiate the WPF folder picker
             Dim dlg As New VistaFolderBrowserDialog With {
-                .Description = "Select your Space Haven save-game folder",
+                .Description = Localization.T("Select your Space Haven save-game folder"),
                 .SelectedPath = startPath,
                 .UseDescriptionForTitle = True
             }
@@ -101,8 +101,8 @@ Namespace SpaceHavenEditor2
             Else
                 Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory = GetDefaultSpaceHavenDirectory()
                 txtDefaultDirectory.Text = Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory
-                MessageBox.Show("The selected directory is invalid. Reverted to default Space Haven save directory.",
-                              "Invalid Directory",
+                MessageBox.Show(Localization.T("The selected directory is invalid. Reverted to default Space Haven save directory."),
+                              Localization.T("Invalid Directory"),
                               MessageBoxButton.OK,
                               MessageBoxImage.Warning)
             End If

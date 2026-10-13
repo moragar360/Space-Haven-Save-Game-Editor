@@ -80,7 +80,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnSelectSourceSave_Click(sender As Object, e As RoutedEventArgs) Handles btnSelectSourceSave.Click
             Debug.WriteLine(">>> btnSelectSourceSave_Click Entered") ' DEBUG MESSAGE
             Dim ofd As New OpenFileDialog With {
-                .Title = "Select Source Space Haven Save File ('game')",
+                .Title = Localization.T("Select Source Space Haven Save File ('game')"),
                 .Filter = "Space Haven Save|game;*.sav|All Files (*.*)|*.*", ' Allow game or .sav
                 .CheckFileExists = True,
                 .InitialDirectory = GetDefaultSaveDirectory()
@@ -100,7 +100,7 @@ Namespace SpaceHavenEditor2
         ' Handles selecting the blueprint XML file for import
         Private Sub btnSelectBlueprintFile_Click(sender As Object, e As RoutedEventArgs) Handles btnSelectBlueprintFile.Click
             Dim ofd As New OpenFileDialog With {
-                .Title = "Select Ship Blueprint File",
+                .Title = Localization.T("Select Ship Blueprint File"),
                 .Filter = "Ship Blueprint XML (*.xml)|*.xml|All Files (*.*)|*.*",
                 .CheckFileExists = True,
                 .InitialDirectory = GetDefaultSaveDirectory()
@@ -119,7 +119,7 @@ Namespace SpaceHavenEditor2
         ' Handles selecting the target save file for import
         Private Sub btnSelectTargetSave_Click(sender As Object, e As RoutedEventArgs) Handles btnSelectTargetSave.Click
             Dim ofd As New OpenFileDialog With {
-               .Title = "Select Target Space Haven Save File ('game')",
+               .Title = Localization.T("Select Target Space Haven Save File ('game')"),
                .Filter = "Space Haven Save|game;*.sav|All Files (*.*)|*.*", ' Allow game or .sav
                .CheckFileExists = True,
                .InitialDirectory = GetDefaultSaveDirectory()
@@ -211,7 +211,7 @@ Namespace SpaceHavenEditor2
                 CheckExportButtonState()
 
             Catch ex As Exception
-                MessageBox.Show($"Error loading ships from source save:{Environment.NewLine}{ex.ToString()}", "Load Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error loading ships from source save:{0}{1}", Environment.NewLine, ex.ToString()), Localization.T("Load Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 sourceXmlDoc = Nothing
                 cmbShipsToExport.ItemsSource = Nothing
                 cmbShipsToExport.IsEnabled = False
@@ -239,19 +239,19 @@ Namespace SpaceHavenEditor2
             If selectedShip Is Nothing OrElse String.IsNullOrWhiteSpace(sourceSavePath) Then Return
 
             Dim confirmation = MessageBox.Show(
-                $"Delete '{selectedShip.Sname}' (SID {selectedShip.Sid}) from this save?{vbCrLf}{vbCrLf}" &
-                "A .bak backup will be created first. This cannot be undone inside the editor.",
-                "Delete Ship", MessageBoxButton.YesNo, MessageBoxImage.Warning)
+                Localization.F("Delete '{0}' (SID {1}) from this save?{2}{3}", selectedShip.Sname, selectedShip.Sid, vbCrLf, vbCrLf) &
+                Localization.T("A .bak backup will be created first. This cannot be undone inside the editor."),
+                Localization.T("Delete Ship"), MessageBoxButton.YesNo, MessageBoxImage.Warning)
             If confirmation <> MessageBoxResult.Yes Then Return
 
             Try
                 Dim deletedName = ShipDeletionService.DeleteShip(sourceSavePath, selectedShip.Sid)
                 UpdateStatus($"Deleted '{deletedName}'. Backup saved as {Path.GetFileName(sourceSavePath)}.bak.")
                 LoadShipsFromSource()
-                MessageBox.Show($"'{deletedName}' was deleted successfully.", "Ship Deleted",
+                MessageBox.Show(Localization.F("'{0}' was deleted successfully.", deletedName), Localization.T("Ship Deleted"),
                                 MessageBoxButton.OK, MessageBoxImage.Information)
             Catch ex As Exception
-                MessageBox.Show($"Unable to delete ship:{vbCrLf}{ex.Message}", "Delete Error",
+                MessageBox.Show(Localization.F("Unable to delete ship:{0}{1}", vbCrLf, ex.Message), Localization.T("Delete Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
                 UpdateStatus($"Delete failed: {ex.Message}")
             End Try
@@ -260,15 +260,15 @@ Namespace SpaceHavenEditor2
         Private Sub btnExportBlueprint_Click(sender As Object, e As RoutedEventArgs) Handles btnExportBlueprint.Click
             Dim selectedShipInfo = TryCast(cmbShipsToExport.SelectedItem, ShipInfo)
             If selectedShipInfo Is Nothing Then
-                MessageBox.Show("Please select a ship from the list.", "No Ship Selected", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+                MessageBox.Show(Localization.T("Please select a ship from the list."), Localization.T("No Ship Selected"), MessageBoxButton.OK, MessageBoxImage.Warning) : Return
             End If
             If selectedShipInfo.IsStation Then
-                MessageBox.Show("Stations use additional map and generation data and cannot be exported as ordinary ship blueprints.",
-                                "Station Export Not Supported", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Stations use additional map and generation data and cannot be exported as ordinary ship blueprints."),
+                                Localization.T("Station Export Not Supported"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If sourceXmlDoc Is Nothing OrElse sourceXmlDoc.Root Is Nothing Then
-                MessageBox.Show("Source save file is not loaded or is invalid.", "Error", MessageBoxButton.OK, MessageBoxImage.Error) : Return
+                MessageBox.Show(Localization.T("Source save file is not loaded or is invalid."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error) : Return
             End If
 
             ' Check which export mode radio button is selected
@@ -291,7 +291,7 @@ Namespace SpaceHavenEditor2
                 End If
 
                 Dim sfd As New SaveFileDialog() With {
-                    .Title = "Save Ship Blueprint As",
+                    .Title = Localization.T("Save Ship Blueprint As"),
                     .Filter = "Ship Blueprint XML (*.xml)|*.xml|All Files (*.*)|*.*",
                     .FileName = $"{selectedShipInfo.Sname}_Blueprint.xml",
                     .InitialDirectory = GetDefaultSaveDirectory()
@@ -299,13 +299,13 @@ Namespace SpaceHavenEditor2
 
                 If sfd.ShowDialog() = True Then
                     blueprintNodeToSave.Save(sfd.FileName)
-                    MessageBox.Show($"Blueprint '{Path.GetFileName(sfd.FileName)}' saved successfully!", "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information)
+                    MessageBox.Show(Localization.F("Blueprint '{0}' saved successfully!", Path.GetFileName(sfd.FileName)), Localization.T("Export Complete"), MessageBoxButton.OK, MessageBoxImage.Information)
                     UpdateStatus($"Blueprint '{Path.GetFileName(sfd.FileName)}' saved.")
                 Else
                     UpdateStatus("Export cancelled.")
                 End If
             Catch ex As Exception
-                MessageBox.Show($"Error exporting blueprint:{Environment.NewLine}{ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error exporting blueprint:{0}{1}", Environment.NewLine, ex.Message), Localization.T("Export Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 UpdateStatus("Export failed.")
             End Try
         End Sub
@@ -321,20 +321,20 @@ Namespace SpaceHavenEditor2
         Private Sub btnImportBlueprint_Click(sender As Object, e As RoutedEventArgs) Handles btnImportBlueprint.Click
             ' --- 0) Validate inputs ---
             If String.IsNullOrEmpty(blueprintFilePath) OrElse Not File.Exists(blueprintFilePath) Then
-                MessageBox.Show("Please select a valid blueprint XML file.", "Blueprint Missing", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a valid blueprint XML file."), Localization.T("Blueprint Missing"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If String.IsNullOrEmpty(targetSavePath) OrElse Not File.Exists(targetSavePath) Then
-                MessageBox.Show("Please select a valid target save 'game' file.", "Target Save Missing", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a valid target save 'game' file."), Localization.T("Target Save Missing"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             ' --- 1) Confirm --- 
             Dim result = MessageBox.Show(
-        $"Import '{Path.GetFileName(blueprintFilePath)}' into '{Path.GetFileName(targetSavePath)}'?" & vbCrLf &
-        "BACKUP YOUR SAVE FIRST! Do not have the game loaded." & vbCrLf & vbCrLf &
-        "Proceed?",
-        "Confirm Import", MessageBoxButton.YesNo, MessageBoxImage.Warning
+        Localization.F("Import '{0}' into '{1}'?", Path.GetFileName(blueprintFilePath), Path.GetFileName(targetSavePath)) & vbCrLf &
+        Localization.T("BACKUP YOUR SAVE FIRST! Do not have the game loaded.") & vbCrLf & vbCrLf &
+        Localization.T("Proceed?"),
+        Localization.T("Confirm Import"), MessageBoxButton.YesNo, MessageBoxImage.Warning
     )
             If result = MessageBoxResult.No Then
                 UpdateStatus("Import cancelled.")
@@ -429,7 +429,7 @@ Namespace SpaceHavenEditor2
 
                     targetXmlDoc.Save(targetSavePath)
                     UpdateStatus($"Blueprint import complete: SID {newBlueprintSid}.")
-                    MessageBox.Show("Ship blueprint imported successfully!", "Done",
+                    MessageBox.Show(Localization.T("Ship blueprint imported successfully!"), Localization.T("Done"),
                                     MessageBoxButton.OK, MessageBoxImage.Information)
                     Return
                 End If
@@ -588,10 +588,10 @@ Namespace SpaceHavenEditor2
 
                         targetXmlDoc.Save(targetSavePath)
                         UpdateStatus($"Import complete: SID {newBlueprintSid}, Instance #{newInstanceId}.")
-                        MessageBox.Show("Ship imported successfully!", "Done", MessageBoxButton.OK, MessageBoxImage.Information)
+                        MessageBox.Show(Localization.T("Ship imported successfully!"), Localization.T("Done"), MessageBoxButton.OK, MessageBoxImage.Information)
 
     Catch ex As Exception
-                MessageBox.Show($"Import Error:{vbCrLf}{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Import Error:{0}{1}", vbCrLf, ex.Message), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 UpdateStatus("Import failed.")
             Finally
                 Me.Cursor = Cursors.Arrow

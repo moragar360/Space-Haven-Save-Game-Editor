@@ -11,12 +11,12 @@ Public Class BulkScheduleCrewItem
 
     Public ReadOnly Property CurrentSchedule As String
         Get
-            If Crew Is Nothing Then Return "Unknown"
+            If Crew Is Nothing Then Return SpaceHavenEditor2.Localization.T("Unknown")
             If Crew.UsesGlobalSchedule Then
                 If Not String.IsNullOrWhiteSpace(ScheduleDisplayName) Then Return ScheduleDisplayName
-                Return $"Global Schedule {Crew.GlobalScheduleId}"
+                Return SpaceHavenEditor2.Localization.F("Global Schedule {0}", Crew.GlobalScheduleId)
             End If
-            Return "Custom Schedule"
+            Return SpaceHavenEditor2.Localization.T("Custom Schedule")
         End Get
     End Property
 End Class

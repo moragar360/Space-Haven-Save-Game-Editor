@@ -34,6 +34,7 @@ Public Class SaveIntegrityScanner
                                     findings As List(Of SaveIntegrityFinding)) As HashSet(Of Long)
         Dim validIds As New HashSet(Of Long)
         Dim grouped As New Dictionary(Of Long, List(Of XElement))
+        Dim categoryText = SpaceHavenEditor2.Localization.T(category)
 
         For Each element In elements
             Dim rawValue = element.Attribute(attributeName)?.Value
@@ -44,9 +45,9 @@ Public Class SaveIntegrityScanner
                Not Long.TryParse(rawValue, parsedValue) OrElse parsedValue <= 0 Then
                 findings.Add(New SaveIntegrityFinding With {
                     .Severity = SaveIntegritySeverity.Critical,
-                    .Category = $"{category} IDs",
+                    .Category = SpaceHavenEditor2.Localization.F("{0} IDs", categoryText),
                     .AffectedObject = displayName,
-                    .Description = $"{category} has a missing, zero, or non-numeric {attributeName}.",
+                    .Description = SpaceHavenEditor2.Localization.F("{0} has a missing, zero, or non-numeric {1}.", categoryText, attributeName),
                     .RepairKind = SaveIntegrityRepairKind.None
                 })
                 Continue For
@@ -60,9 +61,9 @@ Public Class SaveIntegrityScanner
         For Each duplicate In grouped.Where(Function(pair) pair.Value.Count > 1)
             findings.Add(New SaveIntegrityFinding With {
                 .Severity = SaveIntegritySeverity.Critical,
-                .Category = $"{category} IDs",
-                .AffectedObject = $"{attributeName} {duplicate.Key}",
-                .Description = $"{duplicate.Value.Count} {category.ToLowerInvariant()} records share the same primary ID.",
+                .Category = SpaceHavenEditor2.Localization.F("{0} IDs", categoryText),
+                .AffectedObject = SpaceHavenEditor2.Localization.F("{0} {1}", attributeName, duplicate.Key),
+                .Description = SpaceHavenEditor2.Localization.F("{0} {1} records share the same primary ID.", duplicate.Value.Count, categoryText),
                 .RepairKind = SaveIntegrityRepairKind.None
             })
         Next
@@ -75,7 +76,7 @@ Public Class SaveIntegrityScanner
         For Each source In crew
             Dim sourceId As Long
             If Not Long.TryParse(source.Attribute("entId")?.Value, sourceId) OrElse sourceId <= 0 Then Continue For
-            Dim sourceName = If(source.Attribute("name")?.Value, $"Crew {sourceId}")
+            Dim sourceName = If(source.Attribute("name")?.Value, SpaceHavenEditor2.Localization.F("Crew {0}", sourceId))
             Dim relationships = source.Element("pers")?.Element("sociality")?.
                 Element("relationships")?.Elements("l").ToList()
             If relationships Is Nothing Then Continue For
@@ -99,7 +100,7 @@ Public Class SaveIntegrityScanner
                         "Remove self-relationship", relationship))
                 ElseIf Not validCrewIds.Contains(targetId) Then
                     findings.Add(RemoveFinding(
-                        SaveIntegritySeverity.Warning, "Relationships", $"{sourceName} -> Crew {targetId}",
+                        SaveIntegritySeverity.Warning, "Relationships", SpaceHavenEditor2.Localization.F("{0} -> Crew {1}", sourceName, targetId),
                         "Relationship target does not exist in the loaded save.",
                         "Remove stale relationship", relationship))
                 End If
@@ -113,9 +114,9 @@ Public Class SaveIntegrityScanner
                 If invalidValues.Count > 0 Then
                     findings.Add(New SaveIntegrityFinding With {
                         .Severity = SaveIntegritySeverity.Warning,
-                        .Category = "Relationships",
-                        .AffectedObject = $"{sourceName} -> Crew {targetId}",
-                        .Description = $"Relationship values outside -100 to 100: {String.Join(", ", invalidValues)}.",
+                        .Category = SpaceHavenEditor2.Localization.T("Relationships"),
+                        .AffectedObject = SpaceHavenEditor2.Localization.F("{0} -> Crew {1}", sourceName, targetId),
+                        .Description = SpaceHavenEditor2.Localization.F("Relationship values outside -100 to 100: {0}.", String.Join(", ", invalidValues)),
                         .RepairDescription = "Clamp values to -100..100",
                         .RepairKind = SaveIntegrityRepairKind.ClampRelationshipValues,
                         .SourceElement = relationship
@@ -128,9 +129,9 @@ Public Class SaveIntegrityScanner
                 Dim rows = duplicate.Select(Function(item) item.Item2).ToList()
                 findings.Add(New SaveIntegrityFinding With {
                     .Severity = SaveIntegritySeverity.Warning,
-                    .Category = "Relationships",
-                    .AffectedObject = $"{sourceName} -> Crew {duplicate.Key}",
-                    .Description = $"{rows.Count} relationship rows target the same crew member.",
+                    .Category = SpaceHavenEditor2.Localization.T("Relationships"),
+                    .AffectedObject = SpaceHavenEditor2.Localization.F("{0} -> Crew {1}", sourceName, duplicate.Key),
+                    .Description = SpaceHavenEditor2.Localization.F("{0} relationship rows target the same crew member.", rows.Count),
                     .RepairDescription = "Keep last relationship row",
                     .RepairKind = SaveIntegrityRepairKind.RemoveElements,
                     .ElementsToRemove = rows.Take(rows.Count - 1).ToList()
@@ -147,9 +148,9 @@ Public Class SaveIntegrityScanner
                                    element As XElement) As SaveIntegrityFinding
         Return New SaveIntegrityFinding With {
             .Severity = severity,
-            .Category = category,
+            .Category = SpaceHavenEditor2.Localization.T(category),
             .AffectedObject = affectedObject,
-            .Description = description,
+            .Description = SpaceHavenEditor2.Localization.T(description),
             .RepairDescription = repairDescription,
             .RepairKind = SaveIntegrityRepairKind.RemoveElements,
             .ElementsToRemove = New List(Of XElement) From {element}
@@ -169,9 +170,9 @@ Public Class SaveIntegrityScanner
             If Not Long.TryParse(schedule.Attribute("schedId")?.Value, scheduleId) OrElse scheduleId <= 0 Then
                 findings.Add(New SaveIntegrityFinding With {
                     .Severity = SaveIntegritySeverity.Critical,
-                    .Category = "Global Schedules",
-                    .AffectedObject = "Global schedule",
-                    .Description = "Global schedule has a missing, zero, or non-numeric schedId.",
+                    .Category = SpaceHavenEditor2.Localization.T("Global Schedules"),
+                    .AffectedObject = SpaceHavenEditor2.Localization.T("Global schedule"),
+                    .Description = SpaceHavenEditor2.Localization.T("Global schedule has a missing, zero, or non-numeric schedId."),
                     .RepairKind = SaveIntegrityRepairKind.None
                 })
                 Continue For
@@ -183,9 +184,9 @@ Public Class SaveIntegrityScanner
         For Each duplicate In grouped.Where(Function(pair) pair.Value > 1)
             findings.Add(New SaveIntegrityFinding With {
                 .Severity = SaveIntegritySeverity.Critical,
-                .Category = "Global Schedules",
-                .AffectedObject = $"Schedule {duplicate.Key}",
-                .Description = $"{duplicate.Value} global schedules share the same schedId.",
+                .Category = SpaceHavenEditor2.Localization.T("Global Schedules"),
+                .AffectedObject = SpaceHavenEditor2.Localization.F("Schedule {0}", duplicate.Key),
+                .Description = SpaceHavenEditor2.Localization.F("{0} global schedules share the same schedId.", duplicate.Value),
                 .RepairKind = SaveIntegrityRepairKind.None
             })
         Next
@@ -196,12 +197,12 @@ Public Class SaveIntegrityScanner
             Dim scheduleId As Long
             If Not Long.TryParse(pers.Attribute("globalSch")?.Value, scheduleId) OrElse
                Not validScheduleIds.Contains(scheduleId) Then
-                Dim crewName = If(character.Attribute("name")?.Value, "Unnamed crew")
+                Dim crewName = If(character.Attribute("name")?.Value, SpaceHavenEditor2.Localization.T("Unnamed crew"))
                 findings.Add(New SaveIntegrityFinding With {
                     .Severity = SaveIntegritySeverity.Warning,
-                    .Category = "Global Schedules",
+                    .Category = SpaceHavenEditor2.Localization.T("Global Schedules"),
                     .AffectedObject = crewName,
-                    .Description = $"Crew member references missing global schedule '{pers.Attribute("globalSch")?.Value}'.",
+                    .Description = SpaceHavenEditor2.Localization.F("Crew member references missing global schedule '{0}'.", pers.Attribute("globalSch")?.Value),
                     .RepairKind = SaveIntegrityRepairKind.None
                 })
             End If
@@ -219,8 +220,8 @@ Public Class SaveIntegrityScanner
                    Not validShipIds.Contains(sid) Then
                     findings.Add(RemoveFinding(
                         SaveIntegritySeverity.Warning, "Ship References",
-                        If(blueprint.Attribute("sname")?.Value, $"Blueprint ship {sid}"),
-                        $"Blueprint references missing ship SID {sid}.",
+                        If(blueprint.Attribute("sname")?.Value, SpaceHavenEditor2.Localization.F("Blueprint ship {0}", sid)),
+                        SpaceHavenEditor2.Localization.F("Blueprint references missing ship SID {0}.", sid),
                         "Remove stale blueprint reference", blueprint))
                 End If
             Next
@@ -243,16 +244,16 @@ Public Class SaveIntegrityScanner
                 If isPlayer Then
                     findings.Add(RemoveFinding(
                         SaveIntegritySeverity.Warning, "Ship References",
-                        If(createdShip.Attribute("shn")?.Value, $"Player created ship {String.Join("/", candidateIds)}"),
+                        If(createdShip.Attribute("shn")?.Value, SpaceHavenEditor2.Localization.F("Player created ship {0}", String.Join("/", candidateIds))),
                         "Player createdShips row does not resolve to a loaded ship by createdShipId or slid.",
                         "Remove stale createdShips row", createdShip))
                 Else
                     findings.Add(New SaveIntegrityFinding With {
                         .Severity = SaveIntegritySeverity.Information,
-                        .Category = "Ship References",
+                        .Category = SpaceHavenEditor2.Localization.T("Ship References"),
                         .AffectedObject = If(createdShip.Attribute("shn")?.Value,
-                                             $"Created ship {String.Join("/", candidateIds)}"),
-                        .Description = "Spawned non-player ship is not in the currently loaded sector and may be off-sector.",
+                                             SpaceHavenEditor2.Localization.F("Created ship {0}", String.Join("/", candidateIds))),
+                        .Description = SpaceHavenEditor2.Localization.T("Spawned non-player ship is not in the currently loaded sector and may be off-sector."),
                         .RepairKind = SaveIntegrityRepairKind.None
                     })
                 End If
@@ -293,10 +294,10 @@ Public Class SaveIntegrityScanner
         If Not Long.TryParse(rawValue, currentValue) OrElse currentValue <= highestExistingId Then
             findings.Add(New SaveIntegrityFinding With {
                 .Severity = SaveIntegritySeverity.Warning,
-                .Category = category,
+                .Category = SpaceHavenEditor2.Localization.T(category),
                 .AffectedObject = attributeName,
-                .Description = $"{attributeName} is '{rawValue}' but must be above existing ID {highestExistingId}.",
-                .RepairDescription = $"Raise to {highestExistingId + 1}",
+                .Description = SpaceHavenEditor2.Localization.F("{0} is '{1}' but must be above existing ID {2}.", attributeName, rawValue, highestExistingId),
+                .RepairDescription = SpaceHavenEditor2.Localization.F("Raise to {0}", highestExistingId + 1),
                 .RepairKind = SaveIntegrityRepairKind.RaiseCounter,
                 .SourceElement = owner,
                 .CounterAttributeName = attributeName,

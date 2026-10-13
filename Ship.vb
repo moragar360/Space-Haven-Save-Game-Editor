@@ -19,8 +19,8 @@
 
     Public ReadOnly Property DisplayName As String
         Get
-            If Sid = -1 Then Return "-- Select Ship --"
-            Return $"[{StructureType}] {Sname}"
+            If Sid = -1 Then Return SpaceHavenEditor2.Localization.T("-- Select Ship --")
+            Return String.Format("[{0}] {1}", SpaceHavenEditor2.Localization.T(StructureType), Sname)
         End Get
     End Property
 

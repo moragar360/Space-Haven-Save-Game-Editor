@@ -90,7 +90,7 @@ Public Class Character
             If Integer.TryParse(ShirtColorIndex, setId) Then
                 Return IdCollection.GetColorName(setId, ShirtColorIndexValue)
             End If
-            Return "Unknown"
+            Return SpaceHavenEditor2.Localization.T("Unknown")
         End Get
     End Property
     
@@ -100,7 +100,7 @@ Public Class Character
             If Integer.TryParse(PantsColorIndex, setId) Then
                 Return IdCollection.GetColorName(setId, PantsColorIndexValue)
             End If
-            Return "Unknown"
+            Return SpaceHavenEditor2.Localization.T("Unknown")
         End Get
     End Property
     

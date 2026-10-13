@@ -2,6 +2,12 @@ Imports System.Xml.Linq
 
 Public Class FactionReputationInfo
     Public Property FactionName As String
+
+    Public ReadOnly Property DisplayName As String
+        Get
+            Return SpaceHavenEditor2.Localization.T(If(FactionName, ""))
+        End Get
+    End Property
     Public Property Relationship As Integer
     Public Property Stance As String
     Public Property Patience As Integer

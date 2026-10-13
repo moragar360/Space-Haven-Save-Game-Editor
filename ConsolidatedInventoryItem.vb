@@ -7,9 +7,9 @@ Public Class ConsolidatedInventoryItem
     Public ReadOnly Property Name As String
         Get
             If IdCollection.DefaultStorageIDs.ContainsKey(ElementId) Then
-                Return IdCollection.DefaultStorageIDs(ElementId)
+                Return SpaceHavenEditor2.Localization.T(IdCollection.DefaultStorageIDs(ElementId))
             End If
-            Return $"Unknown Item ({ElementId})"
+            Return SpaceHavenEditor2.Localization.F("Unknown Item ({0})", ElementId)
         End Get
     End Property
 End Class

@@ -134,7 +134,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnLoadFile_Click(sender As Object, e As RoutedEventArgs)
             Dim openFileDialog As New OpenFileDialog() With {
                 .Filter = "XML Files (*.xml)|*.xml|All Files (*.*)|*.*",
-                .Title = "Select Game Start XML File"
+                .Title = Localization.T("Select Game Start XML File")
             }
 
             ' Set initial directory from settings, or use default Space Haven path
@@ -197,7 +197,7 @@ Namespace SpaceHavenEditor2
                     ' Ship mode - get the first ship (l element)
                     shipElement = playerShipsElement.Element("l")
                     If shipElement Is Nothing Then
-                        MessageBox.Show("Invalid XML structure: No ship found in 'playerShips'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                        MessageBox.Show(Localization.T("Invalid XML structure: No ship found in 'playerShips'."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                         Return
                     End If
                     currentContainerElement = shipElement
@@ -225,13 +225,13 @@ Namespace SpaceHavenEditor2
                     If shipElement Is Nothing Then
                         shipElement = playerCraftsElement.Element("l")
                         If shipElement Is Nothing Then
-                            MessageBox.Show("Invalid XML structure: No craft found in 'playerCrafts'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                            MessageBox.Show(Localization.T("Invalid XML structure: No craft found in 'playerCrafts'."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                             Return
                         End If
                         currentContainerElement = shipElement
                     End If
                 Else
-                    MessageBox.Show("Invalid XML structure: Neither 'playerShips' nor 'playerCrafts' element found. This may not be a valid Game Start file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                    MessageBox.Show(Localization.T("Invalid XML structure: Neither 'playerShips' nor 'playerCrafts' element found. This may not be a valid Game Start file."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                     Return
                 End If
 
@@ -340,10 +340,10 @@ Namespace SpaceHavenEditor2
                 settingsCard.IsEnabled = True
                 btnSaveChanges.IsEnabled = True
                 ClearUnsavedChanges() ' Reset unsaved changes flag when loading new file
-                MessageBox.Show($"File loaded successfully. Found {resourceItems.Count} resource(s) and {itemItems.Count} item(s).", "Success", MessageBoxButton.OK, MessageBoxImage.Information)
+                MessageBox.Show(Localization.F("File loaded successfully. Found {0} resource(s) and {1} item(s).", resourceItems.Count, itemItems.Count), Localization.T("Success"), MessageBoxButton.OK, MessageBoxImage.Information)
 
             Catch ex As Exception
-                MessageBox.Show($"Error loading XML file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error loading XML file: {0}", ex.Message), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 
@@ -359,13 +359,13 @@ Namespace SpaceHavenEditor2
         ' Add Resource button click handler
         Private Sub btnAddResource_Click(sender As Object, e As RoutedEventArgs)
             If cmbAddResource.SelectedValue Is Nothing Then
-                MessageBox.Show("Please select an item from the dropdown.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select an item from the dropdown."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim elementId As Integer
             If Not Integer.TryParse(cmbAddResource.SelectedValue.ToString(), elementId) Then
-                MessageBox.Show("Invalid item selection.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Invalid item selection."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -375,15 +375,15 @@ Namespace SpaceHavenEditor2
             ' Check if item already exists
             Dim existingItem = resourceItems.FirstOrDefault(Function(r) r.ElementId = elementId)
             If existingItem IsNot Nothing Then
-                Dim result = MessageBox.Show($"Item '{itemName}' already exists with quantity {existingItem.Quantity}. Do you want to update the quantity?", 
-                                           "Item Exists", MessageBoxButton.YesNo, MessageBoxImage.Question)
+                Dim result = MessageBox.Show(Localization.F("Item '{0}' already exists with quantity {1}. Do you want to update the quantity?", itemName, existingItem.Quantity), 
+                                           Localization.T("Item Exists"), MessageBoxButton.YesNo, MessageBoxImage.Question)
                 If result = MessageBoxResult.Yes Then
                     Dim newQuantity As Integer
                     If Integer.TryParse(txtAddResourceQuantity.Text, newQuantity) AndAlso newQuantity > 0 Then
                         existingItem.Quantity = newQuantity
                         MarkUnsavedChanges()
                     Else
-                        MessageBox.Show("Please enter a valid quantity (positive integer).", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                        MessageBox.Show(Localization.T("Please enter a valid quantity (positive integer)."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                     End If
                 End If
                 Return
@@ -401,20 +401,20 @@ Namespace SpaceHavenEditor2
                 cmbAddResource.SelectedValue = Nothing
                 MarkUnsavedChanges()
             Else
-                MessageBox.Show("Please enter a valid quantity (positive integer).", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a valid quantity (positive integer)."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
             End If
         End Sub
 
         ' Add Item button click handler
         Private Sub btnAddItem_Click(sender As Object, e As RoutedEventArgs)
             If cmbAddItem.SelectedValue Is Nothing Then
-                MessageBox.Show("Please select an item from the dropdown.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select an item from the dropdown."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim elementId As Integer
             If Not Integer.TryParse(cmbAddItem.SelectedValue.ToString(), elementId) Then
-                MessageBox.Show("Invalid item selection.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Invalid item selection."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -424,15 +424,15 @@ Namespace SpaceHavenEditor2
             ' Check if item already exists
             Dim existingItem = itemItems.FirstOrDefault(Function(r) r.ElementId = elementId)
             If existingItem IsNot Nothing Then
-                Dim result = MessageBox.Show($"Item '{itemName}' already exists with quantity {existingItem.Quantity}. Do you want to update the quantity?", 
-                                           "Item Exists", MessageBoxButton.YesNo, MessageBoxImage.Question)
+                Dim result = MessageBox.Show(Localization.F("Item '{0}' already exists with quantity {1}. Do you want to update the quantity?", itemName, existingItem.Quantity), 
+                                           Localization.T("Item Exists"), MessageBoxButton.YesNo, MessageBoxImage.Question)
                 If result = MessageBoxResult.Yes Then
                     Dim newQuantity As Integer
                     If Integer.TryParse(txtAddItemQuantity.Text, newQuantity) AndAlso newQuantity > 0 Then
                         existingItem.Quantity = newQuantity
                         MarkUnsavedChanges()
                     Else
-                        MessageBox.Show("Please enter a valid quantity (positive integer).", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                        MessageBox.Show(Localization.T("Please enter a valid quantity (positive integer)."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                     End If
                 End If
                 Return
@@ -450,7 +450,7 @@ Namespace SpaceHavenEditor2
                 cmbAddItem.SelectedValue = Nothing
                 MarkUnsavedChanges()
             Else
-                MessageBox.Show("Please enter a valid quantity (positive integer).", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a valid quantity (positive integer)."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
             End If
         End Sub
 
@@ -458,13 +458,13 @@ Namespace SpaceHavenEditor2
         Private Sub btnDeleteSelectedResources_Click(sender As Object, e As RoutedEventArgs)
             Dim selectedItems = dgResources.SelectedItems.Cast(Of ResourceItem)().ToList()
             If selectedItems.Count = 0 Then
-                MessageBox.Show("Please select one or more items to delete.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select one or more items to delete."), Localization.T("No Selection"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim itemNames = String.Join(", ", selectedItems.Select(Function(i) i.Name))
-            Dim result = MessageBox.Show($"Are you sure you want to delete {selectedItems.Count} selected item(s)?{vbCrLf}{itemNames}", 
-                                        "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question)
+            Dim result = MessageBox.Show(Localization.F("Are you sure you want to delete {0} selected item(s)?{1}{2}", selectedItems.Count, vbCrLf, itemNames), 
+                                        Localization.T("Confirm Delete"), MessageBoxButton.YesNo, MessageBoxImage.Question)
             If result = MessageBoxResult.Yes Then
                 For Each item In selectedItems
                     resourceItems.Remove(item)
@@ -477,13 +477,13 @@ Namespace SpaceHavenEditor2
         Private Sub btnDeleteSelectedItems_Click(sender As Object, e As RoutedEventArgs)
             Dim selectedItems = dgItems.SelectedItems.Cast(Of ResourceItem)().ToList()
             If selectedItems.Count = 0 Then
-                MessageBox.Show("Please select one or more items to delete.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select one or more items to delete."), Localization.T("No Selection"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim itemNames = String.Join(", ", selectedItems.Select(Function(i) i.Name))
-            Dim result = MessageBox.Show($"Are you sure you want to delete {selectedItems.Count} selected item(s)?{vbCrLf}{itemNames}", 
-                                        "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question)
+            Dim result = MessageBox.Show(Localization.F("Are you sure you want to delete {0} selected item(s)?{1}{2}", selectedItems.Count, vbCrLf, itemNames), 
+                                        Localization.T("Confirm Delete"), MessageBoxButton.YesNo, MessageBoxImage.Question)
             If result = MessageBoxResult.Yes Then
                 For Each item In selectedItems
                     itemItems.Remove(item)
@@ -595,7 +595,7 @@ Namespace SpaceHavenEditor2
         ' Save Changes button click handler
         Private Sub btnSaveChanges_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc Is Nothing OrElse String.IsNullOrEmpty(filePath) Then
-                MessageBox.Show("No file loaded to save.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("No file loaded to save."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -625,7 +625,7 @@ Namespace SpaceHavenEditor2
                     ' Ship mode - get the first ship (l element)
                     shipElement = playerShipsElement.Element("l")
                     If shipElement Is Nothing Then
-                        MessageBox.Show("Invalid XML structure: No ship found in 'playerShips'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                        MessageBox.Show(Localization.T("Invalid XML structure: No ship found in 'playerShips'."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                         Return
                     End If
                 ElseIf playerCraftsElement IsNot Nothing Then
@@ -653,13 +653,13 @@ Namespace SpaceHavenEditor2
                         If shipElement Is Nothing Then
                             shipElement = playerCraftsElement.Element("l")
                             If shipElement Is Nothing Then
-                                MessageBox.Show("Invalid XML structure: No craft found in 'playerCrafts'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                                MessageBox.Show(Localization.T("Invalid XML structure: No craft found in 'playerCrafts'."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                                 Return
                             End If
                         End If
                     End If
                 Else
-                    MessageBox.Show("Invalid XML structure: Neither 'playerShips' nor 'playerCrafts' element found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                    MessageBox.Show(Localization.T("Invalid XML structure: Neither 'playerShips' nor 'playerCrafts' element found."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                     Return
                 End If
 
@@ -716,10 +716,10 @@ Namespace SpaceHavenEditor2
                 ' Save the XML file
                 xmlDoc.Save(filePath)
                 ClearUnsavedChanges() ' Reset unsaved changes flag after successful save
-                MessageBox.Show("Changes saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information)
+                MessageBox.Show(Localization.T("Changes saved successfully!"), Localization.T("Success"), MessageBoxButton.OK, MessageBoxImage.Information)
 
             Catch ex As Exception
-                MessageBox.Show($"Error saving file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error saving file: {0}", ex.Message), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 

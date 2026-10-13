@@ -9,6 +9,12 @@ Public Class DatalogUnlockItem
     Public Property DatalogId As Integer
     Public Property DatalogName As String
 
+    Public ReadOnly Property DisplayName As String
+        Get
+            Return SpaceHavenEditor2.Localization.T(If(DatalogName, ""))
+        End Get
+    End Property
+
     Public Property IsSelected As Boolean
         Get
             Return _isSelected
@@ -34,7 +40,7 @@ Public Class DatalogUnlockItem
 
     Public ReadOnly Property Status As String
         Get
-            Return If(IsUnlocked, "Unlocked", "Locked")
+            Return If(IsUnlocked, SpaceHavenEditor2.Localization.T("Unlocked"), SpaceHavenEditor2.Localization.T("Locked"))
         End Get
     End Property
 

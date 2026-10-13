@@ -68,7 +68,7 @@ Namespace SpaceHavenEditor2
                     }
                     flowDoc.Blocks.Add(p)
                     ' If it's the start disclaimer, set the flag
-                    isInsideDisclaimer = (trimmedLine = "*** DISCLAIMER ***")
+                    isInsideDisclaimer = trimmedLine.StartsWith("*** ") AndAlso trimmedLine.EndsWith(" ***")
 
                     ' --- Handle Bullet Points ---
                 ElseIf trimmedLine.StartsWith("- ") Then ' Main bullet point

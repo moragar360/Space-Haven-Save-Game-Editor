@@ -43,7 +43,7 @@ Public Class SaveIntegrityFinding
 
     Public ReadOnly Property SeverityText As String
         Get
-            Return Severity.ToString()
+            Return SpaceHavenEditor2.Localization.T(Severity.ToString())
         End Get
     End Property
 
@@ -55,7 +55,7 @@ Public Class SaveIntegrityFinding
 
     Public ReadOnly Property RepairText As String
         Get
-            Return If(CanRepair, RepairDescription, "Review manually")
+            Return If(CanRepair, SpaceHavenEditor2.Localization.T(RepairDescription), SpaceHavenEditor2.Localization.T("Review manually"))
         End Get
     End Property
 

@@ -13,7 +13,7 @@ Namespace SpaceHavenEditor2
         Public Skills As List(Of DataProp)
         Public Traits As ObservableCollection(Of DataProp)
         Public Property SelectedTemplateCharacterId As Integer = -1
-        Private AvailableTraits As List(Of KeyValuePair(Of Integer, String))
+        Private AvailableTraits As List(Of IdLabel)
 
         Public Sub New(availableCharacters As List(Of Character))
             InitializeComponent()
@@ -39,7 +39,8 @@ Namespace SpaceHavenEditor2
             dgvNewAttributes.ItemsSource = Attributes
             dgvNewSkills.ItemsSource = Skills
 
-            AvailableTraits = IdCollection.DefaultTraitIDs.OrderBy(Function(kvp) kvp.Value).ToList()
+            AvailableTraits = IdCollection.DefaultTraitIDs.OrderBy(Function(kvp) kvp.Value).
+                Select(Function(kvp) New IdLabel(kvp.Key, kvp.Value)).ToList()
             cmbAvailableTraits.ItemsSource = AvailableTraits
             If cmbAvailableTraits.Items.Count > 0 Then cmbAvailableTraits.SelectedIndex = 0
 
@@ -86,7 +87,7 @@ Namespace SpaceHavenEditor2
             If cmbAvailableTraits.SelectedValue IsNot Nothing Then
                 Dim selectedTraitId = CInt(cmbAvailableTraits.SelectedValue)
                 If Not Traits.Any(Function(t) t.Id = selectedTraitId) Then
-                    Dim selectedTraitName = CType(cmbAvailableTraits.SelectedItem, KeyValuePair(Of Integer, String)).Value
+                    Dim selectedTraitName = DirectCast(cmbAvailableTraits.SelectedItem, IdLabel).Value
                     Traits.Add(New DataProp With {.Id = selectedTraitId, .Name = selectedTraitName})
                 End If
             End If
@@ -101,12 +102,12 @@ Namespace SpaceHavenEditor2
 
         Private Sub btnCreateCrew_Click(sender As Object, e As RoutedEventArgs)
             If String.IsNullOrWhiteSpace(txtNewCrewName.Text) Then
-                MessageBox.Show("Please enter a name.", "Name Required", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+                MessageBox.Show(Localization.T("Please enter a name."), Localization.T("Name Required"), MessageBoxButton.OK, MessageBoxImage.Warning) : Return
             End If
 
             ' Validate template character is selected
             If cmbTemplateCharacter.SelectedItem Is Nothing Then
-                MessageBox.Show("Please select a template character to copy structure from.", "Template Required", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+                MessageBox.Show(Localization.T("Please select a template character to copy structure from."), Localization.T("Template Required"), MessageBoxButton.OK, MessageBoxImage.Warning) : Return
             End If
 
             ' Basic validation for numeric values in grids (more robust validation could be added)
@@ -118,7 +119,7 @@ Namespace SpaceHavenEditor2
                     If item.Value < 0 Then Throw New Exception($"Skill '{item.Name}' has invalid value.")
                 Next
             Catch ex As Exception
-                MessageBox.Show($"Validation Error: {ex.Message} Values must be non-negative numbers.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.F("Validation Error: {0} Values must be non-negative numbers.", ex.Message), Localization.T("Validation Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End Try
 

@@ -3,6 +3,13 @@ Imports System.Xml.Linq
 Public Class ResearchTechnologyItem
     Public Property TechId As Integer
     Public Property TechnologyName As String
+
+    Public ReadOnly Property DisplayTechnology As String
+        Get
+            Return SpaceHavenEditor2.Localization.T(If(TechnologyName, ""))
+        End Get
+    End Property
+
     Public Property StateElement As XElement
     Public Property IsQueued As Boolean
 
@@ -28,17 +35,17 @@ Public Class ResearchTechnologyItem
 
     Public ReadOnly Property Status As String
         Get
-            If StageCount > 0 AndAlso CompletedStageCount = StageCount Then Return "Completed"
-            If IsQueued Then Return "Queued"
-            If HasProgress Then Return "In Progress"
-            Return "Not Started"
+            If StageCount > 0 AndAlso CompletedStageCount = StageCount Then Return SpaceHavenEditor2.Localization.T("Completed")
+            If IsQueued Then Return SpaceHavenEditor2.Localization.T("Queued")
+            If HasProgress Then Return SpaceHavenEditor2.Localization.T("In Progress")
+            Return SpaceHavenEditor2.Localization.T("Not Started")
         End Get
     End Property
 
     Public ReadOnly Property ProgressSummary As String
         Get
             Dim stages = StateElement?.Element("stageStates")?.Elements("l").ToList()
-            If stages Is Nothing OrElse stages.Count = 0 Then Return "No stages"
+            If stages Is Nothing OrElse stages.Count = 0 Then Return SpaceHavenEditor2.Localization.T("No stages")
 
             Return String.Join(" | ", stages.Select(
                 Function(stage)
@@ -46,11 +53,11 @@ Public Class ResearchTechnologyItem
                     If String.IsNullOrWhiteSpace(stageNumber) Then stageNumber = "?"
                     Dim blocks = stage.Element("blocksDone")
                     Dim progress = If(blocks Is Nothing,
-                                      "tasks",
+                                      SpaceHavenEditor2.Localization.T("tasks"),
                                       $"{blocks.Attribute("level1")?.Value}/{blocks.Attribute("level2")?.Value}/{blocks.Attribute("level3")?.Value}")
                     Dim done = String.Equals(stage.Attribute("done")?.Value, "true",
                                              StringComparison.OrdinalIgnoreCase)
-                    Return $"Stage {stageNumber}: {progress}{If(done, " done", "")}"
+                    Return SpaceHavenEditor2.Localization.F("Stage {0}: {1}{2}", stageNumber, progress, If(done, SpaceHavenEditor2.Localization.T(" done"), ""))
                 End Function))
         End Get
     End Property
@@ -78,7 +85,7 @@ Public Class ResearchQueueItem
 
     Public ReadOnly Property DisplayName As String
         Get
-            Return $"{TechnologyName} ({TechId})"
+            Return String.Format("{0} ({1})", SpaceHavenEditor2.Localization.T(TechnologyName), TechId)
         End Get
     End Property
 End Class

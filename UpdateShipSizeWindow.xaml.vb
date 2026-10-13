@@ -48,7 +48,7 @@ Namespace SpaceHavenEditor2
 
             ' Validate Width (Squares)
             If Not Integer.TryParse(txtWidth.Text, squaresWidth) OrElse squaresWidth < 1 OrElse squaresWidth > 10 Then
-                MessageBox.Show("Please enter a whole number between 1 and 10 for Width (Squares).", "Invalid Width", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a whole number between 1 and 10 for Width (Squares)."), Localization.T("Invalid Width"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 txtWidth.Focus()
                 txtWidth.SelectAll()
                 Return ' Stop processing if invalid
@@ -56,7 +56,7 @@ Namespace SpaceHavenEditor2
 
             ' Validate Height (Squares)
             If Not Integer.TryParse(txtHeight.Text, squaresHeight) OrElse squaresHeight < 1 OrElse squaresHeight > 10 Then
-                MessageBox.Show("Please enter a whole number between 1 and 10 for Height (Squares).", "Invalid Height", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a whole number between 1 and 10 for Height (Squares)."), Localization.T("Invalid Height"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 txtHeight.Focus()
                 txtHeight.SelectAll()
                 Return ' Stop processing if invalid

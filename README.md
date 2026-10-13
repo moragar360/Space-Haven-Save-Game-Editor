@@ -1,67 +1,87 @@
-# 🚀 Space Haven Save Editor v2.0
+# Space Haven 存档编辑器
 
-Take full control of your Space Haven adventure! This suite of tools lets you modify almost every aspect of your Space Haven experience, from starting a new game to managing complex save files and ship blueprints. Built fresh to support **Space Haven Beta 2**.
+本仓库是 [Moragar360/Space-Haven-Save-Game-Editor](https://github.com/moragar360/Space-Haven-Save-Game-Editor) 的分支。编辑器本体是 Moragar360 于 2025 年的作品，版权归 Moragar360 所有，并继续使用 MIT 许可证，详见 `LICENSE`。
 
----
+Copyright (c) 2025 Moragar360
 
-## 📋 Features
-
-### 🛠️ Three Editors in One
-* **Save Game Editor:** Modify existing save files mid-game.
-* **Game Start Editor:** Set difficulty parameters for new game creation by editing custom game templates.
-* **Blueprint Manager:** Clone and transfer ship blueprints between different save games.
-
-### 💰 Global Save Settings
-* Edit in-game credits and Exodus Fleet prestige points.
-* Enable or disable Sandbox Mode.
-* **New:** Set a **Default Save Location** in settings to jump straight to your save folder every time.
-
-### 🚀 Ship Management & Blueprints
-* View and select ships from your save file.
-* Edit ship dimensions (Width x Height grid squares).
-* **New:** Export ships from one game and import them into another, with or without items.
-
-### 👨‍🚀 Advanced Crew Editing
-* **Bulk Operations:** Create multiple crew members at once from a template or set attributes/skills for everyone on a ship simultaneously.
-* **Detailed Editing:** Modify Bravery, Zest, skills, traits, and conditions (injuries/status effects).
-* **Enhanced Cloning:** Pick a specific crew member to use as a template for new recruits.
-* **Relationships:** Edit Friendship, Attraction, and Compatibility.
-* **Sci-Fi Names:** New crew members automatically get names from an AI-generated sci-fi list.
-
-### 📦 Storage Management
-* View and manage storage containers on ships.
-* Add, edit, or remove items and adjust quantities.
-
-### 💾 Automatic Backups
-* Automatically creates timestamped backup folders when opening saves.
-* Manual backup is still strongly recommended.
+界面多语言由 [GuguguBear](https://github.com/GuguguBear) 添加。关于窗口中的署名为：原作者 Moragar，汉化 GuguguBear。
 
 ---
 
-## 📦 Installation
+用这个工具调整 Space Haven 的存档、开局模板和飞船蓝图。当前版本面向 **Space Haven Beta 2**。
 
-1. Go to the [Latest Release](https://github.com/moragar360/Space-Haven-Save-Game-Editor/releases/latest).
-2. Download the `v2.0` `.zip` file.
-3. Extract the ZIP contents to a folder of your choice.
-4. Run `SpaceHavenEditor.exe` to launch the application.
+## 语言
+
+菜单 **Language / 语言 / 語言** 可以在英文、简体中文和繁体中文之间切换界面。物品、技能、特质和科技名称在能对应到游戏简体中文原文时，使用游戏自己的译名；繁体中文由这份简体中文转换而来。
+
+写回存档的内容保持游戏原来的英文，包括派系立场和难度。船员姓名保持存档里的原文。
+
+## 功能
+
+### 三个编辑器
+
+* **存档编辑器：** 修改已经开始的存档。
+* **开局编辑器：** 编辑游戏里导出的自定义开局模板，调整新游戏的难度参数。
+* **蓝图管理器：** 在不同存档之间复制和转移飞船蓝图。
+
+### 全局存档设置
+
+* 修改信用点和出埃及舰队的声望。
+* 开启或关闭沙盒模式。
+* 在设置里指定**默认存档位置**，以后可以直接打开存档文件夹。
+
+### 飞船与蓝图
+
+* 查看并选择存档中的飞船。
+* 修改飞船尺寸（宽 × 高，以格子计）。
+* 把飞船从一局游戏导出，再导入另一局；可以带上物品，也可以只转移船体。
+
+### 船员编辑
+
+* **批量操作：** 按模板一次创建多名船员，或同时设置一艘飞船上所有人的属性和技能。
+* **单项编辑：** 修改勇气、热情、技能、特质，以及伤病等状态。
+* **克隆：** 选一名现有船员作为新船员的模板。
+* **关系：** 修改友谊、吸引和契合。
+* **科幻名字：** 新船员会从一份科幻名字表里自动取名。
+
+### 储藏管理
+
+* 查看并管理飞船上的储藏容器。
+* 添加、修改或移除物品，并调整数量。
+
+### 自动备份
+
+* 打开存档时会自动建立带时间戳的备份文件夹。
+* 重要存档仍建议再手动备份一份。
+
+## 安装
+
+1. 打开 [最新发布](https://github.com/GuguguBear/Space-Haven-Save-Game-Editor/releases/latest)。
+2. 下载 `SpaceHavenEditor` 的 zip 压缩包。
+3. 解压到任意文件夹。
+4. 运行 `SpaceHavenEditor.exe`。压缩包已包含运行所需的 .NET，无需另外安装。
+
+## 使用
+
+1. **改存档：** 打开**存档编辑器**，选择**文件 → 打开**，选中游戏的 `game` 存档。
+2. **改开局：** 在游戏的“自定义游戏模板”里保存 XML，再用**开局编辑器**打开。
+3. **管蓝图：** 用**蓝图管理器**导出想留到以后使用的飞船。
+
+## 更新记录
+
+### 本分支
+
+* **2.2.2：** 关于窗口增加「汉化：GuguguBear」。
+* **2.2.1：** 补全物品、技能、特质、科技、派系等界面名称的翻译。
+* **2.2：** 增加英文、简体中文、繁体中文界面。
+
+### 原版
+
+* **v2.1：** 编辑器的一次较大更新。
+* **v2.0：** 增加开局编辑器和蓝图管理器；增加船员批量操作；增加默认存档位置；修正“全部设为最大”会作用到错误角色的问题；修正出埃及舰队和较大存档的部分读取错误。
 
 ---
 
-## 🛠️ Usage
+原作者：[Moragar](https://github.com/moragar360)
 
-1. **Save Editing:** Open the **Save Game Editor** tab, go to **File -> Open**, and select your `game` file.
-2. **Game Start:** Use the **Game Start Editor** tab to open an XML file saved from the "Custom Game Template" menu in-game.
-3. **Blueprints:** Use the **Blueprint Manager** tab to export your favorite ships for future playthroughs.
-
----
-
-## 🧩 Changelog (v2.0)
-* Added **Game Start Editor** and **Blueprint Manager**.
-* Added **Bulk Actions** menu for mass crew editing.
-* Added **Default Save Location** setting.
-* Fixed "Set All to Max" bug; it now correctly applies only to the selected character.
-* Resolved various loading errors for Exodus Fleet and large save files.
-
----
-
-Made by [Moragar](https://github.com/moragar360)
+汉化：[GuguguBear](https://github.com/GuguguBear)

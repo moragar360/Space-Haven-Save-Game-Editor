@@ -3,7 +3,7 @@
         {210, "Bravery"},
         {212, "Zest"},
         {213, "Intelligence"},
-        {214, "Preception"}
+        {214, "Perception"}
    }
 
     Public Shared ReadOnly DefaultSkillIDs As New Dictionary(Of Integer, String) From {
@@ -999,7 +999,7 @@
         }
 
         If colorMap.ContainsKey(textureNumber) Then
-            Return colorMap(textureNumber)
+            Return SpaceHavenEditor2.Localization.T(colorMap(textureNumber))
         End If
 
         Return Nothing
@@ -1009,7 +1009,7 @@
     ''' Parses an instance name to extract a friendly color description
     ''' </summary>
     Private Shared Function ParseInstanceNameToColor(instanceName As String) As String
-        If String.IsNullOrEmpty(instanceName) Then Return "Unknown"
+        If String.IsNullOrEmpty(instanceName) Then Return SpaceHavenEditor2.Localization.T("Unknown")
 
         ' Extract variant suffix first (before processing)
         Dim variantMatch = System.Text.RegularExpressions.Regex.Match(instanceName, "s(\d+)$")
@@ -1122,7 +1122,7 @@
             Return name.Substring(0, Math.Min(name.Length, 30))
         End If
         
-        Return "Unknown Color"
+        Return SpaceHavenEditor2.Localization.T("Unknown Color")
     End Function
 
     ''' <summary>
@@ -1145,7 +1145,7 @@
                 Return storedName
             End If
         End If
-        Return "Unknown"
+        Return SpaceHavenEditor2.Localization.T("Unknown")
     End Function
 
     ''' <summary>

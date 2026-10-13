@@ -161,13 +161,15 @@ Namespace SpaceHavenEditor2
 
         Public Property CrewMembers As ObservableCollection(Of CrewMember)
         Public Property Resources As ObservableCollection(Of Resource)
-        Public ReadOnly Property ScheduleActivities As New List(Of KeyValuePair(Of Integer, String)) From {
-            New KeyValuePair(Of Integer, String)(0, "Work"),
-            New KeyValuePair(Of Integer, String)(1, "Leisure"),
-            New KeyValuePair(Of Integer, String)(2, "Sleep")
+        Public ReadOnly Property ScheduleActivities As New List(Of ScheduleActivityOption) From {
+            New ScheduleActivityOption(0, "Work"),
+            New ScheduleActivityOption(1, "Leisure"),
+            New ScheduleActivityOption(2, "Sleep")
         }
-        Public ReadOnly Property FactionStances As New List(Of String) From {
-            "Enemies", "Neutral", "Friendly"
+        Public ReadOnly Property FactionStances As New List(Of LocalizedOption) From {
+            New LocalizedOption("Enemies"),
+            New LocalizedOption("Neutral"),
+            New LocalizedOption("Friendly")
         }
 
 
@@ -181,7 +183,7 @@ Namespace SpaceHavenEditor2
                 _backupEnabled = Global.SpaceHavenEditor2.My.Settings.Default.BackupOnOpen
             Catch ex As Exception
                 ' Handle potential error reading settings file
-                MessageBox.Show($"Error loading settings: {ex.Message}{vbCrLf}Backup on open defaulted to True.", "Settings Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.F("Error loading settings: {0}{1}Backup on open defaulted to True.", ex.Message, vbCrLf), Localization.T("Settings Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 _backupEnabled = True
             End Try
             Resources = New ObservableCollection(Of Resource)()
@@ -191,6 +193,43 @@ Namespace SpaceHavenEditor2
             dgvIntegrityFindings.ItemsSource = integrityFindings
             DataContext = Me
             AddHandler Me.Closing, AddressOf MainWindow_Closing
+            AddHandler Localization.LanguageChanged, AddressOf OnLanguageChanged
+            RefreshLanguageMenu()
+        End Sub
+
+        Private Sub LanguageMenu_Click(sender As Object, e As RoutedEventArgs)
+            Dim item = TryCast(sender, MenuItem)
+            If item Is Nothing OrElse item.Tag Is Nothing Then Return
+            Localization.SetLanguage(CStr(item.Tag))
+        End Sub
+
+        Private Sub OnLanguageChanged()
+            RefreshLanguageMenu()
+            SetWindowTitle(currentFilePath)
+            UpdateGameStartScenarioFolderDisplay()
+            If xmlDoc IsNot Nothing Then RunIntegrityScan()
+            RefreshItemControls(Me)
+        End Sub
+
+        Private Sub RefreshLanguageMenu()
+            If menuLanguage Is Nothing Then Return
+            For Each item In menuLanguage.Items.OfType(Of MenuItem)()
+                item.IsChecked = String.Equals(CStr(item.Tag), Localization.CurrentLanguage, StringComparison.OrdinalIgnoreCase)
+            Next
+        End Sub
+
+        Private Sub RefreshItemControls(root As DependencyObject)
+            Dim items = TryCast(root, ItemsControl)
+            If items IsNot Nothing Then
+                Try
+                    items.Items.Refresh()
+                Catch
+                End Try
+            End If
+            For Each child In LogicalTreeHelper.GetChildren(root)
+                Dim dep = TryCast(child, DependencyObject)
+                If dep IsNot Nothing Then RefreshItemControls(dep)
+            Next
         End Sub
 
         ' Initialize Game Start Editor
@@ -209,18 +248,18 @@ Namespace SpaceHavenEditor2
                 ' Check if scenario directory is set in settings
                 Dim scenarioDir As String = Global.SpaceHavenEditor2.My.Settings.Default.DefaultScenarioDirectory
                 If Not String.IsNullOrEmpty(scenarioDir) AndAlso Directory.Exists(scenarioDir) Then
-                    txtGameStartScenarioFolder.Text = $"Scenario Folder: {scenarioDir}"
+                    txtGameStartScenarioFolder.Text = Localization.F("Scenario Folder: {0}", scenarioDir)
                 Else
                     ' Try to get the default scenario directory
                     scenarioDir = GetGameStartScenarioDirectory()
                     If Not String.IsNullOrEmpty(scenarioDir) AndAlso Directory.Exists(scenarioDir) Then
-                        txtGameStartScenarioFolder.Text = $"Scenario Folder: {scenarioDir}"
+                        txtGameStartScenarioFolder.Text = Localization.F("Scenario Folder: {0}", scenarioDir)
                     Else
-                        txtGameStartScenarioFolder.Text = "Scenario Folder: Not set (click 'Set Scenario Folder' to configure)"
+                        txtGameStartScenarioFolder.Text = Localization.T("Scenario Folder: Not set (click 'Set Scenario Folder' to configure)")
                     End If
                 End If
             Catch ex As Exception
-                txtGameStartScenarioFolder.Text = "Scenario Folder: Not set"
+                txtGameStartScenarioFolder.Text = Localization.T("Scenario Folder: Not set")
             End Try
         End Sub
 
@@ -241,7 +280,7 @@ Namespace SpaceHavenEditor2
                 Global.SpaceHavenEditor2.My.Settings.Default.BackupOnOpen = _backupEnabled ' Store current value
                 Global.SpaceHavenEditor2.My.Settings.Default.Save() ' Persist settings
             Catch ex As Exception
-                MessageBox.Show($"Error saving settings: {ex.Message}", "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error saving settings: {0}", ex.Message), Localization.T("Settings Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 ' Don't cancel closing, just report error
             End Try
         End Sub
@@ -279,7 +318,7 @@ Namespace SpaceHavenEditor2
                 dgvDatalogUnlocks.ItemsSource = Nothing
                 lblDatalogStatus.Text = ""
                 integrityFindings.Clear()
-                lblIntegritySummary.Text = "Load a save to run the scanner."
+                lblIntegritySummary.Text = Localization.T("Load a save to run the scanner.")
                 lblIntegrityStatus.Text = ""
                 ' Clear other UI elements if needed (e.g., status bar text)
                 ' txtStatus.Text = "Ready"
@@ -297,7 +336,7 @@ Namespace SpaceHavenEditor2
                 hasUnsavedChanges = _hasUnsavedChanges
             End If
 
-            Dim baseTitle = "Moragar's Space Haven Save Editor"
+            Dim baseTitle = Localization.T("Moragar's Space Haven Save Editor")
             If String.IsNullOrEmpty(filePath) Then
                 Me.Title = baseTitle
             Else
@@ -314,9 +353,10 @@ Namespace SpaceHavenEditor2
                 Catch pathEx As Exception
                     Console.WriteLine($"Error parsing path for title: {pathEx.Message}")
                 End Try
-                Dim saveType = If(IsStationSave(), " - Station Save", "")
-                Me.Title = $"{baseTitle} - [{fileNameOnly}]{saveType}{If(hasUnsavedChanges, " *", "")}"
+                Dim saveType = If(IsStationSave(), Localization.T(" - Station Save"), "")
+                Me.Title = String.Format("{0} - [{1}]{2}{3}", baseTitle, fileNameOnly, saveType, If(hasUnsavedChanges, " *", ""))
             End If
+            Localization.KeepWindowTitle(Me)
         End Sub
 
         ' Helper method to mark that changes have been made
@@ -356,7 +396,7 @@ Namespace SpaceHavenEditor2
             ' Initialize the OpenFileDialog
             Dim openFileDialog As New OpenFileDialog With {
                 .Filter = "Space Haven Save Files|game",
-                .Title = "Open Space Haven Save File"
+                .Title = Localization.T("Open Space Haven Save File")
             }
 
 
@@ -392,7 +432,7 @@ Namespace SpaceHavenEditor2
                         FileSystem.CopyDirectory(sourceDir, backupPath, UIOption.OnlyErrorDialogs, UICancelOption.DoNothing)
                         backupPerformedSuccessfully = True
                     Catch ex As Exception
-                        MessageBox.Show($"Backup failed: {ex.Message}{Environment.NewLine}Attempting to load original file anyway.", "Backup Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                        MessageBox.Show(Localization.F("Backup failed: {0}{1}Attempting to load original file anyway.", ex.Message, Environment.NewLine), Localization.T("Backup Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                         backupPerformedSuccessfully = False
                     End Try
                 End If
@@ -431,7 +471,7 @@ Namespace SpaceHavenEditor2
 
                                     Dim entityFixedXml = FixEntityNameIssues(currentFilePath)
                                     xmlDoc = XDocument.Parse(entityFixedXml)
-                                    MessageBox.Show("The save file contained XML formatting issues that have been automatically fixed. The file should now load successfully.", "Auto-Fix Applied", MessageBoxButton.OK, MessageBoxImage.Information)
+                                    MessageBox.Show(Localization.T("The save file contained XML formatting issues that have been automatically fixed. The file should now load successfully."), Localization.T("Auto-Fix Applied"), MessageBoxButton.OK, MessageBoxImage.Information)
                                 Catch entityFixEx As Exception
                                     ' If that fails, try removing problematic ships
                                     Try
@@ -444,7 +484,7 @@ Namespace SpaceHavenEditor2
                                             message += Environment.NewLine & Environment.NewLine & "Removed ships:" & Environment.NewLine & _removedShipsInfo
                                         End If
 
-                                        MessageBox.Show(message, "Auto-Fix Applied", MessageBoxButton.OK, MessageBoxImage.Information)
+                                        MessageBox.Show(message, Localization.T("Auto-Fix Applied"), MessageBoxButton.OK, MessageBoxImage.Information)
                                     Catch shipCleanEx As Exception
                                         ' If all attempts fail, show the original error with detailed information
                                         Dim errorMessage As String = $"Error parsing the save file XML:{Environment.NewLine}[{xmlEx.GetType().Name}] {xmlEx.Message}{Environment.NewLine}{Environment.NewLine}File: {currentFilePath}{Environment.NewLine}{Environment.NewLine}The file might be corrupted or not a valid Space Haven save.{Environment.NewLine}{Environment.NewLine}Additional info: Line {xmlEx.LineNumber}, Position {xmlEx.LinePosition}"
@@ -456,7 +496,7 @@ Namespace SpaceHavenEditor2
 
                                         errorMessage += Environment.NewLine & Environment.NewLine & "Manual fix: You can try opening the save file in a text editor and removing the problematic ship section (look for <j> tags around the error line)."
 
-                                        MessageBox.Show(errorMessage, "XML Load Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                                        MessageBox.Show(errorMessage, Localization.T("XML Load Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                                         ResetApplicationState()
                                         Return
                                     End Try
@@ -464,14 +504,14 @@ Namespace SpaceHavenEditor2
                             End Try
                         End Try
                     Catch fileEx As Exception
-                        MessageBox.Show($"Error reading the save file:{Environment.NewLine}[{fileEx.GetType().Name}] {fileEx.Message}{Environment.NewLine}{Environment.NewLine}File: {currentFilePath}", "File Read Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                        MessageBox.Show(Localization.F("Error reading the save file:{0}[{1}] {2}{3}{4}File: {5}", Environment.NewLine, fileEx.GetType().Name, fileEx.Message, Environment.NewLine, Environment.NewLine, currentFilePath), Localization.T("File Read Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                         ResetApplicationState()
                         Return
                     End Try
 
                     ' Step 2: Basic Validation of loaded XML
                     If xmlDoc Is Nothing OrElse xmlDoc.Root Is Nothing OrElse xmlDoc.Root.Name <> "game" Then
-                        MessageBox.Show("The loaded file is not a valid Space Haven save (missing root <game> element).", "Invalid File Structure", MessageBoxButton.OK, MessageBoxImage.Error)
+                        MessageBox.Show(Localization.T("The loaded file is not a valid Space Haven save (missing root <game> element)."), Localization.T("Invalid File Structure"), MessageBoxButton.OK, MessageBoxImage.Error)
                         ResetApplicationState()
                         Return
                     End If
@@ -517,14 +557,14 @@ Namespace SpaceHavenEditor2
 
                     If loadErrors.Length > 0 Then
                         MessageBox.Show(
-                            "Save file loaded, but some issues occurred during data reading:" &
+                            Localization.T("Save file loaded, but some issues occurred during data reading:") &
                             Environment.NewLine & loadErrors.ToString() &
                             Environment.NewLine & integritySummary,
-                            "Load Complete with Issues", MessageBoxButton.OK, MessageBoxImage.Warning)
+                            Localization.T("Load Complete with Issues"), MessageBoxButton.OK, MessageBoxImage.Warning)
                     Else
                         MessageBox.Show(
-                            $"Save game loaded successfully!{Environment.NewLine}{integritySummary}",
-                            "Load Complete", MessageBoxButton.OK, MessageBoxImage.Information)
+                            Localization.F("Save game loaded successfully!{0}{1}", Environment.NewLine, integritySummary),
+                            Localization.T("Load Complete"), MessageBoxButton.OK, MessageBoxImage.Information)
                     End If
 
                     SetWindowTitle(currentFilePath) ' Update window title
@@ -532,7 +572,7 @@ Namespace SpaceHavenEditor2
                 Catch ex As Exception
                     ' Catch any unexpected errors during the overall loading process
                     ' Show full exception details including stack trace for debugging
-                    MessageBox.Show($"An unexpected critical error occurred while loading the save file:{Environment.NewLine}{ex.ToString()}", "Critical Load Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                    MessageBox.Show(Localization.F("An unexpected critical error occurred while loading the save file:{0}{1}", Environment.NewLine, ex.ToString()), Localization.T("Critical Load Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                     ResetApplicationState()
                 End Try
             End If
@@ -596,7 +636,7 @@ Namespace SpaceHavenEditor2
                 txtPrestigePoints.Text = prestigePoints.ToString()
 
             Catch ex As Exception
-                MessageBox.Show($"Error loading global settings: {ex.Message}", "Load Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error loading global settings: {0}", ex.Message), Localization.T("Load Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 ' Reset UI elements to defaults on error
                 txtPlayerCredits.Text = "0"
                 chkSandbox.IsChecked = False
@@ -618,7 +658,8 @@ Namespace SpaceHavenEditor2
             dgvEmbeddedNewAttributes.ItemsSource = embeddedNewCrewAttributes
             dgvEmbeddedNewSkills.ItemsSource = embeddedNewCrewSkills
             lstEmbeddedNewTraits.ItemsSource = embeddedNewCrewTraits
-            cmbEmbeddedAvailableTraits.ItemsSource = IdCollection.DefaultTraitIDs.OrderBy(Function(kvp) kvp.Value).ToList()
+            cmbEmbeddedAvailableTraits.ItemsSource = IdCollection.DefaultTraitIDs.OrderBy(Function(kvp) kvp.Value).
+                Select(Function(kvp) New IdLabel(kvp.Key, kvp.Value)).ToList()
             If cmbEmbeddedAvailableTraits.Items.Count > 0 Then cmbEmbeddedAvailableTraits.SelectedIndex = 0
         End Sub
 
@@ -664,10 +705,18 @@ Namespace SpaceHavenEditor2
                 values.Insert(0, currentValue)
             End If
 
-            combo.ItemsSource = values
-            combo.SelectedItem = values.FirstOrDefault(Function(value) String.Equals(value, currentValue, StringComparison.OrdinalIgnoreCase))
-            If combo.SelectedItem Is Nothing AndAlso values.Count > 0 Then combo.SelectedIndex = 0
+            combo.DisplayMemberPath = "Display"
+            combo.SelectedValuePath = "Value"
+            combo.ItemsSource = values.Select(Function(value) New LocalizedOption(value)).ToList()
+            combo.SelectedValue = values.FirstOrDefault(Function(value) String.Equals(value, currentValue, StringComparison.OrdinalIgnoreCase))
+            If combo.SelectedValue Is Nothing AndAlso values.Count > 0 Then combo.SelectedIndex = 0
         End Sub
+
+        Private Function SelectedRule(combo As ComboBox) As String
+            Dim selectedValue = TryCast(combo.SelectedValue, String)
+            If Not String.IsNullOrWhiteSpace(selectedValue) Then Return selectedValue
+            Return TryCast(combo.SelectedItem, LocalizedOption)?.Value
+        End Function
 
         Private Function ReadBooleanAttribute(element As XElement, attributeName As String, defaultValue As Boolean) As Boolean
             If element Is Nothing Then Return defaultValue
@@ -705,44 +754,44 @@ Namespace SpaceHavenEditor2
             Dim diffElement = xmlDoc?.Root?.Element("settings")?.Element("diff")
             Dim modeElement = diffElement?.Element("modeSettings")
             If diffElement Is Nothing OrElse modeElement Is Nothing Then
-                MessageBox.Show("The loaded save does not contain the expected difficulty settings.",
-                                "Difficulty Settings Missing", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("The loaded save does not contain the expected difficulty settings."),
+                                Localization.T("Difficulty Settings Missing"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim changed As Boolean = False
-            changed = UpdateRuleAttribute(diffElement, "moodDifficulty", TryCast(cmbMoodDifficulty.SelectedItem, String)) OrElse changed
-            changed = UpdateRuleAttribute(diffElement, "npcTargeting", TryCast(cmbNpcTargeting.SelectedItem, String)) OrElse changed
-            changed = UpdateRuleAttribute(diffElement, "questDifficulty", TryCast(cmbQuestDifficulty.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(diffElement, "moodDifficulty", SelectedRule(cmbMoodDifficulty)) OrElse changed
+            changed = UpdateRuleAttribute(diffElement, "npcTargeting", SelectedRule(cmbNpcTargeting)) OrElse changed
+            changed = UpdateRuleAttribute(diffElement, "questDifficulty", SelectedRule(cmbQuestDifficulty)) OrElse changed
             changed = UpdateRuleAttribute(diffElement, "enemiesEnabled", chkRulesEnemiesEnabled.IsChecked.GetValueOrDefault().ToString().ToLowerInvariant()) OrElse changed
             changed = UpdateRuleAttribute(diffElement, "friendsEnabled", chkRulesFriendsEnabled.IsChecked.GetValueOrDefault().ToString().ToLowerInvariant()) OrElse changed
             changed = UpdateRuleAttribute(diffElement, "loversEnabled", chkRulesLoversEnabled.IsChecked.GetValueOrDefault().ToString().ToLowerInvariant()) OrElse changed
 
-            changed = UpdateRuleAttribute(modeElement, "wearAndTear", TryCast(cmbWearAndTear.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "wearAndTear", SelectedRule(cmbWearAndTear)) OrElse changed
             changed = UpdateRuleAttribute(modeElement, "rebuildingCosts", chkRebuildingCosts.IsChecked.GetValueOrDefault().ToString().ToLowerInvariant()) OrElse changed
-            changed = UpdateRuleAttribute(modeElement, "monsters", TryCast(cmbMonsterFrequency.SelectedItem, String)) OrElse changed
-            changed = UpdateRuleAttribute(modeElement, "robots", TryCast(cmbRobotFrequency.SelectedItem, String)) OrElse changed
-            changed = UpdateRuleAttribute(modeElement, "solarFlares", TryCast(cmbSolarFlareFrequency.SelectedItem, String)) OrElse changed
-            changed = UpdateRuleAttribute(modeElement, "microMeteoroids", TryCast(cmbMeteorFrequency.SelectedItem, String)) OrElse changed
-            changed = UpdateRuleAttribute(modeElement, "derelicts", TryCast(cmbDerelictFrequency.SelectedItem, String)) OrElse changed
-            changed = UpdateRuleAttribute(modeElement, "derelictLoot", TryCast(cmbDerelictLoot.SelectedItem, String)) OrElse changed
-            changed = UpdateRuleAttribute(modeElement, "asteroids", TryCast(cmbAsteroidAbundance.SelectedItem, String)) OrElse changed
-            changed = UpdateRuleAttribute(modeElement, "interTravelThreat", TryCast(cmbTravelThreat.SelectedItem, String)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "monsters", SelectedRule(cmbMonsterFrequency)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "robots", SelectedRule(cmbRobotFrequency)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "solarFlares", SelectedRule(cmbSolarFlareFrequency)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "microMeteoroids", SelectedRule(cmbMeteorFrequency)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "derelicts", SelectedRule(cmbDerelictFrequency)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "derelictLoot", SelectedRule(cmbDerelictLoot)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "asteroids", SelectedRule(cmbAsteroidAbundance)) OrElse changed
+            changed = UpdateRuleAttribute(modeElement, "interTravelThreat", SelectedRule(cmbTravelThreat)) OrElse changed
 
             If changed Then
                 MarkUnsavedChanges()
-                MessageBox.Show("Difficulty and world rules updated in memory. Use File > Save to make them permanent.",
-                                "Rules Updated", MessageBoxButton.OK, MessageBoxImage.Information)
+                MessageBox.Show(Localization.T("Difficulty and world rules updated in memory. Use File > Save to make them permanent."),
+                                Localization.T("Rules Updated"), MessageBoxButton.OK, MessageBoxImage.Information)
             Else
-                MessageBox.Show("No difficulty or world-rule changes were detected.",
-                                "No Changes", MessageBoxButton.OK, MessageBoxImage.Information)
+                MessageBox.Show(Localization.T("No difficulty or world-rule changes were detected."),
+                                Localization.T("No Changes"), MessageBoxButton.OK, MessageBoxImage.Information)
             End If
         End Sub
 
         ' --- Click Handler for Update Global Settings Button ---
         Private Sub btnUpdateGlobalSettings_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc Is Nothing OrElse xmlDoc.Root Is Nothing Then ' Added Root check
-                MessageBox.Show("No save file loaded.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("No save file loaded."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -826,27 +875,27 @@ Namespace SpaceHavenEditor2
 
                 ' --- Feedback ---
                 If validationError Then
-                    MessageBox.Show("Please correct the following errors:" & Environment.NewLine & errorMessages.ToString(),
-                                 "Validation Failed", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    MessageBox.Show(Localization.T("Please correct the following errors:") & Environment.NewLine & errorMessages.ToString(),
+                                 Localization.T("Validation Failed"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 ElseIf settingsUpdated Then
                     ' Mark as unsaved
                     MarkUnsavedChanges()
-                    MessageBox.Show("Global settings updated in memory. Use File -> Save to make permanent.",
-                                 "Globals Updated", MessageBoxButton.OK, MessageBoxImage.Information)
+                    MessageBox.Show(Localization.T("Global settings updated in memory. Use File -> Save to make permanent."),
+                                 Localization.T("Globals Updated"), MessageBoxButton.OK, MessageBoxImage.Information)
                 Else
-                    MessageBox.Show("No changes detected in global settings values.",
-                                 "Info", MessageBoxButton.OK, MessageBoxImage.Information)
+                    MessageBox.Show(Localization.T("No changes detected in global settings values."),
+                                 Localization.T("Info"), MessageBoxButton.OK, MessageBoxImage.Information)
                 End If
 
             Catch ex As Exception
-                MessageBox.Show($"Error updating global settings in memory: {ex.Message}", "Update Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error updating global settings in memory: {0}", ex.Message), Localization.T("Update Error"), MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 
         ' --- ADDED: Click Handler for Update Credits Button ---
         Private Sub btnUpdateCredits_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc Is Nothing OrElse xmlDoc.Root Is Nothing Then
-                MessageBox.Show("No save file loaded.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.T("No save file loaded."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 Return
             End If
 
@@ -854,7 +903,7 @@ Namespace SpaceHavenEditor2
             Dim newCreditsValue As Integer ' Or Long if needed
 
             If Not Integer.TryParse(newCreditsString, newCreditsValue) OrElse newCreditsValue < 0 Then
-                MessageBox.Show("Invalid credits value. Enter non-negative number.", "Input Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Invalid credits value. Enter non-negative number."), Localization.T("Input Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -866,16 +915,16 @@ Namespace SpaceHavenEditor2
                 If playerBankNode IsNot Nothing Then
                     ' Found it, just update the attribute
                     playerBankNode.SetAttributeValue("ca", newCreditsValue.ToString())
-                    MessageBox.Show($"Player credits updated to {newCreditsValue} (in memory). Save the file to make changes permanent.", "Credits Updated", MessageBoxButton.OK, MessageBoxImage.Information)
+                    MessageBox.Show(Localization.F("Player credits updated to {0} (in memory). Save the file to make changes permanent.", newCreditsValue), Localization.T("Credits Updated"), MessageBoxButton.OK, MessageBoxImage.Information)
                 Else
                     ' Could not find it - inform user, don't create it automatically
-                    MessageBox.Show("<playerBank> element not found in the save file. Cannot update credits automatically.", "XML Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                    MessageBox.Show(Localization.T("<playerBank> element not found in the save file. Cannot update credits automatically."), Localization.T("XML Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                     ' NOTE: If desired, code could be added here to create the <settings> and <playerBank> nodes
                     '       if they are missing entirely, but that's riskier if the structure is unknown.
                 End If
 
             Catch ex As Exception
-                MessageBox.Show($"Error updating credits in XML: {ex.Message}", "XML Update Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error updating credits in XML: {0}", ex.Message), Localization.T("XML Update Error"), MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 
@@ -896,10 +945,10 @@ Namespace SpaceHavenEditor2
 
                 ' Notify the user of the changes
                 MessageBox.Show(
-            $"Backup on Open setting is now: {_backupEnabled}. " & vbCrLf &
-            $"Default Save Directory is now: {Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory}. " & vbCrLf &
-            "Changes take effect next time you open a file.",
-            "Settings Updated",
+            Localization.F("Backup on Open setting is now: {0}. ", _backupEnabled) & vbCrLf &
+            Localization.F("Default Save Directory is now: {0}. ", Global.SpaceHavenEditor2.My.Settings.Default.DefaultSaveDirectory) & vbCrLf &
+            Localization.T("Changes take effect next time you open a file."),
+            Localization.T("Settings Updated"),
             MessageBoxButton.OK,
             MessageBoxImage.Information
         )
@@ -925,7 +974,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnSelectSourceSave_Click(sender As Object, e As RoutedEventArgs) Handles btnSelectSourceSave.Click
             Debug.WriteLine(">>> btnSelectSourceSave_Click Entered")
             Dim ofd As New OpenFileDialog With {
-                .Title = "Select Source Space Haven Save File ('game')",
+                .Title = Localization.T("Select Source Space Haven Save File ('game')"),
                 .Filter = "Space Haven Save|game;*.sav|All Files (*.*)|*.*",
                 .CheckFileExists = True,
                 .InitialDirectory = GetBlueprintDefaultDirectory()
@@ -943,7 +992,7 @@ Namespace SpaceHavenEditor2
         ' Handles selecting the blueprint XML file for import
         Private Sub btnSelectBlueprintFile_Click(sender As Object, e As RoutedEventArgs) Handles btnSelectBlueprintFile.Click
             Dim ofd As New OpenFileDialog With {
-                .Title = "Select Ship Blueprint File",
+                .Title = Localization.T("Select Ship Blueprint File"),
                 .Filter = "Ship Blueprint XML (*.xml)|*.xml|All Files (*.*)|*.*",
                 .CheckFileExists = True,
                 .InitialDirectory = GetBlueprintDefaultDirectory()
@@ -960,7 +1009,7 @@ Namespace SpaceHavenEditor2
         ' Handles selecting the target save file for import
         Private Sub btnSelectTargetSave_Click(sender As Object, e As RoutedEventArgs) Handles btnSelectTargetSave.Click
             Dim ofd As New OpenFileDialog With {
-               .Title = "Select Target Space Haven Save File ('game')",
+               .Title = Localization.T("Select Target Space Haven Save File ('game')"),
                .Filter = "Space Haven Save|game;*.sav|All Files (*.*)|*.*",
                .CheckFileExists = True,
                .InitialDirectory = GetBlueprintDefaultDirectory()
@@ -1045,7 +1094,7 @@ Namespace SpaceHavenEditor2
                 CheckExportButtonState()
 
             Catch ex As Exception
-                MessageBox.Show($"Error loading ships from source save:{Environment.NewLine}{ex.ToString()}", "Load Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error loading ships from source save:{0}{1}", Environment.NewLine, ex.ToString()), Localization.T("Load Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 sourceXmlDoc = Nothing
                 cmbShipsToExport.ItemsSource = Nothing
                 cmbShipsToExport.IsEnabled = False
@@ -1073,19 +1122,19 @@ Namespace SpaceHavenEditor2
             If selectedShip Is Nothing OrElse String.IsNullOrWhiteSpace(sourceSavePath) Then Return
 
             Dim confirmation = MessageBox.Show(
-                $"Delete '{selectedShip.Sname}' (SID {selectedShip.Sid}) from this save?{vbCrLf}{vbCrLf}" &
-                "A .bak backup will be created first. This cannot be undone inside the editor.",
-                "Delete Ship", MessageBoxButton.YesNo, MessageBoxImage.Warning)
+                Localization.F("Delete '{0}' (SID {1}) from this save?{2}{3}", selectedShip.Sname, selectedShip.Sid, vbCrLf, vbCrLf) &
+                Localization.T("A .bak backup will be created first. This cannot be undone inside the editor."),
+                Localization.T("Delete Ship"), MessageBoxButton.YesNo, MessageBoxImage.Warning)
             If confirmation <> MessageBoxResult.Yes Then Return
 
             Try
                 Dim deletedName = ShipDeletionService.DeleteShip(sourceSavePath, selectedShip.Sid)
                 UpdateBlueprintStatus($"Deleted '{deletedName}'. Backup saved as {Path.GetFileName(sourceSavePath)}.bak.")
                 LoadShipsFromSource()
-                MessageBox.Show($"'{deletedName}' was deleted successfully.", "Ship Deleted",
+                MessageBox.Show(Localization.F("'{0}' was deleted successfully.", deletedName), Localization.T("Ship Deleted"),
                                 MessageBoxButton.OK, MessageBoxImage.Information)
             Catch ex As Exception
-                MessageBox.Show($"Unable to delete ship:{vbCrLf}{ex.Message}", "Delete Error",
+                MessageBox.Show(Localization.F("Unable to delete ship:{0}{1}", vbCrLf, ex.Message), Localization.T("Delete Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
                 UpdateBlueprintStatus($"Delete failed: {ex.Message}")
             End Try
@@ -1108,7 +1157,7 @@ Namespace SpaceHavenEditor2
                       End Function)
 
             If relationshipRows Is Nothing Then
-                lblFactionStatus.Text = "No faction reputation records were found in this save."
+                lblFactionStatus.Text = Localization.T("No faction reputation records were found in this save.")
                 Return
             End If
 
@@ -1134,10 +1183,8 @@ Namespace SpaceHavenEditor2
             Next
 
             dgvFactionReputation.ItemsSource = factionReputations.OrderBy(Function(faction) faction.FactionName).ToList()
-            Dim stanceColumn = TryCast(dgvFactionReputation.Columns.FirstOrDefault(Function(column) column.Header?.ToString() = "Stance"),
-                                       DataGridComboBoxColumn)
-            If stanceColumn IsNot Nothing Then stanceColumn.ItemsSource = FactionStances
-            lblFactionStatus.Text = $"{factionReputations.Count} player-facing factions loaded."
+            If colFactionStance IsNot Nothing Then colFactionStance.ItemsSource = FactionStances
+            lblFactionStatus.Text = Localization.F("{0} player-facing factions loaded.", factionReputations.Count)
         End Sub
 
         Private Function ReadIntegerAttribute(element As XElement, attributeName As String, Optional defaultValue As Integer = 0) As Integer
@@ -1165,7 +1212,7 @@ Namespace SpaceHavenEditor2
                                        vision As Boolean, services As Boolean, hire As Boolean)
             Dim faction = GetSelectedFaction()
             If faction Is Nothing Then
-                MessageBox.Show("Select a faction first.", "Faction Required",
+                MessageBox.Show(Localization.T("Select a faction first."), Localization.T("Faction Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -1178,7 +1225,7 @@ Namespace SpaceHavenEditor2
             faction.AccessServices = services
             faction.AccessHire = hire
             dgvFactionReputation.Items.Refresh()
-            lblFactionStatus.Text = $"{faction.FactionName} preset loaded. Click Apply Selected Faction to commit it."
+            lblFactionStatus.Text = Localization.F("{0} preset loaded. Click Apply Selected Faction to commit it.", Localization.T(faction.FactionName))
         End Sub
 
         Private Sub btnFactionEnemy_Click(sender As Object, e As RoutedEventArgs)
@@ -1200,7 +1247,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnApplyFaction_Click(sender As Object, e As RoutedEventArgs)
             Dim faction = GetSelectedFaction()
             If faction Is Nothing Then
-                MessageBox.Show("Select a faction first.", "Faction Required",
+                MessageBox.Show(Localization.T("Select a faction first."), Localization.T("Faction Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -1215,7 +1262,7 @@ Namespace SpaceHavenEditor2
                 If faction.Patience < 0 OrElse faction.Patience > 100 Then
                     Throw New ArgumentOutOfRangeException("Patience", "Patience must be between 0 and 100.")
                 End If
-                If Not FactionStances.Contains(faction.Stance) Then
+                If Not FactionStances.Any(Function(stanceOption) stanceOption.Value = faction.Stance) Then
                     Throw New InvalidDataException("Stance must be Enemies, Neutral, or Friendly.")
                 End If
                 If faction.SettlementDebt < 0 Then
@@ -1236,9 +1283,9 @@ Namespace SpaceHavenEditor2
                 faction.SourceElement.SetAttributeValue("playerOwesSettlement", faction.SettlementDebt)
 
                 MarkUnsavedChanges()
-                lblFactionStatus.Text = $"{faction.FactionName} updated in memory. Use File > Save to make it permanent."
+                lblFactionStatus.Text = Localization.F("{0} updated in memory. Use File > Save to make it permanent.", Localization.T(faction.FactionName))
             Catch ex As Exception
-                MessageBox.Show($"Could not update faction: {ex.Message}", "Faction Update Error",
+                MessageBox.Show(Localization.F("Could not update faction: {0}", ex.Message), Localization.T("Faction Update Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -1246,15 +1293,15 @@ Namespace SpaceHavenEditor2
         Private Sub btnExportBlueprint_Click(sender As Object, e As RoutedEventArgs) Handles btnExportBlueprint.Click
             Dim selectedShipInfo = TryCast(cmbShipsToExport.SelectedItem, ShipInfo)
             If selectedShipInfo Is Nothing Then
-                MessageBox.Show("Please select a ship from the list.", "No Ship Selected", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+                MessageBox.Show(Localization.T("Please select a ship from the list."), Localization.T("No Ship Selected"), MessageBoxButton.OK, MessageBoxImage.Warning) : Return
             End If
             If selectedShipInfo.IsStation Then
-                MessageBox.Show("Stations use additional map and generation data and cannot be exported as ordinary ship blueprints.",
-                                "Station Export Not Supported", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Stations use additional map and generation data and cannot be exported as ordinary ship blueprints."),
+                                Localization.T("Station Export Not Supported"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If sourceXmlDoc Is Nothing OrElse sourceXmlDoc.Root Is Nothing Then
-                MessageBox.Show("Source save file is not loaded or is invalid.", "Error", MessageBoxButton.OK, MessageBoxImage.Error) : Return
+                MessageBox.Show(Localization.T("Source save file is not loaded or is invalid."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error) : Return
             End If
 
             Try
@@ -1265,7 +1312,7 @@ Namespace SpaceHavenEditor2
                 Dim blueprintNodeToSave = BlueprintConverter.CreateUnbuiltBlueprint(originalShipElement)
 
                 Dim sfd As New Microsoft.Win32.SaveFileDialog() With {
-                    .Title = "Save Ship Blueprint As",
+                    .Title = Localization.T("Save Ship Blueprint As"),
                     .Filter = "Ship Blueprint XML (*.xml)|*.xml|All Files (*.*)|*.*",
                     .FileName = $"{selectedShipInfo.Sname}_Blueprint.xml",
                     .InitialDirectory = GetBlueprintDefaultDirectory()
@@ -1273,13 +1320,13 @@ Namespace SpaceHavenEditor2
 
                 If sfd.ShowDialog() = True Then
                     blueprintNodeToSave.Save(sfd.FileName)
-                    MessageBox.Show($"Blueprint '{Path.GetFileName(sfd.FileName)}' saved successfully!", "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information)
+                    MessageBox.Show(Localization.F("Blueprint '{0}' saved successfully!", Path.GetFileName(sfd.FileName)), Localization.T("Export Complete"), MessageBoxButton.OK, MessageBoxImage.Information)
                     UpdateBlueprintStatus($"Blueprint '{Path.GetFileName(sfd.FileName)}' saved.")
                 Else
                     UpdateBlueprintStatus("Export cancelled.")
                 End If
             Catch ex As Exception
-                MessageBox.Show($"Error exporting blueprint:{Environment.NewLine}{ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error exporting blueprint:{0}{1}", Environment.NewLine, ex.Message), Localization.T("Export Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 UpdateBlueprintStatus("Export failed.")
             End Try
         End Sub
@@ -1291,19 +1338,19 @@ Namespace SpaceHavenEditor2
 
         Private Sub btnImportBlueprint_Click(sender As Object, e As RoutedEventArgs) Handles btnImportBlueprint.Click
             If String.IsNullOrEmpty(blueprintFilePath) OrElse Not File.Exists(blueprintFilePath) Then
-                MessageBox.Show("Please select a valid blueprint XML file.", "Blueprint Missing", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a valid blueprint XML file."), Localization.T("Blueprint Missing"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If String.IsNullOrEmpty(targetSavePath) OrElse Not File.Exists(targetSavePath) Then
-                MessageBox.Show("Please select a valid target save 'game' file.", "Target Save Missing", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a valid target save 'game' file."), Localization.T("Target Save Missing"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim result = MessageBox.Show(
-        $"Import '{Path.GetFileName(blueprintFilePath)}' into '{Path.GetFileName(targetSavePath)}'?" & vbCrLf &
-        "BACKUP YOUR SAVE FIRST! Do not have the game loaded." & vbCrLf & vbCrLf &
-        "Proceed?",
-        "Confirm Import", MessageBoxButton.YesNo, MessageBoxImage.Warning
+        Localization.F("Import '{0}' into '{1}'?", Path.GetFileName(blueprintFilePath), Path.GetFileName(targetSavePath)) & vbCrLf &
+        Localization.T("BACKUP YOUR SAVE FIRST! Do not have the game loaded.") & vbCrLf & vbCrLf &
+        Localization.T("Proceed?"),
+        Localization.T("Confirm Import"), MessageBoxButton.YesNo, MessageBoxImage.Warning
     )
             If result = MessageBoxResult.No Then
                 UpdateBlueprintStatus("Import cancelled.")
@@ -1397,7 +1444,7 @@ Namespace SpaceHavenEditor2
 
                     targetXmlDoc.Save(targetSavePath)
                     UpdateBlueprintStatus($"Blueprint import complete: SID {newBlueprintSid}.")
-                    MessageBox.Show("Ship blueprint imported successfully!", "Done",
+                    MessageBox.Show(Localization.T("Ship blueprint imported successfully!"), Localization.T("Done"),
                                     MessageBoxButton.OK, MessageBoxImage.Information)
                     Return
                 End If
@@ -1552,10 +1599,10 @@ Namespace SpaceHavenEditor2
 
                 targetXmlDoc.Save(targetSavePath)
                 UpdateBlueprintStatus($"Import complete: SID {newBlueprintSid}, Instance #{newInstanceId}.")
-                MessageBox.Show("Ship imported successfully!", "Done", MessageBoxButton.OK, MessageBoxImage.Information)
+                MessageBox.Show(Localization.T("Ship imported successfully!"), Localization.T("Done"), MessageBoxButton.OK, MessageBoxImage.Information)
 
             Catch ex As Exception
-                MessageBox.Show($"Import Error:{vbCrLf}{ex.Message}{vbCrLf}{vbCrLf}Stack Trace:{vbCrLf}{ex.StackTrace}", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Import Error:{0}{1}{2}{3}Stack Trace:{4}{5}", vbCrLf, ex.Message, vbCrLf, vbCrLf, vbCrLf, ex.StackTrace), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 UpdateBlueprintStatus($"Import failed: {ex.Message}")
                 Debug.WriteLine($"Import Error: {ex.ToString()}")
             Finally
@@ -1575,9 +1622,9 @@ Namespace SpaceHavenEditor2
         Private Function RunIntegrityScan(Optional updateStatus As Boolean = True) As String
             integrityFindings.Clear()
             If xmlDoc Is Nothing OrElse xmlDoc.Root Is Nothing Then
-                lblIntegritySummary.Text = "Load a save to run the scanner."
+                lblIntegritySummary.Text = Localization.T("Load a save to run the scanner.")
                 If updateStatus Then lblIntegrityStatus.Text = ""
-                Return "Integrity scan unavailable"
+                Return Localization.T("Integrity scan unavailable")
             End If
 
             For Each finding In integrityScanner.Scan(xmlDoc).
@@ -1595,12 +1642,12 @@ Namespace SpaceHavenEditor2
                 Function(item) item.Severity = SaveIntegritySeverity.Information).Count()
             Dim repairableCount = integrityFindings.Where(Function(item) item.CanRepair).Count()
             lblIntegritySummary.Text =
-                $"Integrity scan: {criticalCount} critical, {warningCount} warning, {informationCount} information; {repairableCount} repairable."
+                Localization.F("Integrity scan: {0} critical, {1} warning, {2} information; {3} repairable.", criticalCount, warningCount, informationCount, repairableCount)
             If updateStatus Then
                 lblIntegrityStatus.Text = If(
                     integrityFindings.Count = 0,
-                    "No integrity issues were found in the structures checked by the editor.",
-                    "Review the findings below. Critical findings must be corrected manually before saving.")
+                    Localization.T("No integrity issues were found in the structures checked by the editor."),
+                    Localization.T("Review the findings below. Critical findings must be corrected manually before saving."))
             End If
             Return lblIntegritySummary.Text
         End Function
@@ -1632,18 +1679,18 @@ Namespace SpaceHavenEditor2
                 Where(Function(item) item.IsSelected AndAlso item.CanRepair).
                 ToList()
             If selectedRepairs.Count = 0 Then
-                MessageBox.Show("Select at least one repairable finding.", "No Repairs Selected",
+                MessageBox.Show(Localization.T("Select at least one repairable finding."), Localization.T("No Repairs Selected"),
                                 MessageBoxButton.OK, MessageBoxImage.Information)
                 Return
             End If
             If String.IsNullOrWhiteSpace(currentFilePath) OrElse Not File.Exists(currentFilePath) Then
-                MessageBox.Show("The loaded save file could not be found for backup.", "Repair Error",
+                MessageBox.Show(Localization.T("The loaded save file could not be found for backup."), Localization.T("Repair Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
                 Return
             End If
             If MessageBox.Show(
-                $"Apply {selectedRepairs.Count} selected repair(s)? A timestamped backup will be created first.",
-                "Confirm Integrity Repairs", MessageBoxButton.YesNo,
+                Localization.F("Apply {0} selected repair(s)? A timestamped backup will be created first.", selectedRepairs.Count),
+                Localization.T("Confirm Integrity Repairs"), MessageBoxButton.YesNo,
                 MessageBoxImage.Question) <> MessageBoxResult.Yes Then Return
 
             Try
@@ -1659,7 +1706,7 @@ Namespace SpaceHavenEditor2
                 lblIntegrityStatus.Text =
                     $"Applied {selectedRepairs.Count} repair(s). Backup: {backupPath}. Review the rescan, then use File > Save."
             Catch ex As Exception
-                MessageBox.Show($"Could not apply integrity repairs: {ex.Message}", "Repair Error",
+                MessageBox.Show(Localization.F("Could not apply integrity repairs: {0}", ex.Message), Localization.T("Repair Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
                 RunIntegrityScan(False)
             End Try
@@ -1670,7 +1717,7 @@ Namespace SpaceHavenEditor2
         ' --- SIMPLIFIED SaveFileMenu_Click ---
         Private Sub SaveFileMenu_Click(sender As Object, e As RoutedEventArgs)
             If String.IsNullOrEmpty(currentFilePath) OrElse xmlDoc Is Nothing Then
-                MessageBox.Show("No file loaded to save.", "Save Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("No file loaded to save."), Localization.T("Save Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -1685,15 +1732,15 @@ Namespace SpaceHavenEditor2
                 If criticalCount > 0 Then
                     mainNavigationTabs.SelectedItem = navSaveIntegrity
                     MessageBox.Show(
-                        $"Saving is blocked because the integrity scanner found {criticalCount} critical issue(s). Review Save Integrity for details.",
-                        "Critical Integrity Issues", MessageBoxButton.OK, MessageBoxImage.Error)
+                        Localization.F("Saving is blocked because the integrity scanner found {0} critical issue(s). Review Save Integrity for details.", criticalCount),
+                        Localization.T("Critical Integrity Issues"), MessageBoxButton.OK, MessageBoxImage.Error)
                     Return
                 End If
                 Dim warningCount = integrityFindings.Where(
                     Function(item) item.Severity = SaveIntegritySeverity.Warning).Count()
                 If warningCount > 0 AndAlso MessageBox.Show(
-                    $"The integrity scanner found {warningCount} warning(s). Save anyway?",
-                    "Integrity Warnings", MessageBoxButton.YesNo,
+                    Localization.F("The integrity scanner found {0} warning(s). Save anyway?", warningCount),
+                    Localization.T("Integrity Warnings"), MessageBoxButton.YesNo,
                     MessageBoxImage.Warning) <> MessageBoxResult.Yes Then
                     mainNavigationTabs.SelectedItem = navSaveIntegrity
                     Return
@@ -1708,10 +1755,10 @@ Namespace SpaceHavenEditor2
                 ' Save the entire in-memory XML document to the file
                 xmlDoc.Save(currentFilePath)
                 ClearUnsavedChanges() ' Reset unsaved changes flag after successful save
-                MessageBox.Show("File saved successfully!", "Save Complete", MessageBoxButton.OK, MessageBoxImage.Information)
+                MessageBox.Show(Localization.T("File saved successfully!"), Localization.T("Save Complete"), MessageBoxButton.OK, MessageBoxImage.Information)
 
             Catch ex As Exception
-                MessageBox.Show($"Error saving file: {ex.Message}", "Save Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error saving file: {0}", ex.Message), Localization.T("Save Error"), MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 
@@ -1721,7 +1768,7 @@ Namespace SpaceHavenEditor2
         '    ' Force commit any pending grid edit before saving
         '    Try : dgvStorage.CommitEdit(DataGridEditingUnit.Row, True) : Catch : End Try
 
-        '    If xmlDoc Is Nothing OrElse String.IsNullOrEmpty(currentFilePath) Then MessageBox.Show("No file loaded.", "Warn", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+        '    If xmlDoc Is Nothing OrElse String.IsNullOrEmpty(currentFilePath) Then MessageBox.Show(Localization.T("No file loaded."), Localization.T("Warn"), MessageBoxButton.OK, MessageBoxImage.Warning) : Return
 
         '    Dim settingsUpdated As Boolean = False ' Track if any global setting actually changed
 
@@ -1740,11 +1787,11 @@ Namespace SpaceHavenEditor2
         '            Else
         '                ' Optionally warn user that playerBank node wasn't found if they tried to edit
         '                If Not String.IsNullOrWhiteSpace(txtPlayerCredits.Text) Then ' Check if user actually typed something
-        '                    MessageBox.Show("<playerBank> node not found. Credits cannot be saved.", "Save Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+        '                    MessageBox.Show(Localization.T("<playerBank> node not found. Credits cannot be saved."), Localization.T("Save Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
         '                End If
         '            End If
         '        ElseIf Not String.IsNullOrWhiteSpace(txtPlayerCredits.Text) Then ' Check if user typed invalid data
-        '            MessageBox.Show($"Invalid Credits value ('{newCreditsString}') entered. Credits not saved. Please correct and save again.", "Save Error", MessageBoxButton.OK, MessageBoxImage.Error)
+        '            MessageBox.Show(Localization.F("Invalid Credits value ('{0}') entered. Credits not saved. Please correct and save again.", newCreditsString), Localization.T("Save Error"), MessageBoxButton.OK, MessageBoxImage.Error)
         '            Return ' Stop the save if credits are invalid
         '        End If
 
@@ -1771,13 +1818,13 @@ Namespace SpaceHavenEditor2
 
         '        ' Optionally provide combined feedback
         '        If settingsUpdated Then
-        '            MessageBox.Show("File saved successfully (including updated global settings).", "Success", MessageBoxButton.OK, MessageBoxImage.Information)
+        '            MessageBox.Show(Localization.T("File saved successfully (including updated global settings)."), Localization.T("Success"), MessageBoxButton.OK, MessageBoxImage.Information)
         '        Else
-        '            MessageBox.Show("File saved successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information)
+        '            MessageBox.Show(Localization.T("File saved successfully."), Localization.T("Success"), MessageBoxButton.OK, MessageBoxImage.Information)
         '        End If
 
         '    Catch ex As Exception
-        '        MessageBox.Show($"Error saving file: {ex.Message}", "Save Error", MessageBoxButton.OK, MessageBoxImage.Error)
+        '        MessageBox.Show(Localization.F("Error saving file: {0}", ex.Message), Localization.T("Save Error"), MessageBoxButton.OK, MessageBoxImage.Error)
         '    End Try ' End Try block for saving
 
         'End Sub
@@ -1838,7 +1885,7 @@ Namespace SpaceHavenEditor2
                     End If
                 Next
             Catch ex As Exception
-                MessageBox.Show($"Error updating character changes: {ex.Message}", "Update Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error updating character changes: {0}", ex.Message), Localization.T("Update Error"), MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 
@@ -1857,20 +1904,19 @@ Namespace SpaceHavenEditor2
                             If Not String.IsNullOrEmpty(ownerValue) Then
                                 ' Check if the owner value indicates the player
                                 ownerText = If(ownerValue.Equals("Player", StringComparison.OrdinalIgnoreCase),
-                                       "Owner: Player",
-                                       $"Owner: {ownerValue}") ' Display actual owner if not "Player"
+                                       Localization.T("Owner: Player"),
+                                       Localization.F("Owner: {0}", ownerValue))
                             Else
-                                ownerText = "Owner: Not Specified" ' Owner attribute missing value
+                                ownerText = Localization.T("Owner: Not Specified")
                             End If
                         Else
-                            ownerText = "Owner: Settings Missing" ' <settings> tag missing in ship
+                            ownerText = Localization.T("Owner: Settings Missing")
                         End If
                     Else
-                        ownerText = "Owner: Ship Node Error" ' Ship XML element not found (shouldn't happen if SID is valid)
+                        ownerText = Localization.T("Owner: Ship Node Error")
                     End If
                 Catch ex As Exception
-                    ' Handle potential errors during XML parsing for this specific part
-                    ownerText = "Owner: Load Error"
+                    ownerText = Localization.T("Owner: Load Error")
                     ' Optionally log the exception ex.Message
                 End Try
             End If
@@ -1887,22 +1933,22 @@ Namespace SpaceHavenEditor2
 
             ' --- This is the logic moved from the original SelectionChanged handler ---
             ' Display ship size
-            lbl_shipSize.Text = $"Size: {selectedShip.Sx}x{selectedShip.Sy}"
+            lbl_shipSize.Text = Localization.F("Size: {0}x{1}", selectedShip.Sx, selectedShip.Sy)
             Dim canvasWidth As Integer = selectedShip.Sx \ 28 ' Integer division
             Dim canvasHeight As Integer = selectedShip.Sy \ 28 ' Integer division
-            lbl_CanvasSize.Text = $"Canvas Size: {canvasWidth} W x {canvasHeight} H squares"
-            lbl_structureType.Text = $"Structure Type: {selectedShip.StructureType}"
+            lbl_CanvasSize.Text = Localization.F("Canvas Size: {0} W x {1} H squares", canvasWidth, canvasHeight)
+            lbl_structureType.Text = Localization.F("Structure Type: {0}", Localization.T(selectedShip.StructureType))
             txtStructureName.Text = selectedShip.Sname
             btnRenameStructure.IsEnabled = selectedShip.IsPlayerOwned
             btn_updateSize.IsEnabled = selectedShip.IsPlayerOwned AndAlso Not selectedShip.IsStation
             btn_updateSize.ToolTip = If(selectedShip.IsStation,
-                                        "Station dimensions are protected because changing them can corrupt station geometry.",
+                                        Localization.T("Station dimensions are protected because changing them can corrupt station geometry."),
                                         Nothing)
 
             pnlStationInfo.Visibility = If(selectedShip.IsStation, Visibility.Visible, Visibility.Collapsed)
             If selectedShip.IsStation Then
-                lblStationType.Text = $"Type: {selectedShip.StationType}"
-                lblStationPopulation.Text = $"Crew: {selectedShip.CrewCount} | Storage containers: {selectedShip.StorageContainerCount}"
+                lblStationType.Text = Localization.F("Type: {0}", selectedShip.StationType)
+                lblStationPopulation.Text = Localization.F("Crew: {0} | Storage containers: {1}", selectedShip.CrewCount, selectedShip.StorageContainerCount)
             End If
 
             ' Load owner info
@@ -2048,7 +2094,7 @@ Namespace SpaceHavenEditor2
             If selectedShip Is Nothing OrElse selectedShip.Sid = -1 Then
                 lstCharacters.ItemsSource = Nothing
                 ClearDataGrids()
-                txtCrewCount.Text = "Total Crew: 0"
+                txtCrewCount.Text = Localization.T("Total Crew: 0")
                 cmbTemplateCrew.ItemsSource = Nothing
                 Return
             End If
@@ -2076,7 +2122,7 @@ Namespace SpaceHavenEditor2
 
             Dim newName = txtStructureName.Text.Trim()
             If String.IsNullOrWhiteSpace(newName) Then
-                MessageBox.Show("Enter a name for the selected structure.", "Name Required",
+                MessageBox.Show(Localization.T("Enter a name for the selected structure."), Localization.T("Name Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -2255,9 +2301,9 @@ Namespace SpaceHavenEditor2
                                  .ToList()
             lstCharacters.ItemsSource = shipCrew
             If shipCrew IsNot Nothing Then
-                txtCrewCount.Text = $"Total Crew: {shipCrew.Count}"
+                txtCrewCount.Text = Localization.F("Total Crew: {0}", shipCrew.Count)
             Else
-                txtCrewCount.Text = "Total Crew: 0"
+                txtCrewCount.Text = Localization.T("Total Crew: 0")
             End If
             PopulateBulkScheduleCrew(shipSid)
             PopulateBulkLoadoutCrew(shipSid)
@@ -2284,8 +2330,8 @@ Namespace SpaceHavenEditor2
                 PopulateGlobalScheduleComboBoxes()
                 cmbCrewGlobalSchedule.SelectedValue = selectedCharacter.GlobalScheduleId
                 txtScheduleMode.Text = If(selectedCharacter.UsesGlobalSchedule,
-                                          $"Currently follows {GetGlobalScheduleDisplayName(selectedCharacter.GlobalScheduleId)}. Applying changes will make it custom.",
-                                          "Currently uses a custom individual schedule.")
+                                          Localization.F("Currently follows {0}. Applying changes will make it custom.", GetGlobalScheduleDisplayName(selectedCharacter.GlobalScheduleId)),
+                                          Localization.T("Currently uses a custom individual schedule."))
 
                 PopulateAddTraitComboBox(selectedCharacter)
                 RefreshCrewRecoverySummary(selectedCharacter)
@@ -2386,8 +2432,8 @@ Namespace SpaceHavenEditor2
                         })
                     Next
                 Catch ex As Exception
-                    MessageBox.Show($"Could not load saved loadout configurations: {ex.Message}",
-                                    "Loadout Templates", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    MessageBox.Show(Localization.F("Could not load saved loadout configurations: {0}", ex.Message),
+                                    Localization.T("Loadout Templates"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 End Try
             End If
             RefreshLoadoutTemplateCombo()
@@ -2544,22 +2590,22 @@ Namespace SpaceHavenEditor2
 
         Private Function GetCrewLoadoutSummary(character As Character) As String
             Dim loadoutNode = FindCharacterNode(character.CharacterEntityId)?.Element("loadout")
-            If loadoutNode Is Nothing Then Return "No loadout"
+            If loadoutNode Is Nothing Then Return Localization.T("No loadout")
             Dim current = LoadoutFromElement(loadoutNode)
             Dim matching = loadoutTemplates.FirstOrDefault(Function(template) LoadoutsMatch(template, current))
             If matching IsNot Nothing Then Return matching.Name
-            Return $"Custom: armor {current.Armor}, primary {current.Primary}"
+            Return Localization.F("Custom: armor {0}, primary {1}", current.Armor, current.Primary)
         End Function
 
         Private Sub LoadCrewLoadoutEditor(character As Character)
             If character Is Nothing Then
-                txtCrewLoadoutMember.Text = "Select a crew member to view their loadout."
+                txtCrewLoadoutMember.Text = Localization.T("Select a crew member to view their loadout.")
                 PopulateLoadoutControls(New LoadoutTemplate(), True)
                 Return
             End If
             Dim loadoutNode = FindCharacterNode(character.CharacterEntityId)?.Element("loadout")
             PopulateLoadoutControls(LoadoutFromElement(loadoutNode), True)
-            txtCrewLoadoutMember.Text = $"{character.CharacterName} (Crew ID {character.CharacterEntityId})"
+            txtCrewLoadoutMember.Text = Localization.F("{0} (Crew ID {1})", character.CharacterName, character.CharacterEntityId)
             lblCrewLoadoutStatus.Text = If(loadoutNode Is Nothing,
                                            "This crew member has no loadout node yet. Applying will create one.",
                                            $"Current configuration: {GetCrewLoadoutSummary(character)}")
@@ -2612,7 +2658,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnApplyCrewLoadout_Click(sender As Object, e As RoutedEventArgs)
             Dim character = TryCast(lstCharacters.SelectedItem, Character)
             If character Is Nothing Then
-                MessageBox.Show("Select a crew member first.", "Selection Required",
+                MessageBox.Show(Localization.T("Select a crew member first."), Localization.T("Selection Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -2622,7 +2668,7 @@ Namespace SpaceHavenEditor2
                 RefreshBulkLoadoutSummaries()
                 lblCrewLoadoutStatus.Text = $"Applied loadout to {character.CharacterName}. Use File > Save to make it permanent."
             Catch ex As Exception
-                MessageBox.Show($"Could not apply the loadout: {ex.Message}", "Loadout Error",
+                MessageBox.Show(Localization.F("Could not apply the loadout: {0}", ex.Message), Localization.T("Loadout Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -2630,7 +2676,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnClearCrewLoadout_Click(sender As Object, e As RoutedEventArgs)
             Dim character = TryCast(lstCharacters.SelectedItem, Character)
             If character Is Nothing Then
-                MessageBox.Show("Select a crew member first.", "Selection Required",
+                MessageBox.Show(Localization.T("Select a crew member first."), Localization.T("Selection Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -2648,7 +2694,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnSaveCrewLoadoutTemplate_Click(sender As Object, e As RoutedEventArgs)
             Dim character = TryCast(lstCharacters.SelectedItem, Character)
             If character Is Nothing Then
-                MessageBox.Show("Select a crew member first.", "Selection Required",
+                MessageBox.Show(Localization.T("Select a crew member first."), Localization.T("Selection Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -2657,7 +2703,7 @@ Namespace SpaceHavenEditor2
                 $"{character.CharacterName} Loadout")
             If String.IsNullOrWhiteSpace(templateName) Then Return
             If LoadoutTemplateNameExists(templateName) Then
-                MessageBox.Show("A loadout configuration with that name already exists.", "Duplicate Name",
+                MessageBox.Show(Localization.T("A loadout configuration with that name already exists."), Localization.T("Duplicate Name"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -2678,7 +2724,7 @@ Namespace SpaceHavenEditor2
             Dim templateName = PromptForLoadoutTemplateName("Enter a name for the new loadout configuration:")
             If String.IsNullOrWhiteSpace(templateName) Then Return
             If LoadoutTemplateNameExists(templateName) Then
-                MessageBox.Show("A loadout configuration with that name already exists.", "Duplicate Name",
+                MessageBox.Show(Localization.T("A loadout configuration with that name already exists."), Localization.T("Duplicate Name"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -2696,7 +2742,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnSaveLoadoutTemplate_Click(sender As Object, e As RoutedEventArgs)
             Dim template = TryCast(cmbBulkLoadoutTemplate.SelectedItem, LoadoutTemplate)
             If template Is Nothing Then
-                MessageBox.Show("Create or select a loadout configuration first.", "Template Required",
+                MessageBox.Show(Localization.T("Create or select a loadout configuration first."), Localization.T("Template Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -2712,7 +2758,7 @@ Namespace SpaceHavenEditor2
             Dim newName = PromptForLoadoutTemplateName("Enter the new configuration name:", template.Name)
             If String.IsNullOrWhiteSpace(newName) OrElse String.Equals(newName, template.Name, StringComparison.Ordinal) Then Return
             If LoadoutTemplateNameExists(newName, template) Then
-                MessageBox.Show("A loadout configuration with that name already exists.", "Duplicate Name",
+                MessageBox.Show(Localization.T("A loadout configuration with that name already exists."), Localization.T("Duplicate Name"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -2726,8 +2772,8 @@ Namespace SpaceHavenEditor2
         Private Sub btnDeleteLoadoutTemplate_Click(sender As Object, e As RoutedEventArgs)
             Dim template = TryCast(cmbBulkLoadoutTemplate.SelectedItem, LoadoutTemplate)
             If template Is Nothing Then Return
-            If MessageBox.Show($"Delete the reusable loadout configuration '{template.Name}'?",
-                               "Delete Loadout", MessageBoxButton.YesNo,
+            If MessageBox.Show(Localization.F("Delete the reusable loadout configuration '{0}'?", template.Name),
+                               Localization.T("Delete Loadout"), MessageBoxButton.YesNo,
                                MessageBoxImage.Question) <> MessageBoxResult.Yes Then Return
             loadoutTemplates.Remove(template)
             SaveLoadoutTemplates()
@@ -2754,12 +2800,12 @@ Namespace SpaceHavenEditor2
             Dim template = TryCast(cmbBulkLoadoutTemplate.SelectedItem, LoadoutTemplate)
             Dim selectedCrew = bulkLoadoutCrew.Where(Function(item) item.IsSelected AndAlso item.Crew IsNot Nothing).ToList()
             If template Is Nothing OrElse selectedCrew.Count = 0 Then
-                MessageBox.Show("Select a loadout configuration and check at least one crew member.",
-                                "Selection Required", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Select a loadout configuration and check at least one crew member."),
+                                Localization.T("Selection Required"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
-            If MessageBox.Show($"Apply '{template.Name}' to {selectedCrew.Count} checked crew member(s)?",
-                               "Confirm Bulk Loadout", MessageBoxButton.YesNo,
+            If MessageBox.Show(Localization.F("Apply '{0}' to {1} checked crew member(s)?", template.Name, selectedCrew.Count),
+                               Localization.T("Confirm Bulk Loadout"), MessageBoxButton.YesNo,
                                MessageBoxImage.Question) <> MessageBoxResult.Yes Then Return
             Try
                 For Each item In selectedCrew
@@ -2776,7 +2822,7 @@ Namespace SpaceHavenEditor2
                 lblBulkLoadoutStatus.Text =
                     $"Applied '{template.Name}' to {selectedCrew.Count} crew member(s). Use File > Save to make it permanent."
             Catch ex As Exception
-                MessageBox.Show($"Could not apply the bulk loadout: {ex.Message}", "Bulk Loadout Error",
+                MessageBox.Show(Localization.F("Could not apply the bulk loadout: {0}", ex.Message), Localization.T("Bulk Loadout Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -2821,7 +2867,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnApplyCrewSchedule_Click(sender As Object, e As RoutedEventArgs)
             Dim selectedCharacter = TryCast(lstCharacters.SelectedItem, Character)
             If selectedCharacter Is Nothing Then
-                MessageBox.Show("Select a crew member first.", "Crew Required",
+                MessageBox.Show(Localization.T("Select a crew member first."), Localization.T("Crew Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -2845,10 +2891,10 @@ Namespace SpaceHavenEditor2
                 scheduleNode.SetAttributeValue("p2", PackScheduleSlots(selectedCharacter.CharacterSchedule, 16))
                 persNode.SetAttributeValue("useGlobal", "false")
                 selectedCharacter.UsesGlobalSchedule = False
-                txtScheduleMode.Text = "Currently uses a custom individual schedule."
+                txtScheduleMode.Text = Localization.T("Currently uses a custom individual schedule.")
                 MarkUnsavedChanges()
             Catch ex As Exception
-                MessageBox.Show($"Could not update crew schedule: {ex.Message}", "Schedule Error",
+                MessageBox.Show(Localization.F("Could not update crew schedule: {0}", ex.Message), Localization.T("Schedule Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -2967,7 +3013,7 @@ Namespace SpaceHavenEditor2
 
         Private Sub btnCreateGlobalSchedule_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc?.Root Is Nothing Then
-                MessageBox.Show("Load a save game first.", "Save Required",
+                MessageBox.Show(Localization.T("Load a save game first."), Localization.T("Save Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -2988,7 +3034,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnDuplicateGlobalSchedule_Click(sender As Object, e As RoutedEventArgs)
             Dim sourceDefinition = GetSelectedGlobalScheduleDefinition()
             If sourceDefinition Is Nothing Then
-                MessageBox.Show("Select a schedule to duplicate.", "Schedule Required",
+                MessageBox.Show(Localization.T("Select a schedule to duplicate."), Localization.T("Schedule Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -3013,14 +3059,14 @@ Namespace SpaceHavenEditor2
         Private Sub btnRenameGlobalSchedule_Click(sender As Object, e As RoutedEventArgs)
             Dim definition = GetSelectedGlobalScheduleDefinition()
             If definition Is Nothing Then
-                MessageBox.Show("Select a schedule to rename.", "Schedule Required",
+                MessageBox.Show(Localization.T("Select a schedule to rename."), Localization.T("Schedule Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim scheduleName = txtGlobalScheduleName.Text.Trim()
             If String.IsNullOrWhiteSpace(scheduleName) Then
-                MessageBox.Show("Enter a schedule name.", "Name Required",
+                MessageBox.Show(Localization.T("Enter a schedule name."), Localization.T("Name Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -3036,7 +3082,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnApplyGlobalScheduleChanges_Click(sender As Object, e As RoutedEventArgs)
             Dim definition = GetSelectedGlobalScheduleDefinition()
             If definition Is Nothing Then
-                MessageBox.Show("Select a schedule to edit.", "Schedule Required",
+                MessageBox.Show(Localization.T("Select a schedule to edit."), Localization.T("Schedule Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -3062,7 +3108,7 @@ Namespace SpaceHavenEditor2
                 MarkUnsavedChanges()
                 lblGlobalScheduleDesignerStatus.Text = $"Applied all 24 hourly slots to {definition.DisplayName}."
             Catch ex As Exception
-                MessageBox.Show($"Could not update the global schedule: {ex.Message}", "Schedule Error",
+                MessageBox.Show(Localization.F("Could not update the global schedule: {0}", ex.Message), Localization.T("Schedule Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -3083,7 +3129,7 @@ Namespace SpaceHavenEditor2
             Dim selectedCharacter = TryCast(lstCharacters.SelectedItem, Character)
             If selectedCharacter IsNot Nothing AndAlso selectedCharacter.UsesGlobalSchedule Then
                 cmbCrewGlobalSchedule.SelectedValue = selectedCharacter.GlobalScheduleId
-                txtScheduleMode.Text = $"Currently follows {GetGlobalScheduleDisplayName(selectedCharacter.GlobalScheduleId)}."
+                txtScheduleMode.Text = Localization.F("Currently follows {0}.", GetGlobalScheduleDisplayName(selectedCharacter.GlobalScheduleId))
                 dgvCrewSchedule.ItemsSource = New ObservableCollection(Of CrewScheduleSlot)(selectedCharacter.CharacterSchedule)
             End If
         End Sub
@@ -3131,7 +3177,7 @@ Namespace SpaceHavenEditor2
             If researchElement Is Nothing Then
                 dgvResearchTechnologies.ItemsSource = Nothing
                 lstResearchQueue.ItemsSource = Nothing
-                lblResearchStatus.Text = "This save does not contain a <research> section."
+                lblResearchStatus.Text = Localization.T("This save does not contain a <research> section.")
                 Return
             End If
 
@@ -3216,7 +3262,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnCompleteSelectedResearch_Click(sender As Object, e As RoutedEventArgs)
             Dim technology = GetSelectedResearchTechnology()
             If technology Is Nothing Then
-                MessageBox.Show("Select a technology first.", "Research Required",
+                MessageBox.Show(Localization.T("Select a technology first."), Localization.T("Research Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -3225,13 +3271,13 @@ Namespace SpaceHavenEditor2
             RemoveTechnologyFromResearchQueue(technology.TechId)
             LoadResearchEditor(technology.TechId)
             MarkUnsavedChanges()
-            lblResearchStatus.Text = $"Completed {technology.TechnologyName}. Use File > Save to write the change."
+            lblResearchStatus.Text = Localization.F("Completed {0}. Use File > Save to write the change.", Localization.T(technology.TechnologyName))
         End Sub
 
         Private Sub btnResetSelectedResearch_Click(sender As Object, e As RoutedEventArgs)
             Dim technology = GetSelectedResearchTechnology()
             If technology Is Nothing Then
-                MessageBox.Show("Select a technology first.", "Research Required",
+                MessageBox.Show(Localization.T("Select a technology first."), Localization.T("Research Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -3240,13 +3286,13 @@ Namespace SpaceHavenEditor2
             RemoveTechnologyFromResearchQueue(technology.TechId)
             LoadResearchEditor(technology.TechId)
             MarkUnsavedChanges()
-            lblResearchStatus.Text = $"Reset {technology.TechnologyName} to not started."
+            lblResearchStatus.Text = Localization.F("Reset {0} to not started.", Localization.T(technology.TechnologyName))
         End Sub
 
         Private Sub btnCompleteAllResearch_Click(sender As Object, e As RoutedEventArgs)
             If researchTechnologies.Count = 0 Then Return
-            If MessageBox.Show($"Complete all {researchTechnologies.Count} technologies?",
-                               "Complete All Research", MessageBoxButton.YesNo,
+            If MessageBox.Show(Localization.F("Complete all {0} technologies?", researchTechnologies.Count),
+                               Localization.T("Complete All Research"), MessageBoxButton.YesNo,
                                MessageBoxImage.Question) <> MessageBoxResult.Yes Then Return
 
             For Each technology In researchTechnologies
@@ -3255,23 +3301,23 @@ Namespace SpaceHavenEditor2
             GetResearchQueueElement()?.RemoveNodes()
             LoadResearchEditor()
             MarkUnsavedChanges()
-            lblResearchStatus.Text = "All research technologies have been marked completed."
+            lblResearchStatus.Text = Localization.T("All research technologies have been marked completed.")
         End Sub
 
         Private Sub btnAddResearchQueue_Click(sender As Object, e As RoutedEventArgs)
             Dim technology = GetSelectedResearchTechnology()
             If technology Is Nothing Then
-                MessageBox.Show("Select a technology to queue.", "Research Required",
+                MessageBox.Show(Localization.T("Select a technology to queue."), Localization.T("Research Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If technology.StageCount > 0 AndAlso technology.CompletedStageCount = technology.StageCount Then
-                MessageBox.Show("That technology is already completed.", "Research Completed",
+                MessageBox.Show(Localization.T("That technology is already completed."), Localization.T("Research Completed"),
                                 MessageBoxButton.OK, MessageBoxImage.Information)
                 Return
             End If
             If researchQueue.Any(Function(item) item.TechId = technology.TechId) Then
-                MessageBox.Show("That technology is already in the queue.", "Already Queued",
+                MessageBox.Show(Localization.T("That technology is already in the queue."), Localization.T("Already Queued"),
                                 MessageBoxButton.OK, MessageBoxImage.Information)
                 Return
             End If
@@ -3279,7 +3325,7 @@ Namespace SpaceHavenEditor2
             GetResearchQueueElement()?.Add(New XElement("l", New XAttribute("techId", technology.TechId)))
             LoadResearchEditor(technology.TechId, researchQueue.Count)
             MarkUnsavedChanges()
-            lblResearchStatus.Text = $"Added {technology.TechnologyName} to the research queue."
+            lblResearchStatus.Text = Localization.F("Added {0} to the research queue.", Localization.T(technology.TechnologyName))
         End Sub
 
         Private Sub btnRemoveResearchQueue_Click(sender As Object, e As RoutedEventArgs)
@@ -3289,7 +3335,7 @@ Namespace SpaceHavenEditor2
             queueItem.QueueElement?.Remove()
             LoadResearchEditor(queueItem.TechId, Math.Min(oldIndex, researchQueue.Count - 2))
             MarkUnsavedChanges()
-            lblResearchStatus.Text = $"Removed {queueItem.TechnologyName} from the research queue."
+            lblResearchStatus.Text = Localization.F("Removed {0} from the research queue.", Localization.T(queueItem.TechnologyName))
         End Sub
 
         Private Sub MoveResearchQueueItem(direction As Integer)
@@ -3323,7 +3369,7 @@ Namespace SpaceHavenEditor2
             GetResearchQueueElement()?.RemoveNodes()
             LoadResearchEditor()
             MarkUnsavedChanges()
-            lblResearchStatus.Text = "Research queue cleared."
+            lblResearchStatus.Text = Localization.T("Research queue cleared.")
         End Sub
 
         Private Function GetDatalogsElement() As XElement
@@ -3457,7 +3503,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnUnlockSelectedDatalogs_Click(sender As Object, e As RoutedEventArgs)
             Dim selectedIds = GetSelectedDatalogIds()
             If selectedIds.Count = 0 Then
-                MessageBox.Show("Select at least one datalog.", "Datalog Required",
+                MessageBox.Show(Localization.T("Select at least one datalog."), Localization.T("Datalog Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -3480,7 +3526,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnResetSelectedDatalogs_Click(sender As Object, e As RoutedEventArgs)
             Dim selectedIds = GetSelectedDatalogIds()
             If selectedIds.Count = 0 Then
-                MessageBox.Show("Select at least one datalog.", "Datalog Required",
+                MessageBox.Show(Localization.T("Select at least one datalog."), Localization.T("Datalog Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -3525,7 +3571,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnApplyCrewGlobalSchedule_Click(sender As Object, e As RoutedEventArgs)
             Dim selectedCharacter = TryCast(lstCharacters.SelectedItem, Character)
             If selectedCharacter Is Nothing OrElse cmbCrewGlobalSchedule.SelectedValue Is Nothing Then
-                MessageBox.Show("Select a crew member and a global schedule.", "Selection Required",
+                MessageBox.Show(Localization.T("Select a crew member and a global schedule."), Localization.T("Selection Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -3534,10 +3580,10 @@ Namespace SpaceHavenEditor2
                 Dim scheduleId = CInt(cmbCrewGlobalSchedule.SelectedValue)
                 ApplyGlobalScheduleToCharacter(selectedCharacter, scheduleId)
                 dgvCrewSchedule.ItemsSource = New ObservableCollection(Of CrewScheduleSlot)(selectedCharacter.CharacterSchedule)
-                txtScheduleMode.Text = $"Currently follows {GetGlobalScheduleDisplayName(scheduleId)}."
+                txtScheduleMode.Text = Localization.F("Currently follows {0}.", GetGlobalScheduleDisplayName(scheduleId))
                 MarkUnsavedChanges()
             Catch ex As Exception
-                MessageBox.Show($"Could not assign global schedule: {ex.Message}", "Schedule Error",
+                MessageBox.Show(Localization.F("Could not assign global schedule: {0}", ex.Message), Localization.T("Schedule Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -3562,7 +3608,7 @@ Namespace SpaceHavenEditor2
 
         Private Sub UpdateBulkScheduleCounts()
             If bulkScheduleCrew Is Nothing OrElse bulkScheduleCrew.Count = 0 Then
-                lblBulkScheduleCounts.Text = "Crew schedules: No crew loaded"
+                lblBulkScheduleCounts.Text = Localization.T("Crew schedules: No crew loaded")
                 Return
             End If
 
@@ -3692,7 +3738,7 @@ Namespace SpaceHavenEditor2
         Private Function GetSelectedCrewForRecovery() As Character
             Dim character = TryCast(lstCharacters.SelectedItem, Character)
             If character Is Nothing Then
-                MessageBox.Show("Select a crew member first.", "Crew Required",
+                MessageBox.Show(Localization.T("Select a crew member first."), Localization.T("Crew Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
             End If
             Return character
@@ -3720,7 +3766,7 @@ Namespace SpaceHavenEditor2
 
         Private Sub RefreshCrewRecoverySummary(character As Character)
             If character Is Nothing Then
-                txtCrewRecoveryMember.Text = "Select a crew member to view recovery details."
+                txtCrewRecoveryMember.Text = Localization.T("Select a crew member to view recovery details.")
                 dgvCrewRecoveryVitals.ItemsSource = Nothing
                 lblCrewRecoveryStatus.Text = ""
                 Return
@@ -3743,7 +3789,7 @@ Namespace SpaceHavenEditor2
             AddCrewRecoveryVital(vitalItems, propsNode, "SmokeGas", "Exposure")
             AddCrewRecoveryVital(vitalItems, propsNode, "HazardousGas", "Exposure")
 
-            txtCrewRecoveryMember.Text = $"{character.CharacterName} (Crew ID {character.CharacterEntityId})"
+            txtCrewRecoveryMember.Text = Localization.F("{0} (Crew ID {1})", character.CharacterName, character.CharacterEntityId)
             dgvCrewRecoveryVitals.ItemsSource = vitalItems
         End Sub
 
@@ -3756,7 +3802,7 @@ Namespace SpaceHavenEditor2
                 MarkUnsavedChanges()
                 lblCrewRecoveryStatus.Text = $"Restored health and needs for {character.CharacterName}."
             Catch ex As Exception
-                MessageBox.Show($"Could not restore crew: {ex.Message}", "Recovery Error",
+                MessageBox.Show(Localization.F("Could not restore crew: {0}", ex.Message), Localization.T("Recovery Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -3770,7 +3816,7 @@ Namespace SpaceHavenEditor2
                 MarkUnsavedChanges()
                 lblCrewRecoveryStatus.Text = $"Restored oxygen reserve and cleared gas exposure for {character.CharacterName}."
             Catch ex As Exception
-                MessageBox.Show($"Could not restore oxygen: {ex.Message}", "Recovery Error",
+                MessageBox.Show(Localization.F("Could not restore oxygen: {0}", ex.Message), Localization.T("Recovery Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -3793,7 +3839,7 @@ Namespace SpaceHavenEditor2
                 MarkUnsavedChanges()
                 lblCrewRecoveryStatus.Text = $"Applied full recovery to {character.CharacterName}."
             Catch ex As Exception
-                MessageBox.Show($"Could not recover crew: {ex.Message}", "Recovery Error",
+                MessageBox.Show(Localization.F("Could not recover crew: {0}", ex.Message), Localization.T("Recovery Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -3818,7 +3864,7 @@ Namespace SpaceHavenEditor2
                 Select(Function(item) item.Crew).
                 ToList()
             If selectedCrew.Count = 0 Then
-                MessageBox.Show("Check at least one crew member.", "Crew Required",
+                MessageBox.Show(Localization.T("Check at least one crew member."), Localization.T("Crew Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -3833,7 +3879,7 @@ Namespace SpaceHavenEditor2
                 lblBulkRecoveryStatus.Text =
                     $"{If(clearConditions, "Fully recovered", "Restored")} {selectedCrew.Count} crew member(s)."
             Catch ex As Exception
-                MessageBox.Show($"Could not recover selected crew: {ex.Message}", "Bulk Recovery Error",
+                MessageBox.Show(Localization.F("Could not recover selected crew: {0}", ex.Message), Localization.T("Bulk Recovery Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -3856,14 +3902,14 @@ Namespace SpaceHavenEditor2
                       End Function).
                 ToList()
             If playerCrew.Count = 0 Then
-                MessageBox.Show("No active player crew members are loaded.", "No Crew",
+                MessageBox.Show(Localization.T("No active player crew members are loaded."), Localization.T("No Crew"),
                                 MessageBoxButton.OK, MessageBoxImage.Information)
                 Return
             End If
 
             Dim actionName = If(clearConditions, "fully recover", "restore the vitals of")
-            If MessageBox.Show($"Are you sure you want to {actionName} all {playerCrew.Count} active player crew members?",
-                               "Confirm Global Recovery", MessageBoxButton.YesNo,
+            If MessageBox.Show(Localization.F("Are you sure you want to {0} all {1} active player crew members?", actionName, playerCrew.Count),
+                               Localization.T("Confirm Global Recovery"), MessageBoxButton.YesNo,
                                MessageBoxImage.Question) <> MessageBoxResult.Yes Then Return
 
             Try
@@ -3876,7 +3922,7 @@ Namespace SpaceHavenEditor2
                 lblBulkRecoveryStatus.Text =
                     $"{If(clearConditions, "Fully recovered", "Restored the vitals of")} all {playerCrew.Count} active player crew member(s)."
             Catch ex As Exception
-                MessageBox.Show($"Could not recover all crew: {ex.Message}", "Global Recovery Error",
+                MessageBox.Show(Localization.F("Could not recover all crew: {0}", ex.Message), Localization.T("Global Recovery Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -3892,7 +3938,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnApplyBulkGlobalSchedule_Click(sender As Object, e As RoutedEventArgs)
             Dim selectedCrew = bulkScheduleCrew.Where(Function(item) item.IsSelected).ToList()
             If selectedCrew.Count = 0 OrElse cmbBulkGlobalSchedule.SelectedValue Is Nothing Then
-                MessageBox.Show("Check at least one crew member and select a global schedule.", "Selection Required",
+                MessageBox.Show(Localization.T("Check at least one crew member and select a global schedule."), Localization.T("Selection Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -3912,10 +3958,10 @@ Namespace SpaceHavenEditor2
                 If currentCharacter IsNot Nothing AndAlso selectedCrew.Any(Function(item) item.Crew.CharacterEntityId = currentCharacter.CharacterEntityId) Then
                     cmbCrewGlobalSchedule.SelectedValue = scheduleId
                     dgvCrewSchedule.ItemsSource = New ObservableCollection(Of CrewScheduleSlot)(currentCharacter.CharacterSchedule)
-                    txtScheduleMode.Text = $"Currently follows {GetGlobalScheduleDisplayName(scheduleId)}."
+                    txtScheduleMode.Text = Localization.F("Currently follows {0}.", GetGlobalScheduleDisplayName(scheduleId))
                 End If
             Catch ex As Exception
-                MessageBox.Show($"Could not apply bulk schedule: {ex.Message}", "Bulk Schedule Error",
+                MessageBox.Show(Localization.F("Could not apply bulk schedule: {0}", ex.Message), Localization.T("Bulk Schedule Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -3938,7 +3984,7 @@ Namespace SpaceHavenEditor2
             Dim selectedCharacter = TryCast(lstCharacters.SelectedItem, Character)
             If selectedCharacter Is Nothing OrElse selectedCharacter.CharacterRelationships Is Nothing Then
                 dgvRelationships.ItemsSource = Nothing
-                txtRelationshipPageInfo.Text = "Page 0 of 0"
+                txtRelationshipPageInfo.Text = Localization.T("Page 0 of 0")
                 btnRelPrev.IsEnabled = False
                 btnRelNext.IsEnabled = False
                 Return
@@ -3962,7 +4008,7 @@ Namespace SpaceHavenEditor2
             dgvRelationships.ItemsSource = New ObservableCollection(Of RelationshipInfo)(pagedList)
 
             ' Update paging info text and button states
-            txtRelationshipPageInfo.Text = $"Page {_relationshipsCurrentPage} of {totalPages}"
+            txtRelationshipPageInfo.Text = Localization.F("Page {0} of {1}", _relationshipsCurrentPage, totalPages)
             btnRelPrev.IsEnabled = (_relationshipsCurrentPage > 1)
             btnRelNext.IsEnabled = (_relationshipsCurrentPage < totalPages)
         End Sub
@@ -4080,7 +4126,7 @@ Namespace SpaceHavenEditor2
             Dim results = visibleItems.ToList()
             dgvConsolidatedInventory.ItemsSource = results
             Dim totalUnits = results.Sum(Function(item) item.TotalQuantity)
-            lblInventorySummary.Text = $"{results.Count} item types | {totalUnits} total units | {currentShipStorageContainers.Count} containers"
+            lblInventorySummary.Text = Localization.F("{0} item types | {1} total units | {2} containers", results.Count, totalUnits, currentShipStorageContainers.Count)
         End Sub
 
         Private Sub txtInventorySearch_TextChanged(sender As Object, e As TextChangedEventArgs)
@@ -4127,32 +4173,32 @@ Namespace SpaceHavenEditor2
         ' *** btnAddItem_Click - Uses FeatElement Reference ***
         'Private Sub btnAddItem_Click(sender As Object, e As RoutedEventArgs)
         '    If cmbStorageContainers.SelectedItem Is Nothing Then
-        '        MessageBox.Show("Please select a storage container first.", "No Container Selected", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+        '        MessageBox.Show(Localization.T("Please select a storage container first."), Localization.T("No Container Selected"), MessageBoxButton.OK, MessageBoxImage.Warning) : Return
         '    End If
         '    If cmbAddItem.SelectedValue Is Nothing Then
-        '        MessageBox.Show("Please select an item to add.", "No Item Selected", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+        '        MessageBox.Show(Localization.T("Please select an item to add."), Localization.T("No Item Selected"), MessageBoxButton.OK, MessageBoxImage.Warning) : Return
         '    End If
         '    If xmlDoc Is Nothing Then
-        '        MessageBox.Show("Save file not loaded.", "Error", MessageBoxButton.OK, MessageBoxImage.Error) : Return
+        '        MessageBox.Show(Localization.T("Save file not loaded."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error) : Return
         '    End If
 
         '    Dim selectedContainer = TryCast(cmbStorageContainers.SelectedItem, StorageContainer)
         '    Dim itemId = CInt(cmbAddItem.SelectedValue)
         '    Dim quantity As Integer
         '    If Not Integer.TryParse(txtAddQuantity.Text, quantity) OrElse quantity <= 0 Then
-        '        MessageBox.Show("Please enter a valid positive quantity.", "Invalid Quantity", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+        '        MessageBox.Show(Localization.T("Please enter a valid positive quantity."), Localization.T("Invalid Quantity"), MessageBoxButton.OK, MessageBoxImage.Warning) : Return
         '    End If
 
         '    ' Get the target <feat> element directly from the selected container
         '    Dim targetFeatElement = selectedContainer.FeatElement
         '    If targetFeatElement Is Nothing Then
-        '        MessageBox.Show("Error: Selected container object missing its XML element reference.", "Internal Error", MessageBoxButton.OK, MessageBoxImage.Error) : Return
+        '        MessageBox.Show(Localization.T("Error: Selected container object missing its XML element reference."), Localization.T("Internal Error"), MessageBoxButton.OK, MessageBoxImage.Error) : Return
         '    End If
 
         '    ' Find the <inv> element within this specific <feat> element
         '    Dim targetInv = targetFeatElement.Descendants("inv").FirstOrDefault()
         '    If targetInv Is Nothing Then
-        '        MessageBox.Show($"Container '{selectedContainer.DisplayName}' lacks an <inv> node. Creating one.", "Info", MessageBoxButton.OK, MessageBoxImage.Information)
+        '        MessageBox.Show(Localization.F("Container '{0}' lacks an <inv> node. Creating one.", selectedContainer.DisplayName), Localization.T("Info"), MessageBoxButton.OK, MessageBoxImage.Information)
         '        targetInv = New XElement("inv")
         '        targetFeatElement.Add(targetInv) ' Add it to the <feat> element
         '    End If
@@ -4177,7 +4223,7 @@ Namespace SpaceHavenEditor2
         '    End If
         '    dgvStorage.ItemsSource = Nothing ' Force refresh
         '    dgvStorage.ItemsSource = selectedContainer.Items.OrderBy(Function(item) item.Name).ToList()
-        '    MessageBox.Show($"{quantity}x {CType(cmbAddItem.SelectedItem, KeyValuePair(Of Integer, String)).Value} added/updated in {selectedContainer.DisplayName} (in memory). Save the file to persist.", "Item Added/Updated", MessageBoxButton.OK, MessageBoxImage.Information)
+        '    MessageBox.Show(Localization.F("{0}x {1} added/updated in {2} (in memory). Save the file to persist.", quantity, CType(cmbAddItem.SelectedItem, KeyValuePair(Of Integer, String)).Value, selectedContainer.DisplayName), Localization.T("Item Added/Updated"), MessageBoxButton.OK, MessageBoxImage.Information)
         'End Sub
 
 
@@ -4187,19 +4233,19 @@ Namespace SpaceHavenEditor2
         Private Sub btnAddItem_Click(sender As Object, e As RoutedEventArgs)
             ' Check if a container is selected
             If cmbStorageContainers.SelectedItem Is Nothing Then
-                MessageBox.Show("Please select a storage container first.", "No Container Selected", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a storage container first."), Localization.T("No Container Selected"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return ' Exit Sub if no container selected
             End If ' This End If is CORRECT
 
             ' Check if an item is selected in the Add Item dropdown
             If cmbAddItem.SelectedValue Is Nothing Then
-                MessageBox.Show("Please select an item to add.", "No Item Selected", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select an item to add."), Localization.T("No Item Selected"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return ' Exit Sub if no item selected
             End If ' This End If is CORRECT
 
             ' Check if the XML document is loaded
             If xmlDoc Is Nothing Then
-                MessageBox.Show("Save file not loaded.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.T("Save file not loaded."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 Return ' Exit Sub if file not loaded
             End If ' This End If is CORRECT
 
@@ -4210,14 +4256,14 @@ Namespace SpaceHavenEditor2
 
             ' Validate the quantity input
             If Not Integer.TryParse(txtAddQuantity.Text, quantity) OrElse quantity <= 0 Then
-                MessageBox.Show("Please enter a valid positive quantity.", "Invalid Quantity", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a valid positive quantity."), Localization.T("Invalid Quantity"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return ' Exit Sub if quantity invalid
             End If ' This End If is CORRECT
 
             ' Get the target <feat> element directly from the selected container object
             Dim targetFeatElement As XElement = selectedContainer.FeatElement
             If targetFeatElement Is Nothing Then
-                MessageBox.Show("Error: Selected container object is missing its internal XML element reference. Cannot modify.", "Internal Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.T("Error: Selected container object is missing its internal XML element reference. Cannot modify."), Localization.T("Internal Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 Return ' Exit Sub if reference is broken
             End If ' This End If is CORRECT
 
@@ -4226,7 +4272,7 @@ Namespace SpaceHavenEditor2
 
             ' If <inv> doesn't exist within the <feat>, create it
             If targetInv Is Nothing Then
-                MessageBox.Show($"Container '{selectedContainer.DisplayName}' lacks an <inv> node. Creating one.", "Info", MessageBoxButton.OK, MessageBoxImage.Information)
+                MessageBox.Show(Localization.F("Container '{0}' lacks an <inv> node. Creating one.", selectedContainer.DisplayName), Localization.T("Info"), MessageBoxButton.OK, MessageBoxImage.Information)
                 targetInv = New XElement("inv")
                 targetFeatElement.Add(targetInv) ' Add it to the <feat> element
             End If
@@ -4269,19 +4315,19 @@ Namespace SpaceHavenEditor2
             ' Mark as unsaved
             MarkUnsavedChanges()
             RefreshConsolidatedInventory()
-            MessageBox.Show($"{quantity}x {itemName} added/updated in {selectedContainer.DisplayName} (in memory). Use File > Save to make permanent.", "Item Added/Updated", MessageBoxButton.OK, MessageBoxImage.Information)
+            MessageBox.Show(Localization.F("{0}x {1} added/updated in {2} (in memory). Use File > Save to make permanent.", quantity, itemName, selectedContainer.DisplayName), Localization.T("Item Added/Updated"), MessageBoxButton.OK, MessageBoxImage.Information)
         End Sub
 
         ' *** btnDeleteItem_Click - Uses FeatElement Reference ***
         Private Sub btnDeleteItem_Click(sender As Object, e As RoutedEventArgs)
             If cmbStorageContainers.SelectedItem Is Nothing Then
-                MessageBox.Show("Please select a storage container first.", "No Container Selected", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+                MessageBox.Show(Localization.T("Please select a storage container first."), Localization.T("No Container Selected"), MessageBoxButton.OK, MessageBoxImage.Warning) : Return
             End If
             If dgvStorage.SelectedItem Is Nothing Then
-                MessageBox.Show("Please select an item in the grid to delete.", "No Item Selected", MessageBoxButton.OK, MessageBoxImage.Warning) : Return
+                MessageBox.Show(Localization.T("Please select an item in the grid to delete."), Localization.T("No Item Selected"), MessageBoxButton.OK, MessageBoxImage.Warning) : Return
             End If
             If xmlDoc Is Nothing Then
-                MessageBox.Show("Save file not loaded.", "Error", MessageBoxButton.OK, MessageBoxImage.Error) : Return
+                MessageBox.Show(Localization.T("Save file not loaded."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error) : Return
             End If
 
             Dim selectedContainer = TryCast(cmbStorageContainers.SelectedItem, StorageContainer)
@@ -4298,10 +4344,10 @@ Namespace SpaceHavenEditor2
             ' Find the specific <s> element for the item within this <inv>
             Dim itemElementToDelete = targetInv.Elements("s").FirstOrDefault(Function(s) s.Attribute("elementaryId")?.Value = itemIdToDelete.ToString())
             If itemElementToDelete Is Nothing Then
-                MessageBox.Show($"Item {itemIdToDelete} not found in XML for {selectedContainer.DisplayName}.", "XML Error", MessageBoxButton.OK, MessageBoxImage.Error) : Return
+                MessageBox.Show(Localization.F("Item {0} not found in XML for {1}.", itemIdToDelete, selectedContainer.DisplayName), Localization.T("XML Error"), MessageBoxButton.OK, MessageBoxImage.Error) : Return
             End If
 
-            Dim confirmResult = MessageBox.Show($"Are you sure you want to delete ALL {selectedStorageItem.Quantity} x {selectedStorageItem.Name} from {selectedContainer.DisplayName}?", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Question)
+            Dim confirmResult = MessageBox.Show(Localization.F("Are you sure you want to delete ALL {0} x {1} from {2}?", selectedStorageItem.Quantity, selectedStorageItem.Name, selectedContainer.DisplayName), Localization.T("Confirm Deletion"), MessageBoxButton.YesNo, MessageBoxImage.Question)
             If confirmResult = MessageBoxResult.Yes Then
                 itemElementToDelete.Remove() ' Remove from XML
                 selectedContainer.Items.Remove(selectedStorageItem) ' Remove from memory
@@ -4309,7 +4355,7 @@ Namespace SpaceHavenEditor2
                 ' Mark as unsaved
                 MarkUnsavedChanges()
                 RefreshConsolidatedInventory()
-                MessageBox.Show($"{selectedStorageItem.Name} removed from {selectedContainer.DisplayName} (in memory). Use File > Save to make permanent.", "Item Deleted", MessageBoxButton.OK, MessageBoxImage.Information)
+                MessageBox.Show(Localization.F("{0} removed from {1} (in memory). Use File > Save to make permanent.", selectedStorageItem.Name, selectedContainer.DisplayName), Localization.T("Item Deleted"), MessageBoxButton.OK, MessageBoxImage.Information)
             End If
         End Sub
 
@@ -4320,17 +4366,17 @@ Namespace SpaceHavenEditor2
             dgvTraits.ItemsSource = Nothing
             lstConditions.ItemsSource = Nothing
             dgvRelationships.ItemsSource = Nothing ' Clear Relationships Grid
-            txtRelationshipPageInfo.Text = "Page 0 of 0" ' Clear Paging Label
+            txtRelationshipPageInfo.Text = Localization.T("Page 0 of 0") ' Clear Paging Label
             btnRelPrev.IsEnabled = False
             btnRelNext.IsEnabled = False
             cmbRelationshipTarget.ItemsSource = Nothing
             dgvCrewSchedule.ItemsSource = Nothing
             txtScheduleMode.Text = ""
             cmb_addTrait.ItemsSource = Nothing
-            txtCrewRecoveryMember.Text = "Select a crew member to view recovery details."
+            txtCrewRecoveryMember.Text = Localization.T("Select a crew member to view recovery details.")
             dgvCrewRecoveryVitals.ItemsSource = Nothing
             lblCrewRecoveryStatus.Text = ""
-            txtCrewLoadoutMember.Text = "Select a crew member to view their loadout."
+            txtCrewLoadoutMember.Text = Localization.T("Select a crew member to view their loadout.")
             PopulateLoadoutControls(New LoadoutTemplate(), True)
             lblCrewLoadoutStatus.Text = ""
         End Sub
@@ -4338,7 +4384,7 @@ Namespace SpaceHavenEditor2
         Private Sub UpdateXmlWithShipSize(shipToUpdate As Ship)
             ' Ensure xmlDoc and the ship object are valid
             If xmlDoc Is Nothing OrElse xmlDoc.Root Is Nothing OrElse shipToUpdate Is Nothing Then
-                MessageBox.Show("Cannot update XML: XML document or ship data is missing.", "Internal Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.T("Cannot update XML: XML document or ship data is missing."), Localization.T("Internal Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 Return
             End If
 
@@ -4358,11 +4404,11 @@ Namespace SpaceHavenEditor2
 
                 Else
                     ' Ship element with the matching SID was not found in the XML
-                    MessageBox.Show($"Could not find ship with SID {shipToUpdate.Sid} in the loaded XML file to update its size.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                    MessageBox.Show(Localization.F("Could not find ship with SID {0} in the loaded XML file to update its size.", shipToUpdate.Sid), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 End If
             Catch ex As Exception
                 ' Handle any errors during XML searching or attribute setting
-                MessageBox.Show($"Error updating ship size in XML: {ex.Message}", "XML Update Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error updating ship size in XML: {0}", ex.Message), Localization.T("XML Update Error"), MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 
@@ -4370,17 +4416,17 @@ Namespace SpaceHavenEditor2
         ' Update ship size button click
         Private Sub btn_updateSize_Click(sender As Object, e As RoutedEventArgs)
             If cmb_ships.SelectedItem Is Nothing OrElse TryCast(cmb_ships.SelectedItem, Ship)?.Sid = -1 Then
-                MessageBox.Show("Please select a valid ship first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a valid ship first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             Dim selectedShip = CType(cmb_ships.SelectedItem, Ship)
             If selectedShip.IsStation Then
-                MessageBox.Show("Station dimensions are protected. Changing only sx/sy can damage the station map and tile data.",
-                                "Station Size Protected", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Station dimensions are protected. Changing only sx/sy can damage the station map and tile data."),
+                                Localization.T("Station Size Protected"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If Not selectedShip.IsPlayerOwned Then
-                MessageBox.Show("NPC and derelict ship sizes are read-only.", "Structure Protected",
+                MessageBox.Show(Localization.T("NPC and derelict ship sizes are read-only."), Localization.T("Structure Protected"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -4402,10 +4448,10 @@ Namespace SpaceHavenEditor2
                 selectedShip.Sy = newSy
 
                 ' Update labels in main window UI
-                lbl_shipSize.Text = $"Size: {selectedShip.Sx}x{selectedShip.Sy}"
+                lbl_shipSize.Text = Localization.F("Size: {0}x{1}", selectedShip.Sx, selectedShip.Sy)
                 Dim canvasWidth As Integer = selectedShip.Sx \ 28 ' Use integer division
                 Dim canvasHeight As Integer = selectedShip.Sy \ 28 ' Use integer division
-                lbl_CanvasSize.Text = $"Canvas Size: {canvasWidth} W x {canvasHeight} H squares"
+                lbl_CanvasSize.Text = Localization.F("Canvas Size: {0} W x {1} H squares", canvasWidth, canvasHeight)
 
                 ' *** CRUCIAL: Update the XML document in memory ***
                 UpdateXmlWithShipSize(selectedShip)
@@ -4426,9 +4472,9 @@ Namespace SpaceHavenEditor2
         '    Next
         '    Try
         '        xmlDoc.Save(currentFilePath)
-        '        MessageBox.Show("Ship size updated in the XML.", "Success - Saved", MessageBoxButton.OK, MessageBoxImage.Information)
+        '        MessageBox.Show(Localization.T("Ship size updated in the XML."), Localization.T("Success - Saved"), MessageBoxButton.OK, MessageBoxImage.Information)
         '    Catch ex As Exception
-        '        MessageBox.Show($"Error saving ship size update: {ex.Message}", "Save Error", MessageBoxButton.OK, MessageBoxImage.Error)
+        '        MessageBox.Show(Localization.F("Error saving ship size update: {0}", ex.Message), Localization.T("Save Error"), MessageBoxButton.OK, MessageBoxImage.Error)
         '    End Try
         'End Sub
 
@@ -4468,13 +4514,13 @@ Namespace SpaceHavenEditor2
 
         ' --- Helper functions for IDs ---
         Private Function GetAttributeNameById(id As Integer) As String
-            Return If(IdCollection.DefaultAttributeIDs.ContainsKey(id), IdCollection.DefaultAttributeIDs(id), $"Unknown ({id})")
+            Return If(IdCollection.DefaultAttributeIDs.ContainsKey(id), IdCollection.DefaultAttributeIDs(id), Localization.F("Unknown ({0})", id))
         End Function
         Private Function GetSkillNameById(id As Integer) As String
-            Return If(IdCollection.DefaultSkillIDs.ContainsKey(id), IdCollection.DefaultSkillIDs(id), $"Unknown ({id})")
+            Return If(IdCollection.DefaultSkillIDs.ContainsKey(id), IdCollection.DefaultSkillIDs(id), Localization.F("Unknown ({0})", id))
         End Function
         Private Function GetTraitNameById(id As Integer) As String
-            Return If(IdCollection.DefaultTraitIDs.ContainsKey(id), IdCollection.DefaultTraitIDs(id), $"Unknown ({id})")
+            Return If(IdCollection.DefaultTraitIDs.ContainsKey(id), IdCollection.DefaultTraitIDs(id), Localization.F("Unknown ({0})", id))
         End Function
 
         ' --- Populate Dropdowns ---
@@ -4506,7 +4552,7 @@ Namespace SpaceHavenEditor2
             Debug.WriteLine($"Available Traits Count: {availableTraits.Count}")
 
             ' Populate the dropdown
-            cmb_addTrait.ItemsSource = availableTraits
+            cmb_addTrait.ItemsSource = availableTraits.Select(Function(trait) New IdLabel(trait.Key, trait.Value)).ToList()
             If availableTraits.Any() Then
                 cmb_addTrait.SelectedIndex = 0
             Else
@@ -4534,15 +4580,15 @@ Namespace SpaceHavenEditor2
         Private Sub btn_addTrait_Click(sender As Object, e As RoutedEventArgs)
             Dim selectedCharacter As Character = TryCast(lstCharacters.SelectedItem, Character)
             If selectedCharacter Is Nothing Then
-                MessageBox.Show("Please select a character first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a character first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If cmb_addTrait.SelectedValue Is Nothing Then
-                MessageBox.Show("Please select a trait to add.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a trait to add."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             Dim selectedTraitId = CInt(cmb_addTrait.SelectedValue)
-            Dim selectedTraitName = CType(cmb_addTrait.SelectedItem, KeyValuePair(Of Integer, String)).Value
+            Dim selectedTraitName = DirectCast(cmb_addTrait.SelectedItem, IdLabel).Value
             If Not selectedCharacter.CharacterTraits.Any(Function(t) t.Id = selectedTraitId) Then
                 Dim newTrait As New DataProp With {.Id = selectedTraitId, .Name = selectedTraitName}
                 selectedCharacter.CharacterTraits.Add(newTrait)
@@ -4550,9 +4596,9 @@ Namespace SpaceHavenEditor2
                 dgvTraits.ItemsSource = New ObservableCollection(Of DataProp)(selectedCharacter.CharacterTraits)
                 ' Mark as unsaved - XML will be updated in UpdateXmlWithCharacterChanges() when Save is called
                 MarkUnsavedChanges()
-                MessageBox.Show($"Trait '{selectedTraitName}' added to character (in memory). Use File > Save to make permanent.", "Info", MessageBoxButton.OK, MessageBoxImage.Information)
+                MessageBox.Show(Localization.F("Trait '{0}' added to character (in memory). Use File > Save to make permanent.", selectedTraitName), Localization.T("Info"), MessageBoxButton.OK, MessageBoxImage.Information)
             Else
-                MessageBox.Show("Trait already exists for this character.", "Info", MessageBoxButton.OK, MessageBoxImage.Information)
+                MessageBox.Show(Localization.T("Trait already exists for this character."), Localization.T("Info"), MessageBoxButton.OK, MessageBoxImage.Information)
             End If
         End Sub
 
@@ -4594,12 +4640,13 @@ Namespace SpaceHavenEditor2
             If lstBulkTraits Is Nothing Then Return
             lstBulkTraits.ItemsSource = IdCollection.DefaultTraitIDs.
                 OrderBy(Function(pair) pair.Value).
+                Select(Function(pair) New IdLabel(pair.Key, pair.Value)).
                 ToList()
 
             Dim ship = ships.FirstOrDefault(Function(item) item.Sid = shipSid)
             Dim crewCount = characters.Where(Function(character) character.ShipSid = shipSid).Count()
             If ship Is Nothing OrElse shipSid = -1 Then
-                lblBulkTraitsShip.Text = "Select a ship or station in Crew Editor."
+                lblBulkTraitsShip.Text = Localization.T("Select a ship or station in Crew Editor.")
             Else
                 lblBulkTraitsShip.Text = $"Target: {ship.DisplayName} ({crewCount} crew member(s))."
             End If
@@ -4653,18 +4700,18 @@ Namespace SpaceHavenEditor2
         Private Sub btnBulkAddTraits_Click(sender As Object, e As RoutedEventArgs)
             Dim targetCrew = GetBulkTraitTargetCrew()
             If targetCrew.Count = 0 Then
-                MessageBox.Show("Select a ship or station with crew in Crew Editor first.", "No Crew",
+                MessageBox.Show(Localization.T("Select a ship or station with crew in Crew Editor first."), Localization.T("No Crew"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If lstBulkTraits.SelectedItems.Count = 0 Then
-                MessageBox.Show("Select one or more traits to add.", "No Traits Selected",
+                MessageBox.Show(Localization.T("Select one or more traits to add."), Localization.T("No Traits Selected"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim selectedTraits = lstBulkTraits.SelectedItems.
-                Cast(Of KeyValuePair(Of Integer, String)).
+                Cast(Of IdLabel).
                 ToList()
             Dim additions = 0
             For Each character In targetCrew
@@ -4677,19 +4724,18 @@ Namespace SpaceHavenEditor2
 
             RefreshCurrentTraitEditorIfNeeded(targetCrew)
             MarkUnsavedChanges()
-            lblBulkTraitsStatus.Text =
-                $"Added {selectedTraits.Count} selected trait(s) across {targetCrew.Count} crew member(s). New trait entries added: {additions}. Existing traits were skipped."
+            lblBulkTraitsStatus.Text = Localization.F("Added {0} selected trait(s) across {1} crew member(s). New trait entries added: {2}. Existing traits were skipped.", selectedTraits.Count, targetCrew.Count, additions)
         End Sub
 
         Private Sub btnBulkClearTraits_Click(sender As Object, e As RoutedEventArgs)
             Dim targetCrew = GetBulkTraitTargetCrew()
             If targetCrew.Count = 0 Then
-                MessageBox.Show("Select a ship or station with crew in Crew Editor first.", "No Crew",
+                MessageBox.Show(Localization.T("Select a ship or station with crew in Crew Editor first."), Localization.T("No Crew"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
-            If MessageBox.Show($"Clear all traits from {targetCrew.Count} crew member(s) on the selected ship/station?",
-                               "Confirm Clear Traits", MessageBoxButton.YesNo,
+            If MessageBox.Show(Localization.F("Clear all traits from {0} crew member(s) on the selected ship/station?", targetCrew.Count),
+                               Localization.T("Confirm Clear Traits"), MessageBoxButton.YesNo,
                                MessageBoxImage.Warning) <> MessageBoxResult.Yes Then Return
 
             Dim removed = 0
@@ -4708,17 +4754,17 @@ Namespace SpaceHavenEditor2
 
         ' --- Clear UI Helpers ---
         Private Sub ClearUI()
-            lbl_structureType.Text = "Structure Type: "
-            lbl_owner.Text = "Owner: "
-            lbl_shipSize.Text = "Size: "
-            lbl_CanvasSize.Text = "Canvas Size: "
+            lbl_structureType.Text = Localization.T("Structure Type: ")
+            lbl_owner.Text = Localization.T("Owner: ")
+            lbl_shipSize.Text = Localization.T("Size: ")
+            lbl_CanvasSize.Text = Localization.T("Canvas Size: ")
             txtStructureName.Text = ""
             btnRenameStructure.IsEnabled = False
             btn_updateSize.IsEnabled = False
             pnlStationInfo.Visibility = Visibility.Collapsed
             lstCharacters.ItemsSource = Nothing
             ClearDataGrids()
-            txtCrewCount.Text = "Total Crew: N/A"
+            txtCrewCount.Text = Localization.T("Total Crew: N/A")
         End Sub
 
         ' --- Set All Buttons (Full versions, save immediately) ---
@@ -4735,8 +4781,8 @@ Namespace SpaceHavenEditor2
             currentShipStorageContainers.Clear() ' Clear internal list too
             consolidatedInventory.Clear()
             CurrentContainerItems = Nothing
-            txtContainerInfo.Text = "(Select Container)"
-            lblInventorySummary.Text = "0 item types | 0 total units | 0 containers"
+            txtContainerInfo.Text = Localization.T("(Select Container)")
+            lblInventorySummary.Text = Localization.T("0 item types | 0 total units | 0 containers")
         End Sub
         Private Sub ClearStorageGrid() ' Renamed from previous ambiguous name
             dgvStorage.ItemsSource = Nothing
@@ -4836,34 +4882,34 @@ Namespace SpaceHavenEditor2
 
         '                                          ' Validate the new quantity.
         '                                          If newQuantity < 0 Then
-        '                                              MessageBox.Show("Invalid quantity. Please enter 0 or a positive number.", "Invalid Quantity", MessageBoxButton.OK, MessageBoxImage.Warning)
+        '                                              MessageBox.Show(Localization.T("Invalid quantity. Please enter 0 or a positive number."), Localization.T("Invalid Quantity"), MessageBoxButton.OK, MessageBoxImage.Warning)
         '                                              Exit Sub
         '                                          End If
 
         '                                          ' Ensure a storage container is selected.
         '                                          Dim selectedContainer As StorageContainer = TryCast(cmbStorageContainers.SelectedItem, StorageContainer)
         '                                          If selectedContainer Is Nothing Then
-        '                                              MessageBox.Show("No storage container selected.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+        '                                              MessageBox.Show(Localization.T("No storage container selected."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
         '                                              Exit Sub
         '                                          End If
 
         '                                          ' Ensure the XML document is loaded.
         '                                          If xmlDoc Is Nothing Then
-        '                                              MessageBox.Show("No file loaded.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+        '                                              MessageBox.Show(Localization.T("No file loaded."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
         '                                              Exit Sub
         '                                          End If
 
         '                                          ' Retrieve the corresponding XML <feat> element for the container.
         '                                          Dim targetFeatElement As XElement = selectedContainer.FeatElement
         '                                          If targetFeatElement Is Nothing Then
-        '                                              MessageBox.Show("Selected container is missing its XML reference.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+        '                                              MessageBox.Show(Localization.T("Selected container is missing its XML reference."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
         '                                              Exit Sub
         '                                          End If
 
         '                                          ' Locate the <inv> node within the container.
         '                                          Dim targetInv As XElement = targetFeatElement.Descendants("inv").FirstOrDefault()
         '                                          If targetInv Is Nothing Then
-        '                                              MessageBox.Show("Inventory node (<inv>) not found in the selected container.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+        '                                              MessageBox.Show(Localization.T("Inventory node (<inv>) not found in the selected container."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
         '                                              Exit Sub
         '                                          End If
 
@@ -4907,7 +4953,7 @@ Namespace SpaceHavenEditor2
                                                   Dim newQuantity As Integer = editedItem.Quantity ' Assumes binding updated this
 
                                                   If newQuantity < 0 Then
-                                                      MessageBox.Show("Invalid quantity. Must be 0 or positive.", "Invalid Quantity", MessageBoxButton.OK, MessageBoxImage.Warning)
+                                                      MessageBox.Show(Localization.T("Invalid quantity. Must be 0 or positive."), Localization.T("Invalid Quantity"), MessageBoxButton.OK, MessageBoxImage.Warning)
                                                       ' TODO: Revert UI/Data change if possible
                                                       Exit Sub
                                                   End If
@@ -4951,10 +4997,10 @@ Namespace SpaceHavenEditor2
                                                       ' --- End Addition ---
 
                                                       ' Optional: Keep a success message?
-                                                      ' MessageBox.Show($"Quantity for {editedItem.Name} updated to {newQuantity} (in memory). Save to persist.", "Qty Updated", MessageBoxButton.OK, MessageBoxImage.Information)
+                                                      ' MessageBox.Show(Localization.F("Quantity for {0} updated to {1} (in memory). Save to persist.", editedItem.Name, newQuantity), Localization.T("Qty Updated"), MessageBoxButton.OK, MessageBoxImage.Information)
 
                                                   Catch ex As Exception
-                                                      MessageBox.Show($"Error updating XML for item {editedItem.ElementId}: {ex.Message}", "XML Update Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                                                      MessageBox.Show(Localization.F("Error updating XML for item {0}: {1}", editedItem.ElementId, ex.Message), Localization.T("XML Update Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                                                       ' TODO: Revert UI changes if XML update fails?
                                                   End Try
 
@@ -5027,9 +5073,9 @@ Namespace SpaceHavenEditor2
         Private Sub UpdateContainerInfoText(itemsToSum As IEnumerable(Of StorageItem))
             If itemsToSum IsNot Nothing Then
                 Dim currentTotalQuantity As Integer = itemsToSum.Sum(Function(item) item.Quantity)
-                txtContainerInfo.Text = $"Total Items: {currentTotalQuantity}"
+                txtContainerInfo.Text = Localization.F("Total Items: {0}", currentTotalQuantity)
             Else
-                txtContainerInfo.Text = "(No Items)" ' Or "(Select Container)"
+                txtContainerInfo.Text = Localization.T("(No Items)")
             End If
         End Sub
 
@@ -5045,154 +5091,154 @@ Namespace SpaceHavenEditor2
         Private Function GenerateHelpText() As String
             Dim sb As New System.Text.StringBuilder()
 
-            sb.AppendLine("Moragar's Space Haven Save Editor v2.1 - Help & Instructions")
+            sb.AppendLine(Localization.T("Moragar's Space Haven Save Editor v2.1 - Help & Instructions"))
             sb.AppendLine("============================================================")
             sb.AppendLine() ' Blank line for spacing
 
-            sb.AppendLine("*** DISCLAIMER ***")
-            sb.AppendLine("Use this tool at your own risk. Editing save files can lead to unexpected")
-            sb.AppendLine("issues or corrupted saves. The creator is not responsible for any damage")
-            sb.AppendLine("to your save games, even if the backup feature is enabled.")
-            sb.AppendLine("Always keep manual backups of important saves!")
+            sb.AppendLine(Localization.T("*** DISCLAIMER ***"))
+            sb.AppendLine(Localization.T("Use this tool at your own risk. Editing save files can lead to unexpected"))
+            sb.AppendLine(Localization.T("issues or corrupted saves. The creator is not responsible for any damage"))
+            sb.AppendLine(Localization.T("to your save games, even if the backup feature is enabled."))
+            sb.AppendLine(Localization.T("Always keep manual backups of important saves!"))
             sb.AppendLine("******************")
             sb.AppendLine() ' Blank line for spacing
 
 
-            sb.AppendLine("--- Core Workflow ---")
-            sb.AppendLine("- File -> Open loads a Space Haven save file named 'game'.")
-            sb.AppendLine("- File -> Save writes the loaded save back to disk. Most editor pages change memory first.")
-            sb.AppendLine("- Edit -> Settings controls automatic backups, default save folder, and scenario folder behavior.")
-            sb.AppendLine("- Watch the Unsaved Changes indicators at the top of the window.")
-            sb.AppendLine("- Run Save Integrity after large edits, bulk actions, or ship imports.")
+            sb.AppendLine(Localization.T("--- Core Workflow ---"))
+            sb.AppendLine(Localization.T("- File -> Open loads a Space Haven save file named 'game'."))
+            sb.AppendLine(Localization.T("- File -> Save writes the loaded save back to disk. Most editor pages change memory first."))
+            sb.AppendLine(Localization.T("- Edit -> Settings controls automatic backups, default save folder, and scenario folder behavior."))
+            sb.AppendLine(Localization.T("- Watch the Unsaved Changes indicators at the top of the window."))
+            sb.AppendLine(Localization.T("- Run Save Integrity after large edits, bulk actions, or ship imports."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Left Navigation Overview ---")
-            sb.AppendLine("- GLOBAL: Save Settings, Difficulty and World Rules, Research, Datalog Unlocks, and Factions.")
-            sb.AppendLine("- SHIPS AND STATIONS: Structures, Storage, and Ship Import and Export.")
-            sb.AppendLine("- CREW: Crew Editor, Global Schedule Designer, New Crew Member, and Bulk Operations.")
-            sb.AppendLine("- ADVANCED: Save Integrity.")
-            sb.AppendLine("- GAME START: Game Start Editor for custom start-template XML files.")
+            sb.AppendLine(Localization.T("--- Left Navigation Overview ---"))
+            sb.AppendLine(Localization.T("- GLOBAL: Save Settings, Difficulty and World Rules, Research, Datalog Unlocks, and Factions."))
+            sb.AppendLine(Localization.T("- SHIPS AND STATIONS: Structures, Storage, and Ship Import and Export."))
+            sb.AppendLine(Localization.T("- CREW: Crew Editor, Global Schedule Designer, New Crew Member, and Bulk Operations."))
+            sb.AppendLine(Localization.T("- ADVANCED: Save Integrity."))
+            sb.AppendLine(Localization.T("- GAME START: Game Start Editor for custom start-template XML files."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Save Settings ---")
-            sb.AppendLine("- Edit Player Credits, Prestige Points, and Sandbox Mode for the loaded save.")
-            sb.AppendLine("- Click Update Global Settings to place those values into memory.")
-            sb.AppendLine("- Use File -> Save to make the changes permanent.")
+            sb.AppendLine(Localization.T("--- Save Settings ---"))
+            sb.AppendLine(Localization.T("- Edit Player Credits, Prestige Points, and Sandbox Mode for the loaded save."))
+            sb.AppendLine(Localization.T("- Click Update Global Settings to place those values into memory."))
+            sb.AppendLine(Localization.T("- Use File -> Save to make the changes permanent."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Difficulty and World Rules ---")
-            sb.AppendLine("- Adjust save-level difficulty values such as Mood Difficulty, NPC Targeting, and Quest Difficulty.")
-            sb.AppendLine("- Toggle relationship/world flags such as Enemies, Friends, Lovers, Wear and Tear, and Rebuilding Costs.")
-            sb.AppendLine("- Edit world frequencies and abundance values such as Monster, Robot, Solar Flare, Meteor, Derelict, Derelict Loot, Asteroid / Resource Abundance, and Travel Threat Level.")
-            sb.AppendLine("- Existing or modded values are preserved in the dropdowns when possible.")
-            sb.AppendLine("- Click Update Difficulty and World Rules, then use File -> Save.")
+            sb.AppendLine(Localization.T("--- Difficulty and World Rules ---"))
+            sb.AppendLine(Localization.T("- Adjust save-level difficulty values such as Mood Difficulty, NPC Targeting, and Quest Difficulty."))
+            sb.AppendLine(Localization.T("- Toggle relationship/world flags such as Enemies, Friends, Lovers, Wear and Tear, and Rebuilding Costs."))
+            sb.AppendLine(Localization.T("- Edit world frequencies and abundance values such as Monster, Robot, Solar Flare, Meteor, Derelict, Derelict Loot, Asteroid / Resource Abundance, and Travel Threat Level."))
+            sb.AppendLine(Localization.T("- Existing or modded values are preserved in the dropdowns when possible."))
+            sb.AppendLine(Localization.T("- Click Update Difficulty and World Rules, then use File -> Save."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Research ---")
-            sb.AppendLine("- The Research page shows every technology state found in the loaded save.")
-            sb.AppendLine("- Stages shows completed research stages, such as 1/2.")
-            sb.AppendLine("- Progress Level 1/2/3 shows raw Space Haven research block counters, not percentages.")
-            sb.AppendLine("- Complete Selected finishes one technology and removes it from the queue.")
-            sb.AppendLine("- Reset Selected clears a technology's stage, block, and task progress.")
-            sb.AppendLine("- Complete All Research marks every listed technology complete and clears the queue.")
-            sb.AppendLine("- Use Move Up, Move Down, Remove, Add Selected Technology to Queue, and Clear Queue to manage the research queue.")
+            sb.AppendLine(Localization.T("--- Research ---"))
+            sb.AppendLine(Localization.T("- The Research page shows every technology state found in the loaded save."))
+            sb.AppendLine(Localization.T("- Stages shows completed research stages, such as 1/2."))
+            sb.AppendLine(Localization.T("- Progress Level 1/2/3 shows raw Space Haven research block counters, not percentages."))
+            sb.AppendLine(Localization.T("- Complete Selected finishes one technology and removes it from the queue."))
+            sb.AppendLine(Localization.T("- Reset Selected clears a technology's stage, block, and task progress."))
+            sb.AppendLine(Localization.T("- Complete All Research marks every listed technology complete and clears the queue."))
+            sb.AppendLine(Localization.T("- Use Move Up, Move Down, Remove, Add Selected Technology to Queue, and Clear Queue to manage the research queue."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Datalog Unlocks ---")
-            sb.AppendLine("- Lists datalog IDs known to the editor plus additional IDs already present in the loaded save.")
-            sb.AppendLine("- Select All and Clear Selection manage checked rows.")
-            sb.AppendLine("- Unlock Selected makes checked logs available in the save.")
-            sb.AppendLine("- Reset Selected removes checked logs from the unlocked list.")
-            sb.AppendLine("- Unlock All Logs unlocks every listed datalog.")
-            sb.AppendLine("- Resetting a datalog does not delete world objects or cryo-log names.")
+            sb.AppendLine(Localization.T("--- Datalog Unlocks ---"))
+            sb.AppendLine(Localization.T("- Lists datalog IDs known to the editor plus additional IDs already present in the loaded save."))
+            sb.AppendLine(Localization.T("- Select All and Clear Selection manage checked rows."))
+            sb.AppendLine(Localization.T("- Unlock Selected makes checked logs available in the save."))
+            sb.AppendLine(Localization.T("- Reset Selected removes checked logs from the unlocked list."))
+            sb.AppendLine(Localization.T("- Unlock All Logs unlocks every listed datalog."))
+            sb.AppendLine(Localization.T("- Resetting a datalog does not delete world objects or cryo-log names."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Factions ---")
-            sb.AppendLine("- Shows player-facing faction reputation rows.")
-            sb.AppendLine("- Edit Reputation, Stance, Patience, access flags, and Settlement Debt.")
-            sb.AppendLine("- Enemy Preset, Neutral Preset, Friendly Preset, and Full Access quickly fill common values.")
-            sb.AppendLine("- Click Apply Selected Faction for the selected row, then use File -> Save.")
+            sb.AppendLine(Localization.T("--- Factions ---"))
+            sb.AppendLine(Localization.T("- Shows player-facing faction reputation rows."))
+            sb.AppendLine(Localization.T("- Edit Reputation, Stance, Patience, access flags, and Settlement Debt."))
+            sb.AppendLine(Localization.T("- Enemy Preset, Neutral Preset, Friendly Preset, and Full Access quickly fill common values."))
+            sb.AppendLine(Localization.T("- Click Apply Selected Faction for the selected row, then use File -> Save."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Structures ---")
-            sb.AppendLine("- Select ships and stations in the current sector.")
-            sb.AppendLine("- Enable Show NPC and derelict ships if you need to inspect non-player structures.")
-            sb.AppendLine("- View structure type, owner, raw size, and canvas size.")
-            sb.AppendLine("- Rename changes the selected ship or station name.")
-            sb.AppendLine("- Update Size changes ship dimensions. Station size settings are protected because changing them can damage the save.")
-            sb.AppendLine("**WARNING:** Large ship sizes can cause graphics, pathing, docking, and placement problems in-game.")
+            sb.AppendLine(Localization.T("--- Structures ---"))
+            sb.AppendLine(Localization.T("- Select ships and stations in the current sector."))
+            sb.AppendLine(Localization.T("- Enable Show NPC and derelict ships if you need to inspect non-player structures."))
+            sb.AppendLine(Localization.T("- View structure type, owner, raw size, and canvas size."))
+            sb.AppendLine(Localization.T("- Rename changes the selected ship or station name."))
+            sb.AppendLine(Localization.T("- Update Size changes ship dimensions. Station size settings are protected because changing them can damage the save."))
+            sb.AppendLine(Localization.T("**WARNING:** Large ship sizes can cause graphics, pathing, docking, and placement problems in-game."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Storage ---")
-            sb.AppendLine("- Inventory Overview searches all containers on the selected ship or station and summarizes total item quantities and locations.")
-            sb.AppendLine("- Containers lets you choose a specific container, edit item quantities, add items, or delete selected stacks.")
-            sb.AppendLine("- Setting a quantity to 0 removes that stack when saved.")
-            sb.AppendLine("- All storage changes require File -> Save.")
+            sb.AppendLine(Localization.T("--- Storage ---"))
+            sb.AppendLine(Localization.T("- Inventory Overview searches all containers on the selected ship or station and summarizes total item quantities and locations."))
+            sb.AppendLine(Localization.T("- Containers lets you choose a specific container, edit item quantities, add items, or delete selected stacks."))
+            sb.AppendLine(Localization.T("- Setting a quantity to 0 removes that stack when saved."))
+            sb.AppendLine(Localization.T("- All storage changes require File -> Save."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Ship Import and Export ---")
-            sb.AppendLine("- Export Ship Blueprint reads a source save, lets you select a ship, and writes a blueprint XML file.")
-            sb.AppendLine("- Delete Selected Ship removes the selected source ship from the source save workflow when used.")
-            sb.AppendLine("- Import Ship Blueprint uses a blueprint XML file and a target save file.")
-            sb.AppendLine("- Import as Blueprint keeps the hull plan and excludes facilities, crew, robots, and items.")
-            sb.AppendLine("- Importing full ships into crowded sectors can cause in-game space conflicts. Back up first.")
+            sb.AppendLine(Localization.T("--- Ship Import and Export ---"))
+            sb.AppendLine(Localization.T("- Export Ship Blueprint reads a source save, lets you select a ship, and writes a blueprint XML file."))
+            sb.AppendLine(Localization.T("- Delete Selected Ship removes the selected source ship from the source save workflow when used."))
+            sb.AppendLine(Localization.T("- Import Ship Blueprint uses a blueprint XML file and a target save file."))
+            sb.AppendLine(Localization.T("- Import as Blueprint keeps the hull plan and excludes facilities, crew, robots, and items."))
+            sb.AppendLine(Localization.T("- Importing full ships into crowded sectors can cause in-game space conflicts. Back up first."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Crew Editor ---")
-            sb.AppendLine("- Select a ship or station, then select a crew member.")
-            sb.AppendLine("- Attributes: edit attribute values or use Set All Attributes for the current character.")
-            sb.AppendLine("- Skills: edit current and max skill levels, or set all current/max skills for the current character.")
-            sb.AppendLine("- Traits: add traits from the list or delete selected traits.")
-            sb.AppendLine("- Conditions: delete selected injuries, buffs, debuffs, or other active conditions.")
-            sb.AppendLine("- Recovery: restore health and needs, restore oxygen, clear all conditions, or run Full Recovery for the selected crew member.")
-            sb.AppendLine("- Loadout: assign headgear, armor, weapons, attachment, and pocket items; optionally use best available armor or primary weapon quality.")
-            sb.AppendLine("- Relationships: add or update directional Friendship, Attraction, and Compatibility values between -100 and 100.")
-            sb.AppendLine("- Schedules: assign a global schedule or apply a custom 24-hour schedule to the selected crew member.")
+            sb.AppendLine(Localization.T("--- Crew Editor ---"))
+            sb.AppendLine(Localization.T("- Select a ship or station, then select a crew member."))
+            sb.AppendLine(Localization.T("- Attributes: edit attribute values or use Set All Attributes for the current character."))
+            sb.AppendLine(Localization.T("- Skills: edit current and max skill levels, or set all current/max skills for the current character."))
+            sb.AppendLine(Localization.T("- Traits: add traits from the list or delete selected traits."))
+            sb.AppendLine(Localization.T("- Conditions: delete selected injuries, buffs, debuffs, or other active conditions."))
+            sb.AppendLine(Localization.T("- Recovery: restore health and needs, restore oxygen, clear all conditions, or run Full Recovery for the selected crew member."))
+            sb.AppendLine(Localization.T("- Loadout: assign headgear, armor, weapons, attachment, and pocket items; optionally use best available armor or primary weapon quality."))
+            sb.AppendLine(Localization.T("- Relationships: add or update directional Friendship, Attraction, and Compatibility values between -100 and 100."))
+            sb.AppendLine(Localization.T("- Schedules: assign a global schedule or apply a custom 24-hour schedule to the selected crew member."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Global Schedule Designer ---")
-            sb.AppendLine("- Create or duplicate reusable global schedules.")
-            sb.AppendLine("- Rename schedules and edit each hour's activity as Work, Leisure, or Sleep.")
-            sb.AppendLine("- Click Apply Schedule Changes, then use File -> Save.")
+            sb.AppendLine(Localization.T("--- Global Schedule Designer ---"))
+            sb.AppendLine(Localization.T("- Create or duplicate reusable global schedules."))
+            sb.AppendLine(Localization.T("- Rename schedules and edit each hour's activity as Work, Leisure, or Sleep."))
+            sb.AppendLine(Localization.T("- Click Apply Schedule Changes, then use File -> Save."))
             sb.AppendLine()
 
-            sb.AppendLine("--- New Crew Member ---")
-            sb.AppendLine("- Select a target ship or station and a template crew member.")
-            sb.AppendLine("- Enter the new crew name, then adjust Attributes, Skills, and Traits.")
-            sb.AppendLine("- The template supplies required XML structure; conditions, relationships, and bed assignment are cleared.")
-            sb.AppendLine("- Click Create Crew Member, then use File -> Save.")
+            sb.AppendLine(Localization.T("--- New Crew Member ---"))
+            sb.AppendLine(Localization.T("- Select a target ship or station and a template crew member."))
+            sb.AppendLine(Localization.T("- Enter the new crew name, then adjust Attributes, Skills, and Traits."))
+            sb.AppendLine(Localization.T("- The template supplies required XML structure; conditions, relationships, and bed assignment are cleared."))
+            sb.AppendLine(Localization.T("- Click Create Crew Member, then use File -> Save."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Bulk Operations ---")
-            sb.AppendLine("- Add Bulk Crew creates multiple crew members from a selected template crew member.")
-            sb.AppendLine("- Bulk Character Stats sets attributes, current skills, max skills, or current skills to max for all characters.")
-            sb.AppendLine("- Bulk Traits adds selected traits to all crew on the current ship or station, or clears all traits from that crew.")
-            sb.AppendLine("- Bulk Schedules assigns a selected global schedule to checked crew.")
-            sb.AppendLine("- Bulk Recovery restores checked crew, fully recovers checked crew, restores all active player crew vitals, or fully recovers all active player crew.")
-            sb.AppendLine("- Bulk Loadouts creates, saves, renames, and deletes named loadout configurations, then applies a selected configuration to checked crew.")
+            sb.AppendLine(Localization.T("--- Bulk Operations ---"))
+            sb.AppendLine(Localization.T("- Add Bulk Crew creates multiple crew members from a selected template crew member."))
+            sb.AppendLine(Localization.T("- Bulk Character Stats sets attributes, current skills, max skills, or current skills to max for all characters."))
+            sb.AppendLine(Localization.T("- Bulk Traits adds selected traits to all crew on the current ship or station, or clears all traits from that crew."))
+            sb.AppendLine(Localization.T("- Bulk Schedules assigns a selected global schedule to checked crew."))
+            sb.AppendLine(Localization.T("- Bulk Recovery restores checked crew, fully recovers checked crew, restores all active player crew vitals, or fully recovers all active player crew."))
+            sb.AppendLine(Localization.T("- Bulk Loadouts creates, saves, renames, and deletes named loadout configurations, then applies a selected configuration to checked crew."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Save Integrity ---")
-            sb.AppendLine("- Scans primary IDs, relationships, global schedules, known ship references, and ID counters.")
-            sb.AppendLine("- Critical findings block saving until reviewed.")
-            sb.AppendLine("- Use Select Repairable, Clear Selection, and Apply Selected Repairs to control exactly which fixes are applied.")
-            sb.AppendLine("- Repairs are applied only when you select and approve them.")
+            sb.AppendLine(Localization.T("--- Save Integrity ---"))
+            sb.AppendLine(Localization.T("- Scans primary IDs, relationships, global schedules, known ship references, and ID counters."))
+            sb.AppendLine(Localization.T("- Critical findings block saving until reviewed."))
+            sb.AppendLine(Localization.T("- Use Select Repairable, Clear Selection, and Apply Selected Repairs to control exactly which fixes are applied."))
+            sb.AppendLine(Localization.T("- Repairs are applied only when you select and approve them."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Game Start Editor ---")
-            sb.AppendLine("- In Space Haven, start a new game, choose mode and difficulty, then save the difficulty file as a custom template.")
-            sb.AppendLine("- Click Load File to open that custom Game Start XML file.")
-            sb.AppendLine("- Set Scenario Folder if you want the editor to remember where those templates live.")
-            sb.AppendLine("- Edit relationships, sandbox mode, crew count, max crew, max resources, max items, and hangar population.")
-            sb.AppendLine("- Use the Resources and Items tabs to add, edit, or delete starting resources and items.")
-            sb.AppendLine("- Click Save Changes to write the custom template XML.")
+            sb.AppendLine(Localization.T("--- Game Start Editor ---"))
+            sb.AppendLine(Localization.T("- In Space Haven, start a new game, choose mode and difficulty, then save the difficulty file as a custom template."))
+            sb.AppendLine(Localization.T("- Click Load File to open that custom Game Start XML file."))
+            sb.AppendLine(Localization.T("- Set Scenario Folder if you want the editor to remember where those templates live."))
+            sb.AppendLine(Localization.T("- Edit relationships, sandbox mode, crew count, max crew, max resources, max items, and hangar population."))
+            sb.AppendLine(Localization.T("- Use the Resources and Items tabs to add, edit, or delete starting resources and items."))
+            sb.AppendLine(Localization.T("- Click Save Changes to write the custom template XML."))
             sb.AppendLine()
 
-            sb.AppendLine("--- Final Reminder ---")
-            sb.AppendLine("- Keep manual backups of saves before experimenting.")
-            sb.AppendLine("- File -> Save is required for loaded-save edits.")
-            sb.AppendLine("- Game Start Editor uses Save Changes for custom template XML files.")
-            sb.AppendLine("- After blueprint imports, bulk changes, or repairs, run Save Integrity before loading the save in Space Haven.")
+            sb.AppendLine(Localization.T("--- Final Reminder ---"))
+            sb.AppendLine(Localization.T("- Keep manual backups of saves before experimenting."))
+            sb.AppendLine(Localization.T("- File -> Save is required for loaded-save edits."))
+            sb.AppendLine(Localization.T("- Game Start Editor uses Save Changes for custom template XML files."))
+            sb.AppendLine(Localization.T("- After blueprint imports, bulk changes, or repairs, run Save Integrity before loading the save in Space Haven."))
 
             Return sb.ToString()
         End Function
@@ -5202,47 +5248,47 @@ Namespace SpaceHavenEditor2
         ' --- (Ensure all your other existing methods are still present) ---
 
         'Private Sub dgvStorage_CellEditEnding(sender As Object, e As DataGridCellEditEndingEventArgs)
-        '    MessageBox.Show("DEBUG: dgvStorage_CellEditEnding START", "Debug", MessageBoxButton.OK, MessageBoxImage.Information) ' Start of handler
+        '    MessageBox.Show(Localization.T("DEBUG: dgvStorage_CellEditEnding START"), Localization.T("Debug"), MessageBoxButton.OK, MessageBoxImage.Information) ' Start of handler
 
         '    If e.EditAction = DataGridEditAction.Cancel Then
-        '        MessageBox.Show("DEBUG: EditAction was Cancel. Exiting.", "Debug", MessageBoxButton.OK, MessageBoxImage.Warning)
+        '        MessageBox.Show(Localization.T("DEBUG: EditAction was Cancel. Exiting."), Localization.T("Debug"), MessageBoxButton.OK, MessageBoxImage.Warning)
         '        Return ' Edit was cancelled by user (e.g., Esc key)
         '    End If
 
         '    Dim quantityColumn As DataGridTextColumn = TryCast(e.Column, DataGridTextColumn)
         '    If quantityColumn Is Nothing OrElse quantityColumn.Header?.ToString() <> "Quantity" Then
         '        Dim headerInfo As String = If(e.Column Is Nothing, "Column is Nothing", $"Header is '{If(e.Column?.Header?.ToString(), "NULL")}'")
-        '        MessageBox.Show($"DEBUG EXIT: Edited column test failed. {headerInfo}", "Debug Exit", MessageBoxButton.OK, MessageBoxImage.Error)
+        '        MessageBox.Show(Localization.F("DEBUG EXIT: Edited column test failed. {0}", headerInfo), Localization.T("Debug Exit"), MessageBoxButton.OK, MessageBoxImage.Error)
         '        Return ' Exit because it's not the quantity column or column is null
         '    End If
 
         '    Dim editedItem As StorageItem = TryCast(e.Row?.Item, StorageItem)
         '    If editedItem Is Nothing Then
         '        Dim itemTypeInfo As String = If(e.Row?.Item Is Nothing, "Row.Item is Nothing", $"Row.Item type is {e.Row.Item.GetType().Name}")
-        '        MessageBox.Show($"DEBUG EXIT: Failed to cast Row.Item to StorageItem. {itemTypeInfo}", "Debug Exit", MessageBoxButton.OK, MessageBoxImage.Error)
+        '        MessageBox.Show(Localization.F("DEBUG EXIT: Failed to cast Row.Item to StorageItem. {0}", itemTypeInfo), Localization.T("Debug Exit"), MessageBoxButton.OK, MessageBoxImage.Error)
         '        Return ' Exit because the data item for the row is null or not a StorageItem
         '    End If
 
         '    Dim editingTextBox As TextBox = TryCast(e.EditingElement, TextBox)
         '    If editingTextBox Is Nothing Then
         '        Dim elementInfo As String = If(e.EditingElement Is Nothing, "EditingElement is Nothing", $"EditingElement type is {e.EditingElement.GetType().Name}")
-        '        MessageBox.Show($"DEBUG EXIT: Failed to cast EditingElement to TextBox. {elementInfo}", "Debug Exit", MessageBoxButton.OK, MessageBoxImage.Error)
+        '        MessageBox.Show(Localization.F("DEBUG EXIT: Failed to cast EditingElement to TextBox. {0}", elementInfo), Localization.T("Debug Exit"), MessageBoxButton.OK, MessageBoxImage.Error)
         '        Return ' Exit because the control used for editing isn't a TextBox
         '    End If
 
-        '    MessageBox.Show("DEBUG: Initial checks passed (Column, Row Item, Edit Control). Proceeding to validation.", "Debug Progress", MessageBoxButton.OK, MessageBoxImage.Information)
+        '    MessageBox.Show(Localization.T("DEBUG: Initial checks passed (Column, Row Item, Edit Control). Proceeding to validation."), Localization.T("Debug Progress"), MessageBoxButton.OK, MessageBoxImage.Information)
 
         '    Dim newValueString As String = editingTextBox.Text
         '    Dim newQuantity As Integer
 
         '    If Not Integer.TryParse(newValueString, newQuantity) OrElse newQuantity < 0 Then
-        '        MessageBox.Show($"DEBUG EXIT: Invalid quantity input ('{newValueString}'). Cancelling edit.", "Debug Validation", MessageBoxButton.OK, MessageBoxImage.Warning)
+        '        MessageBox.Show(Localization.F("DEBUG EXIT: Invalid quantity input ('{0}'). Cancelling edit.", newValueString), Localization.T("Debug Validation"), MessageBoxButton.OK, MessageBoxImage.Warning)
         '        e.Cancel = True
         '        editingTextBox.Text = editedItem.Quantity.ToString() ' Attempt to restore visually
         '        Return
         '    End If
 
-        '    MessageBox.Show($"DEBUG: Input '{newValueString}' parsed as valid quantity {newQuantity}.", "Debug Validation", MessageBoxButton.OK, MessageBoxImage.Information)
+        '    MessageBox.Show(Localization.F("DEBUG: Input '{0}' parsed as valid quantity {1}.", newValueString, newQuantity), Localization.T("Debug Validation"), MessageBoxButton.OK, MessageBoxImage.Information)
 
         '    ' --- Start XML Update Logic with Try...Catch ---
         '    Dim xmlWasModified As Boolean = False
@@ -5256,37 +5302,37 @@ Namespace SpaceHavenEditor2
         '        If selectedContainer.FeatElement Is Nothing Then Throw New Exception("selectedContainer.FeatElement is Nothing")
 
         '        targetFeatElement = selectedContainer.FeatElement ' Assign within Try block
-        '        MessageBox.Show($"DEBUG: Trying to find <inv> within <feat> (Parent objId='{selectedContainer.ParentObjId}', Parent entId='{If(selectedContainer.ParentEntId.HasValue, selectedContainer.ParentEntId.Value.ToString(), "N/A")}')", "Debug Progress", MessageBoxButton.OK, MessageBoxImage.Information)
+        '        MessageBox.Show(Localization.F("DEBUG: Trying to find <inv> within <feat> (Parent objId='{0}', Parent entId='{1}", selectedContainer.ParentObjId, If(selectedContainer.ParentEntId.HasValue, selectedContainer.ParentEntId.Value.ToString(),)N/A")}')", Localization.T("Debug Progress"), MessageBoxButton.OK, MessageBoxImage.Information)
         '        Dim targetInv = targetFeatElement.Descendants("inv").FirstOrDefault()
 
         '        If targetInv Is Nothing Then Throw New Exception("Cannot find <inv> node within the selected container's <feat> element.")
 
-        '        MessageBox.Show($"DEBUG: Found <inv> node. Trying to find <s> element with elementaryId='{editedItem.ElementId}'.", "Debug Progress", MessageBoxButton.OK, MessageBoxImage.Information)
+        '        MessageBox.Show(Localization.F("DEBUG: Found <inv> node. Trying to find <s> element with elementaryId='{0}'.", editedItem.ElementId), Localization.T("Debug Progress"), MessageBoxButton.OK, MessageBoxImage.Information)
         '        Dim itemElementToUpdate = targetInv.Elements("s").FirstOrDefault(Function(s) s.Attribute("elementaryId")?.Value = editedItem.ElementId.ToString())
 
-        '        If itemElementToUpdate Is Nothing Then MessageBox.Show($"DEBUG: <s> element for Item ID {editedItem.ElementId} was NOT FOUND within the <inv> node.", "Debug XML Info", MessageBoxButton.OK, MessageBoxImage.Warning) Else MessageBox.Show($"DEBUG: Found existing <s> element for Item ID {editedItem.ElementId}.", "Debug XML Info", MessageBoxButton.OK, MessageBoxImage.Information)
+        '        If itemElementToUpdate Is Nothing Then MessageBox.Show(Localization.F("DEBUG: <s> element for Item ID {0} was NOT FOUND within the <inv> node.", editedItem.ElementId), Localization.T("Debug XML Info"), MessageBoxButton.OK, MessageBoxImage.Warning) Else MessageBox.Show(Localization.F("DEBUG: Found existing <s> element for Item ID {0}.", editedItem.ElementId), Localization.T("Debug XML Info"), MessageBoxButton.OK, MessageBoxImage.Information)
 
         '        ' --- Perform XML Update ---
         '        If itemElementToUpdate Is Nothing AndAlso newQuantity > 0 Then
-        '            MessageBox.Show($"DEBUG INFO: Item ID {editedItem.ElementId} not in XML, creating new <s>.", "Debug XML Action", MessageBoxButton.OK, MessageBoxImage.Information)
+        '            MessageBox.Show(Localization.F("DEBUG INFO: Item ID {0} not in XML, creating new <s>.", editedItem.ElementId), Localization.T("Debug XML Action"), MessageBoxButton.OK, MessageBoxImage.Information)
         '            itemElementToUpdate = New XElement("s", New XAttribute("elementaryId", editedItem.ElementId.ToString()), New XAttribute("inStorage", newQuantity.ToString()), New XAttribute("onTheWayIn", "0"), New XAttribute("onTheWayOut", "0"))
         '            targetInv.Add(itemElementToUpdate) : xmlWasModified = True
         '        ElseIf itemElementToUpdate IsNot Nothing Then
         '            If newQuantity > 0 Then
         '                Dim currentQtyXml = itemElementToUpdate.Attribute("inStorage")?.Value
         '                If currentQtyXml <> newQuantity.ToString() Then
-        '                    MessageBox.Show($"DEBUG INFO: Updating XML 'inStorage' for Item ID {editedItem.ElementId} from '{currentQtyXml}' to '{newQuantity}'.", "Debug XML Action", MessageBoxButton.OK, MessageBoxImage.Information)
+        '                    MessageBox.Show(Localization.F("DEBUG INFO: Updating XML 'inStorage' for Item ID {0} from '{1}' to '{2}'.", editedItem.ElementId, currentQtyXml, newQuantity), Localization.T("Debug XML Action"), MessageBoxButton.OK, MessageBoxImage.Information)
         '                    itemElementToUpdate.SetAttributeValue("inStorage", newQuantity.ToString()) : xmlWasModified = True
         '                Else
-        '                    MessageBox.Show($"DEBUG INFO: XML 'inStorage' already matched {newQuantity}. No XML change.", "Debug XML Action", MessageBoxButton.OK, MessageBoxImage.Information)
+        '                    MessageBox.Show(Localization.F("DEBUG INFO: XML 'inStorage' already matched {0}. No XML change.", newQuantity), Localization.T("Debug XML Action"), MessageBoxButton.OK, MessageBoxImage.Information)
         '                    xmlWasModified = False
         '                End If
         '            Else ' newQuantity is 0
-        '                MessageBox.Show($"DEBUG INFO: Removing <s> element for Item ID {editedItem.ElementId} (quantity is 0).", "Debug XML Action", MessageBoxButton.OK, MessageBoxImage.Information)
+        '                MessageBox.Show(Localization.F("DEBUG INFO: Removing <s> element for Item ID {0} (quantity is 0).", editedItem.ElementId), Localization.T("Debug XML Action"), MessageBoxButton.OK, MessageBoxImage.Information)
         '                itemElementToUpdate.Remove() : xmlWasModified = True
         '            End If
         '        Else ' itemElement is Nothing and newQuantity is 0
-        '            MessageBox.Show($"DEBUG INFO: Item ID {editedItem.ElementId} not in XML and new quantity is 0. No XML change.", "Debug XML Action", MessageBoxButton.OK, MessageBoxImage.Information)
+        '            MessageBox.Show(Localization.F("DEBUG INFO: Item ID {0} not in XML and new quantity is 0. No XML change.", editedItem.ElementId), Localization.T("Debug XML Action"), MessageBoxButton.OK, MessageBoxImage.Information)
         '            xmlWasModified = False
         '        End If
 
@@ -5297,13 +5343,13 @@ Namespace SpaceHavenEditor2
 
         '    ' --- Handle results ---
         '    If exceptionMessage IsNot Nothing Then
-        '        MessageBox.Show(exceptionMessage, "Debug Error", MessageBoxButton.OK, MessageBoxImage.Error)
+        '        MessageBox.Show(exceptionMessage, Localization.T("Debug Error"), MessageBoxButton.OK, MessageBoxImage.Error)
         '        TryCast(e.EditingElement, TextBox).Text = editedItem.Quantity.ToString() ' Attempt to restore visually
         '        Return ' Exit handler on error
         '    End If
 
         '    ' --- Update In-Memory Data (Only if XML update was successful or not needed) ---
-        '    MessageBox.Show("DEBUG: Starting In-Memory Update.", "Debug Progress", MessageBoxButton.OK, MessageBoxImage.Information)
+        '    MessageBox.Show(Localization.T("DEBUG: Starting In-Memory Update."), Localization.T("Debug Progress"), MessageBoxButton.OK, MessageBoxImage.Information)
         '    Dim itemInMemoryList = selectedContainer.Items.FirstOrDefault(Function(i) i.ElementId = editedItem.ElementId)
 
         '    ' --- CORRECTED In-Memory Update Logic ---
@@ -5348,21 +5394,21 @@ Namespace SpaceHavenEditor2
         '    End If
         '    ' --- End Corrected Block ---
 
-        '    MessageBox.Show("DEBUG: Finished In-Memory Update.", "Debug Progress", MessageBoxButton.OK, MessageBoxImage.Information)
+        '    MessageBox.Show(Localization.T("DEBUG: Finished In-Memory Update."), Localization.T("Debug Progress"), MessageBoxButton.OK, MessageBoxImage.Information)
 
         '    ' --- Final Messages & Storing Debug Info ---
         '    Dim currentItemName = If(editedItem?.Name, "Unknown Item")
-        '    MessageBox.Show($"Quantity for {currentItemName} updated to {newQuantity} (in memory). Save file to persist.", "Quantity Updated", MessageBoxButton.OK, MessageBoxImage.Information)
+        '    MessageBox.Show(Localization.F("Quantity for {0} updated to {1} (in memory). Save file to persist.", currentItemName, newQuantity), Localization.T("Quantity Updated"), MessageBoxButton.OK, MessageBoxImage.Information)
 
         '    If xmlWasModified AndAlso targetFeatElement IsNot Nothing Then ' Check targetFeatElement isn't nothing
         '        lastEditedStorageItemDetails = Tuple.Create(targetFeatElement, editedItem.ElementId.ToString(), newQuantity.ToString())
-        '        MessageBox.Show($"DEBUG: Set lastEditedStorageItemDetails for Item {editedItem.ElementId}, New Qty {newQuantity}", "CellEditEnding Debug", MessageBoxButton.OK, MessageBoxImage.Asterisk)
+        '        MessageBox.Show(Localization.F("DEBUG: Set lastEditedStorageItemDetails for Item {0}, New Qty {1}", editedItem.ElementId, newQuantity), Localization.T("CellEditEnding Debug"), MessageBoxButton.OK, MessageBoxImage.Asterisk)
         '    Else
         '        lastEditedStorageItemDetails = Nothing
-        '        MessageBox.Show($"DEBUG: XML Was NOT Modified or Error occurred. lastEditedStorageItemDetails NOT set.", "CellEditEnding Debug", MessageBoxButton.OK, MessageBoxImage.Information)
+        '        MessageBox.Show(Localization.T("DEBUG: XML Was NOT Modified or Error occurred. lastEditedStorageItemDetails NOT set."), Localization.T("CellEditEnding Debug"), MessageBoxButton.OK, MessageBoxImage.Information)
         '    End If
 
-        '    MessageBox.Show("DEBUG: dgvStorage_CellEditEnding END", "Debug", MessageBoxButton.OK, MessageBoxImage.Information)
+        '    MessageBox.Show(Localization.T("DEBUG: dgvStorage_CellEditEnding END"), Localization.T("Debug"), MessageBoxButton.OK, MessageBoxImage.Information)
 
         'End Sub
 
@@ -5453,11 +5499,11 @@ Namespace SpaceHavenEditor2
 
             ' Ensure a ship is selected and XML is loaded
             If cmbCrewShip.SelectedItem Is Nothing OrElse TryCast(cmbCrewShip.SelectedItem, Ship)?.Sid = -1 Then
-                MessageBox.Show("Please select a ship first before adding crew.", "No Ship Selected", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a ship first before adding crew."), Localization.T("No Ship Selected"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If xmlDoc Is Nothing OrElse xmlDoc.Root Is Nothing Then
-                MessageBox.Show("Please load a save file first.", "No File Loaded", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please load a save file first."), Localization.T("No File Loaded"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -5466,14 +5512,14 @@ Namespace SpaceHavenEditor2
             Dim charactersNode = shipElement?.Element("characters")
 
             If shipElement Is Nothing OrElse charactersNode Is Nothing Then
-                MessageBox.Show($"Could not find ship (SID:{selectedShip.Sid}) or its <characters> node in the XML.", "XML Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Could not find ship (SID:{0}) or its <characters> node in the XML.", selectedShip.Sid), Localization.T("XML Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 Return
             End If
 
             ' --- Get available characters for template selection ---
             Dim availableCharacters = characters.Where(Function(c) c.ShipSid = selectedShip.Sid).ToList()
             If availableCharacters.Count = 0 Then
-                MessageBox.Show($"The selected ship (SID:{selectedShip.Sid}) has no existing crew members to use as a template. Please add a crew member first.", "No Template Available", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.F("The selected ship (SID:{0}) has no existing crew members to use as a template. Please add a crew member first.", selectedShip.Sid), Localization.T("No Template Available"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -5508,7 +5554,7 @@ Namespace SpaceHavenEditor2
                     nextId += 1
                     Dim newEntIdStr = nextId.ToString()
                     idCounterAttr.Value = newEntIdStr
-                    MessageBox.Show($"Assigned new Entity ID: {newEntIdStr}", "Info", MessageBoxButton.OK, MessageBoxImage.Information)
+                    MessageBox.Show(Localization.F("Assigned new Entity ID: {0}", newEntIdStr), Localization.T("Info"), MessageBoxButton.OK, MessageBoxImage.Information)
 
                     ' --- Clone Template and Modify with User's Data ---
                     Dim newCharacterNode As New XElement(templateCharacterNode) ' Deep copy to get all required structure
@@ -5602,10 +5648,10 @@ Namespace SpaceHavenEditor2
                     LoadCrewForShip(selectedShip.Sid)
                     ' Mark as unsaved
                     MarkUnsavedChanges()
-                    MessageBox.Show($"Crew member '{newName}' added (in memory). Use File > Save to make permanent.", "Crew Added", MessageBoxButton.OK, MessageBoxImage.Information)
+                    MessageBox.Show(Localization.F("Crew member '{0}' added (in memory). Use File > Save to make permanent.", newName), Localization.T("Crew Added"), MessageBoxButton.OK, MessageBoxImage.Information)
 
                 Catch ex As Exception
-                    MessageBox.Show($"Error creating crew: {ex.Message}", "Creation Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                    MessageBox.Show(Localization.F("Error creating crew: {0}", ex.Message), Localization.T("Creation Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 End Try
             End If ' End If DialogResult = True
 
@@ -5617,21 +5663,21 @@ Namespace SpaceHavenEditor2
             Dim selectedCondition = TryCast(lstConditions.SelectedItem, DataProp)
 
             If selectedCharacter Is Nothing Then
-                MessageBox.Show("Please select a character first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a character first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If selectedCondition Is Nothing Then
-                MessageBox.Show("Please select a condition from the list to remove.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a condition from the list to remove."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If xmlDoc Is Nothing Then
-                MessageBox.Show("Save file not loaded.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.T("Save file not loaded."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 Return
             End If
 
             ' Confirmation
-            Dim confirmResult = MessageBox.Show($"Are you sure you want to remove the condition '{selectedCondition.Name}' from {selectedCharacter.CharacterName}?",
-                                                 "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Question)
+            Dim confirmResult = MessageBox.Show(Localization.F("Are you sure you want to remove the condition '{0}' from {1}?", selectedCondition.Name, selectedCharacter.CharacterName),
+                                                 Localization.T("Confirm Deletion"), MessageBoxButton.YesNo, MessageBoxImage.Question)
             If confirmResult <> MessageBoxResult.Yes Then Return
 
             Try
@@ -5663,16 +5709,16 @@ Namespace SpaceHavenEditor2
                     lstConditions.ItemsSource = Nothing
                     lstConditions.ItemsSource = New ObservableCollection(Of DataProp)(selectedCharacter.CharacterConditions) ' Rebind to update UI
 
-                    MessageBox.Show($"Condition '{selectedCondition.Name}' removed (in memory). Use File > Save to make permanent.", "Condition Removed", MessageBoxButton.OK, MessageBoxImage.Information)
+                    MessageBox.Show(Localization.F("Condition '{0}' removed (in memory). Use File > Save to make permanent.", selectedCondition.Name), Localization.T("Condition Removed"), MessageBoxButton.OK, MessageBoxImage.Information)
                 Else
-                    MessageBox.Show($"Condition '{selectedCondition.Name}' (ID: {selectedCondition.Id}) not found in the character's XML <conditions> node. It might have already been removed.", "Not Found", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    MessageBox.Show(Localization.F("Condition '{0}' (ID: {1}) not found in the character's XML <conditions> node. It might have already been removed.", selectedCondition.Name, selectedCondition.Id), Localization.T("Not Found"), MessageBoxButton.OK, MessageBoxImage.Warning)
                     ' Optionally refresh list anyway in case memory was out of sync
                     lstConditions.ItemsSource = Nothing
                     lstConditions.ItemsSource = New ObservableCollection(Of DataProp)(selectedCharacter.CharacterConditions)
                 End If
 
             Catch ex As Exception
-                MessageBox.Show($"Error removing condition: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error removing condition: {0}", ex.Message), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 
@@ -5772,7 +5818,7 @@ Namespace SpaceHavenEditor2
             If cmbEmbeddedAvailableTraits.SelectedValue Is Nothing Then Return
             Dim traitId = CInt(cmbEmbeddedAvailableTraits.SelectedValue)
             If embeddedNewCrewTraits.Any(Function(trait) trait.Id = traitId) Then Return
-            Dim selectedTrait = DirectCast(cmbEmbeddedAvailableTraits.SelectedItem, KeyValuePair(Of Integer, String))
+            Dim selectedTrait = DirectCast(cmbEmbeddedAvailableTraits.SelectedItem, IdLabel)
             embeddedNewCrewTraits.Add(New DataProp With {.Id = traitId, .Name = selectedTrait.Value})
         End Sub
 
@@ -5787,24 +5833,24 @@ Namespace SpaceHavenEditor2
             Dim newName = txtEmbeddedNewCrewName.Text.Trim()
 
             If xmlDoc Is Nothing OrElse xmlDoc.Root Is Nothing Then
-                MessageBox.Show("Load a save file first.", "No Save Loaded", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Load a save file first."), Localization.T("No Save Loaded"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If selectedShip Is Nothing OrElse selectedShip.Sid = -1 Then
-                MessageBox.Show("Select a target ship or station.", "Target Required", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Select a target ship or station."), Localization.T("Target Required"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If templateCharacter Is Nothing Then
-                MessageBox.Show("Select a template crew member.", "Template Required", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Select a template crew member."), Localization.T("Template Required"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If String.IsNullOrWhiteSpace(newName) Then
-                MessageBox.Show("Enter a name for the new crew member.", "Name Required", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Enter a name for the new crew member."), Localization.T("Name Required"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
             If embeddedNewCrewAttributes.Any(Function(item) item.Value < 0) OrElse
                embeddedNewCrewSkills.Any(Function(item) item.Value < 0) Then
-                MessageBox.Show("Attribute and skill values must be non-negative.", "Invalid Values", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Attribute and skill values must be non-negative."), Localization.T("Invalid Values"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -5826,7 +5872,7 @@ Namespace SpaceHavenEditor2
                 embeddedNewCrewTraits.Clear()
                 lblEmbeddedNewCrewStatus.Text = $"Crew member '{newName}' added. Use File > Save to make permanent."
             Catch ex As Exception
-                MessageBox.Show($"Error creating crew: {ex.Message}", "Creation Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error creating crew: {0}", ex.Message), Localization.T("Creation Error"), MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 
@@ -5912,7 +5958,7 @@ Namespace SpaceHavenEditor2
             Dim sourceCharacter = TryCast(lstCharacters.SelectedItem, Character)
             Dim targetCharacter = TryCast(cmbRelationshipTarget.SelectedItem, Character)
             If sourceCharacter Is Nothing OrElse targetCharacter Is Nothing Then
-                MessageBox.Show("Select both a crew member and a relationship target.", "Selection Required",
+                MessageBox.Show(Localization.T("Select both a crew member and a relationship target."), Localization.T("Selection Required"),
                                 MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -5922,8 +5968,8 @@ Namespace SpaceHavenEditor2
                Not Integer.TryParse(txtRelationshipAttraction.Text, attraction) OrElse
                Not Integer.TryParse(txtRelationshipCompatibility.Text, compatibility) OrElse
                Not ValuesAreValid(friendship, attraction, compatibility) Then
-                MessageBox.Show("Friendship, attraction, and compatibility must be whole numbers between -100 and 100.",
-                                "Invalid Relationship Values", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Friendship, attraction, and compatibility must be whole numbers between -100 and 100."),
+                                Localization.T("Invalid Relationship Values"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -5944,7 +5990,7 @@ Namespace SpaceHavenEditor2
                 MarkUnsavedChanges()
                 LoadRelationshipsPage()
             Catch ex As Exception
-                MessageBox.Show($"Could not update relationship: {ex.Message}", "Relationship Error",
+                MessageBox.Show(Localization.F("Could not update relationship: {0}", ex.Message), Localization.T("Relationship Error"),
                                 MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
@@ -5962,7 +6008,7 @@ Namespace SpaceHavenEditor2
                         WriteRelationshipToXml(sourceCharacter, editedRel)
                         MarkUnsavedChanges()
                     Catch ex As Exception
-                        MessageBox.Show($"Could not update relationship: {ex.Message}", "Relationship Error",
+                        MessageBox.Show(Localization.F("Could not update relationship: {0}", ex.Message), Localization.T("Relationship Error"),
                                         MessageBoxButton.OK, MessageBoxImage.Error)
                         LoadRelationshipsPage()
                     End Try
@@ -5984,14 +6030,14 @@ Namespace SpaceHavenEditor2
         Private Sub BtnBulkAddCrew_Click(sender As Object, e As RoutedEventArgs)
             ' Ensure XML is loaded
             If xmlDoc Is Nothing OrElse xmlDoc.Root Is Nothing Then
-                lblBulkStatus.Text = "Please load a save file first."
+                lblBulkStatus.Text = Localization.T("Please load a save file first.")
                 Return
             End If
 
             ' 1. Get the selected ship
             Dim selectedShip As Ship = TryCast(cmb_ships.SelectedItem, Ship)
             If selectedShip Is Nothing OrElse selectedShip.Sid = -1 Then
-                lblBulkStatus.Text = "Please select a ship first."
+                lblBulkStatus.Text = Localization.T("Please select a ship first.")
                 Return
             End If
 
@@ -6004,14 +6050,14 @@ Namespace SpaceHavenEditor2
             ' 2. Get the selected template crew member
             Dim templateCrewElement As XElement = GetSelectedTemplateCrewNode()
             If templateCrewElement Is Nothing Then
-                lblBulkStatus.Text = "Please select a template crew member."
+                lblBulkStatus.Text = Localization.T("Please select a template crew member.")
                 Return
             End If
 
             ' 3. Get and validate the amount to add
             Dim amountToAdd As Integer
             If Not Integer.TryParse(txtBulkCrewAmount.Text, amountToAdd) OrElse amountToAdd <= 0 Then
-                lblBulkStatus.Text = "Please enter a valid positive number to add."
+                lblBulkStatus.Text = Localization.T("Please enter a valid positive number to add.")
                 Return
             End If
 
@@ -6165,7 +6211,7 @@ Namespace SpaceHavenEditor2
         ' >>> REPLACE THIS WITH YOUR ACTUAL LOGIC <<<
         Private Function GetSelectedShipNode() As XElement
             ' Example: Return TryCast(cmbShips.SelectedItem, YourShipClass)?.XmlNode
-            ' MessageBox.Show("GetSelectedShipNode() needs to be implemented!", "Placeholder", MessageBoxButton.OK, MessageBoxImage.Warning)
+            ' MessageBox.Show(Localization.T("GetSelectedShipNode() needs to be implemented!"), Localization.T("Placeholder"), MessageBoxButton.OK, MessageBoxImage.Warning)
             ' For testing, you might temporarily return the first player ship:
             Return xmlDoc?.Root?.Element("ships")?.Elements("ship")?.FirstOrDefault(Function(s) s.Attribute("owner")?.Value = "Player")
             ' Return Nothing ' Return nothing until implemented
@@ -6193,7 +6239,7 @@ Namespace SpaceHavenEditor2
 
             cmbTemplateCrew.ItemsSource = Nothing
             If shipSid = -1 Then
-                lblBulkStatus.Text = "Please select a ship first."
+                lblBulkStatus.Text = Localization.T("Please select a ship first.")
                 btnBulkAddCrew.IsEnabled = False
                 Return
             End If
@@ -6202,7 +6248,7 @@ Namespace SpaceHavenEditor2
             Debug.WriteLine($"Crew Found for Ship {shipSid}: {crewList.Count}")
 
             If crewList.Count = 0 Then
-                lblBulkStatus.Text = "No crew members found for this ship. Add a crew member first."
+                lblBulkStatus.Text = Localization.T("No crew members found for this ship. Add a crew member first.")
                 btnBulkAddCrew.IsEnabled = False
                 Return
             End If
@@ -6219,7 +6265,7 @@ Namespace SpaceHavenEditor2
                 lblBulkStatus.Text = $"Template crew loaded ({crewList.Count} members). Ready to add crew."
             Else
                 btnBulkAddCrew.IsEnabled = False
-                lblBulkStatus.Text = "No crew members found for this ship. Add a crew member first."
+                lblBulkStatus.Text = Localization.T("No crew members found for this ship. Add a crew member first.")
             End If
         End Sub
 
@@ -6553,18 +6599,18 @@ Namespace SpaceHavenEditor2
 
         Private Sub btnSetCharacterAttributes_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc Is Nothing OrElse String.IsNullOrEmpty(currentFilePath) Then
-                MessageBox.Show("Load a save file first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Load a save file first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             If lstCharacters.SelectedItem Is Nothing Then
-                MessageBox.Show("Please select a character first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a character first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim attributeValue As Integer
             If Not Integer.TryParse(txtAttributeValue.Text, attributeValue) OrElse attributeValue < 1 OrElse attributeValue > 10 Then
-                MessageBox.Show("Please enter a valid attribute value between 1 and 10.", "Invalid Value", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a valid attribute value between 1 and 10."), Localization.T("Invalid Value"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -6596,13 +6642,13 @@ Namespace SpaceHavenEditor2
 
         Private Sub btnBulkSetAttributes_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc Is Nothing OrElse String.IsNullOrEmpty(currentFilePath) Then
-                MessageBox.Show("Load a save file first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Load a save file first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim attributeValue As Integer
             If Not Integer.TryParse(txtBulkAttributeValue.Text, attributeValue) OrElse attributeValue < 1 OrElse attributeValue > 10 Then
-                MessageBox.Show("Please enter a valid attribute value between 1 and 10.", "Invalid Value", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a valid attribute value between 1 and 10."), Localization.T("Invalid Value"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -6645,18 +6691,18 @@ Namespace SpaceHavenEditor2
 
         Private Sub btnSetCharacterSkills_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc Is Nothing OrElse String.IsNullOrEmpty(currentFilePath) Then
-                MessageBox.Show("Load a save file first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Load a save file first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             If lstCharacters.SelectedItem Is Nothing Then
-                MessageBox.Show("Please select a character first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a character first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim skillValue As Integer
             If Not Integer.TryParse(txtSkillValue.Text, skillValue) OrElse skillValue < 1 OrElse skillValue > 10 Then
-                MessageBox.Show("Please enter a valid skill value between 1 and 10.", "Invalid Value", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a valid skill value between 1 and 10."), Localization.T("Invalid Value"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -6688,18 +6734,18 @@ Namespace SpaceHavenEditor2
 
         Private Sub btnSetCharacterMaxSkills_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc Is Nothing OrElse String.IsNullOrEmpty(currentFilePath) Then
-                MessageBox.Show("Load a save file first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Load a save file first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             If lstCharacters.SelectedItem Is Nothing Then
-                MessageBox.Show("Please select a character first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select a character first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim skillMaxValue As Integer
             If Not Integer.TryParse(txtSkillMaxValue.Text, skillMaxValue) OrElse skillMaxValue < 1 OrElse skillMaxValue > 10 Then
-                MessageBox.Show("Please enter a valid max skill value between 1 and 10.", "Invalid Value", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a valid max skill value between 1 and 10."), Localization.T("Invalid Value"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -6731,13 +6777,13 @@ Namespace SpaceHavenEditor2
 
         Private Sub btnBulkSetSkills_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc Is Nothing OrElse String.IsNullOrEmpty(currentFilePath) Then
-                MessageBox.Show("Load a save file first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Load a save file first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim skillValue As Integer
             If Not Integer.TryParse(txtBulkSkillValue.Text, skillValue) OrElse skillValue < 1 OrElse skillValue > 10 Then
-                MessageBox.Show("Please enter a valid skill value between 1 and 10.", "Invalid Value", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a valid skill value between 1 and 10."), Localization.T("Invalid Value"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -6780,13 +6826,13 @@ Namespace SpaceHavenEditor2
 
         Private Sub btnBulkSetMaxSkills_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc Is Nothing OrElse String.IsNullOrEmpty(currentFilePath) Then
-                MessageBox.Show("Load a save file first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Load a save file first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim skillMaxValue As Integer
             If Not Integer.TryParse(txtBulkSkillMaxValue.Text, skillMaxValue) OrElse skillMaxValue < 1 OrElse skillMaxValue > 10 Then
-                MessageBox.Show("Please enter a valid max skill value between 1 and 10.", "Invalid Value", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a valid max skill value between 1 and 10."), Localization.T("Invalid Value"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -6829,7 +6875,7 @@ Namespace SpaceHavenEditor2
 
         Private Sub btnBulkSetSkillsMax_Click(sender As Object, e As RoutedEventArgs)
             If xmlDoc Is Nothing OrElse String.IsNullOrEmpty(currentFilePath) Then
-                MessageBox.Show("Load a save file first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Load a save file first."), Localization.T("Warning"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -6870,7 +6916,7 @@ Namespace SpaceHavenEditor2
 
             ' Mark as unsaved (changes are in memory, will be saved when user clicks File > Save)
             MarkUnsavedChanges()
-            lblBulkSkillStatus.Text = "All skills set to their maximum level for every character."
+            lblBulkSkillStatus.Text = Localization.T("All skills set to their maximum level for every character.")
         End Sub
 
         ' ===== UNIFORM EDITING METHODS =====
@@ -7011,7 +7057,7 @@ Namespace SpaceHavenEditor2
         ' Set Scenario Folder button click handler
         Private Sub btnGameStartSetScenarioFolder_Click(sender As Object, e As RoutedEventArgs)
             Dim folderDialog As New System.Windows.Forms.FolderBrowserDialog() With {
-                .Description = "Select the Scenario folder where your custom difficulty game files are stored",
+                .Description = Localization.T("Select the Scenario folder where your custom difficulty game files are stored"),
                 .ShowNewFolderButton = False
             }
 
@@ -7026,9 +7072,9 @@ Namespace SpaceHavenEditor2
                     Global.SpaceHavenEditor2.My.Settings.Default.DefaultScenarioDirectory = folderDialog.SelectedPath
                     Global.SpaceHavenEditor2.My.Settings.Default.Save()
                     UpdateGameStartScenarioFolderDisplay()
-                    MessageBox.Show($"Scenario folder set to:{vbCrLf}{folderDialog.SelectedPath}", "Scenario Folder Set", MessageBoxButton.OK, MessageBoxImage.Information)
+                    MessageBox.Show(Localization.F("Scenario folder set to:{0}{1}", vbCrLf, folderDialog.SelectedPath), Localization.T("Scenario Folder Set"), MessageBoxButton.OK, MessageBoxImage.Information)
                 Catch ex As Exception
-                    MessageBox.Show($"Error saving scenario folder setting: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                    MessageBox.Show(Localization.F("Error saving scenario folder setting: {0}", ex.Message), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                 End Try
             End If
         End Sub
@@ -7037,7 +7083,7 @@ Namespace SpaceHavenEditor2
         Private Sub btnGameStartLoadFile_Click(sender As Object, e As RoutedEventArgs)
             Dim openFileDialog As New Microsoft.Win32.OpenFileDialog() With {
             .Filter = "XML Files (*.xml)|*.xml|All Files (*.*)|*.*",
-            .Title = "Select Game Start XML File"
+            .Title = Localization.T("Select Game Start XML File")
         }
 
             ' Set initial directory to scenario folder
@@ -7090,7 +7136,7 @@ Namespace SpaceHavenEditor2
                     ' Ship mode - get the first ship (l element)
                     shipElement = playerShipsElement.Element("l")
                     If shipElement Is Nothing Then
-                        MessageBox.Show("Invalid XML structure: No ship found in 'playerShips'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                        MessageBox.Show(Localization.T("Invalid XML structure: No ship found in 'playerShips'."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                         Return
                     End If
                     gameStartCurrentContainerElement = shipElement
@@ -7118,13 +7164,13 @@ Namespace SpaceHavenEditor2
                     If shipElement Is Nothing Then
                         shipElement = playerCraftsElement.Element("l")
                         If shipElement Is Nothing Then
-                            MessageBox.Show("Invalid XML structure: No craft found in 'playerCrafts'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                            MessageBox.Show(Localization.T("Invalid XML structure: No craft found in 'playerCrafts'."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                             Return
                         End If
                         gameStartCurrentContainerElement = shipElement
                     End If
                 Else
-                    MessageBox.Show("Invalid XML structure: Neither 'playerShips' nor 'playerCrafts' element found. This may not be a valid Game Start file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                    MessageBox.Show(Localization.T("Invalid XML structure: Neither 'playerShips' nor 'playerCrafts' element found. This may not be a valid Game Start file."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                     Return
                 End If
 
@@ -7243,14 +7289,14 @@ Namespace SpaceHavenEditor2
                 If Not validation.Item1 Then
                     ' Limits exceeded - disable save button and show warning
                     btnGameStartSaveChanges.IsEnabled = False
-                    MessageBox.Show($"{loadMessage}{vbCrLf}{vbCrLf}⚠ WARNING: Limits Exceeded!{vbCrLf}{vbCrLf}{validation.Item2}{vbCrLf}{vbCrLf}You must fix this before saving. Increase the limits or reduce quantities.",
-                                    "File Loaded with Warnings", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    MessageBox.Show(Localization.F("{0}{1}{2}⚠ WARNING: Limits Exceeded!{3}{4}{5}{6}{7}You must fix this before saving. Increase the limits or reduce quantities.", loadMessage, vbCrLf, vbCrLf, vbCrLf, vbCrLf, validation.Item2, vbCrLf, vbCrLf),
+                                    Localization.T("File Loaded with Warnings"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Else
-                    MessageBox.Show(loadMessage, "Success", MessageBoxButton.OK, MessageBoxImage.Information)
+                    MessageBox.Show(loadMessage, Localization.T("Success"), MessageBoxButton.OK, MessageBoxImage.Information)
                 End If
 
             Catch ex As Exception
-                MessageBox.Show($"Error loading XML file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error loading XML file: {0}", ex.Message), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 
@@ -7344,13 +7390,13 @@ Namespace SpaceHavenEditor2
         ' Add Resource button click handler
         Private Sub btnGameStartAddResource_Click(sender As Object, e As RoutedEventArgs)
             If cmbGameStartAddResource.SelectedValue Is Nothing Then
-                MessageBox.Show("Please select an item from the dropdown.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select an item from the dropdown."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim elementId As Integer
             If Not Integer.TryParse(cmbGameStartAddResource.SelectedValue.ToString(), elementId) Then
-                MessageBox.Show("Invalid item selection.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Invalid item selection."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -7360,8 +7406,8 @@ Namespace SpaceHavenEditor2
             ' Check if item already exists
             Dim existingItem = gameStartResourceItems.FirstOrDefault(Function(r) r.ElementId = elementId)
             If existingItem IsNot Nothing Then
-                Dim result = MessageBox.Show($"Item '{itemName}' already exists with quantity {existingItem.Quantity}. Do you want to update the quantity?",
-                                       "Item Exists", MessageBoxButton.YesNo, MessageBoxImage.Question)
+                Dim result = MessageBox.Show(Localization.F("Item '{0}' already exists with quantity {1}. Do you want to update the quantity?", itemName, existingItem.Quantity),
+                                       Localization.T("Item Exists"), MessageBoxButton.YesNo, MessageBoxImage.Question)
                 If result = MessageBoxResult.Yes Then
                     Dim newQuantity As Integer
                     If Integer.TryParse(txtGameStartAddResourceQuantity.Text, newQuantity) AndAlso newQuantity > 0 Then
@@ -7370,13 +7416,13 @@ Namespace SpaceHavenEditor2
                         ' Validate the new total
                         Dim validation = ValidateResourcesLimit(quantityDifference)
                         If Not validation.Item1 Then
-                            MessageBox.Show(validation.Item2, "Resource Limit Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning)
+                            MessageBox.Show(validation.Item2, Localization.T("Resource Limit Exceeded"), MessageBoxButton.OK, MessageBoxImage.Warning)
                             Return
                         End If
                         existingItem.Quantity = newQuantity
                         MarkGameStartUnsavedChanges()
                     Else
-                        MessageBox.Show("Please enter a valid quantity (positive integer).", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                        MessageBox.Show(Localization.T("Please enter a valid quantity (positive integer)."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                     End If
                 End If
                 Return
@@ -7388,7 +7434,7 @@ Namespace SpaceHavenEditor2
                 ' Validate the limit before adding
                 Dim validation = ValidateResourcesLimit(quantity)
                 If Not validation.Item1 Then
-                    MessageBox.Show(validation.Item2, "Resource Limit Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    MessageBox.Show(validation.Item2, Localization.T("Resource Limit Exceeded"), MessageBoxButton.OK, MessageBoxImage.Warning)
                     Return
                 End If
 
@@ -7402,20 +7448,20 @@ Namespace SpaceHavenEditor2
                 cmbGameStartAddResource.SelectedValue = Nothing
                 MarkGameStartUnsavedChanges()
             Else
-                MessageBox.Show("Please enter a valid quantity (positive integer).", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a valid quantity (positive integer)."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
             End If
         End Sub
 
         ' Add Item button click handler
         Private Sub btnGameStartAddItem_Click(sender As Object, e As RoutedEventArgs)
             If cmbGameStartAddItem.SelectedValue Is Nothing Then
-                MessageBox.Show("Please select an item from the dropdown.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select an item from the dropdown."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim elementId As Integer
             If Not Integer.TryParse(cmbGameStartAddItem.SelectedValue.ToString(), elementId) Then
-                MessageBox.Show("Invalid item selection.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Invalid item selection."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -7425,8 +7471,8 @@ Namespace SpaceHavenEditor2
             ' Check if item already exists
             Dim existingItem = gameStartItemItems.FirstOrDefault(Function(r) r.ElementId = elementId)
             If existingItem IsNot Nothing Then
-                Dim result = MessageBox.Show($"Item '{itemName}' already exists with quantity {existingItem.Quantity}. Do you want to update the quantity?",
-                                       "Item Exists", MessageBoxButton.YesNo, MessageBoxImage.Question)
+                Dim result = MessageBox.Show(Localization.F("Item '{0}' already exists with quantity {1}. Do you want to update the quantity?", itemName, existingItem.Quantity),
+                                       Localization.T("Item Exists"), MessageBoxButton.YesNo, MessageBoxImage.Question)
                 If result = MessageBoxResult.Yes Then
                     Dim newQuantity As Integer
                     If Integer.TryParse(txtGameStartAddItemQuantity.Text, newQuantity) AndAlso newQuantity > 0 Then
@@ -7435,13 +7481,13 @@ Namespace SpaceHavenEditor2
                         ' Validate the new total
                         Dim validation = ValidateItemsLimit(quantityDifference)
                         If Not validation.Item1 Then
-                            MessageBox.Show(validation.Item2, "Item Limit Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning)
+                            MessageBox.Show(validation.Item2, Localization.T("Item Limit Exceeded"), MessageBoxButton.OK, MessageBoxImage.Warning)
                             Return
                         End If
                         existingItem.Quantity = newQuantity
                         MarkGameStartUnsavedChanges()
                     Else
-                        MessageBox.Show("Please enter a valid quantity (positive integer).", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                        MessageBox.Show(Localization.T("Please enter a valid quantity (positive integer)."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                     End If
                 End If
                 Return
@@ -7453,7 +7499,7 @@ Namespace SpaceHavenEditor2
                 ' Validate the limit before adding
                 Dim validation = ValidateItemsLimit(quantity)
                 If Not validation.Item1 Then
-                    MessageBox.Show(validation.Item2, "Item Limit Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    MessageBox.Show(validation.Item2, Localization.T("Item Limit Exceeded"), MessageBoxButton.OK, MessageBoxImage.Warning)
                     Return
                 End If
 
@@ -7467,7 +7513,7 @@ Namespace SpaceHavenEditor2
                 cmbGameStartAddItem.SelectedValue = Nothing
                 MarkGameStartUnsavedChanges()
             Else
-                MessageBox.Show("Please enter a valid quantity (positive integer).", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please enter a valid quantity (positive integer)."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
             End If
         End Sub
 
@@ -7476,13 +7522,13 @@ Namespace SpaceHavenEditor2
             ' Get all items where IsSelected is True
             Dim selectedItems = gameStartResourceItems.Where(Function(i) i.IsSelected = True).ToList()
             If selectedItems.Count = 0 Then
-                MessageBox.Show("Please select one or more items to delete by checking their boxes.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select one or more items to delete by checking their boxes."), Localization.T("No Selection"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim itemNames = String.Join(", ", selectedItems.Select(Function(i) i.Name))
-            Dim result = MessageBox.Show($"Are you sure you want to delete {selectedItems.Count} selected item(s)?{vbCrLf}{itemNames}",
-                                    "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question)
+            Dim result = MessageBox.Show(Localization.F("Are you sure you want to delete {0} selected item(s)?{1}{2}", selectedItems.Count, vbCrLf, itemNames),
+                                    Localization.T("Confirm Delete"), MessageBoxButton.YesNo, MessageBoxImage.Question)
             If result = MessageBoxResult.Yes Then
                 ' Remove items from the collection
                 For Each item In selectedItems
@@ -7498,13 +7544,13 @@ Namespace SpaceHavenEditor2
             ' Get all items where IsSelected is True
             Dim selectedItems = gameStartItemItems.Where(Function(i) i.IsSelected = True).ToList()
             If selectedItems.Count = 0 Then
-                MessageBox.Show("Please select one or more items to delete by checking their boxes.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("Please select one or more items to delete by checking their boxes."), Localization.T("No Selection"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             Dim itemNames = String.Join(", ", selectedItems.Select(Function(i) i.Name))
-            Dim result = MessageBox.Show($"Are you sure you want to delete {selectedItems.Count} selected item(s)?{vbCrLf}{itemNames}",
-                                    "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question)
+            Dim result = MessageBox.Show(Localization.F("Are you sure you want to delete {0} selected item(s)?{1}{2}", selectedItems.Count, vbCrLf, itemNames),
+                                    Localization.T("Confirm Delete"), MessageBoxButton.YesNo, MessageBoxImage.Question)
             If result = MessageBoxResult.Yes Then
                 ' Remove items from the collection
                 For Each item In selectedItems
@@ -7593,7 +7639,7 @@ Namespace SpaceHavenEditor2
                             ' Validate the new total
                             Dim validation = ValidateResourcesLimit(quantityDifference)
                             If Not validation.Item1 Then
-                                MessageBox.Show(validation.Item2, "Resource Limit Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning)
+                                MessageBox.Show(validation.Item2, Localization.T("Resource Limit Exceeded"), MessageBoxButton.OK, MessageBoxImage.Warning)
                                 e.Cancel = True ' Cancel the edit
                                 item.Quantity = oldQuantity ' Revert to old value
                                 Return
@@ -7622,7 +7668,7 @@ Namespace SpaceHavenEditor2
                             ' Validate the new total
                             Dim validation = ValidateItemsLimit(quantityDifference)
                             If Not validation.Item1 Then
-                                MessageBox.Show(validation.Item2, "Item Limit Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning)
+                                MessageBox.Show(validation.Item2, Localization.T("Item Limit Exceeded"), MessageBoxButton.OK, MessageBoxImage.Warning)
                                 e.Cancel = True ' Cancel the edit
                                 item.Quantity = oldQuantity ' Revert to old value
                                 Return
@@ -7736,15 +7782,15 @@ Namespace SpaceHavenEditor2
         ' Save Changes button click handler
         Private Sub btnGameStartSaveChanges_Click(sender As Object, e As RoutedEventArgs)
             If gameStartXmlDoc Is Nothing OrElse String.IsNullOrEmpty(gameStartFilePath) Then
-                MessageBox.Show("No file loaded to save.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.T("No file loaded to save."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
             ' Validate limits before saving
             Dim validation = ValidateAllLimits()
             If Not validation.Item1 Then
-                MessageBox.Show($"Cannot save: Limits exceeded!{vbCrLf}{vbCrLf}{validation.Item2}{vbCrLf}{vbCrLf}Please increase the limits or reduce quantities before saving.",
-                                "Cannot Save", MessageBoxButton.OK, MessageBoxImage.Warning)
+                MessageBox.Show(Localization.F("Cannot save: Limits exceeded!{0}{1}{2}{3}{4}Please increase the limits or reduce quantities before saving.", vbCrLf, vbCrLf, validation.Item2, vbCrLf, vbCrLf),
+                                Localization.T("Cannot Save"), MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
 
@@ -7774,7 +7820,7 @@ Namespace SpaceHavenEditor2
                     ' Ship mode - get the first ship (l element)
                     shipElement = playerShipsElement.Element("l")
                     If shipElement Is Nothing Then
-                        MessageBox.Show("Invalid XML structure: No ship found in 'playerShips'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                        MessageBox.Show(Localization.T("Invalid XML structure: No ship found in 'playerShips'."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                         Return
                     End If
                 ElseIf playerCraftsElement IsNot Nothing Then
@@ -7802,13 +7848,13 @@ Namespace SpaceHavenEditor2
                         If shipElement Is Nothing Then
                             shipElement = playerCraftsElement.Element("l")
                             If shipElement Is Nothing Then
-                                MessageBox.Show("Invalid XML structure: No craft found in 'playerCrafts'.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                                MessageBox.Show(Localization.T("Invalid XML structure: No craft found in 'playerCrafts'."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                                 Return
                             End If
                         End If
                     End If
                 Else
-                    MessageBox.Show("Invalid XML structure: Neither 'playerShips' nor 'playerCrafts' element found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                    MessageBox.Show(Localization.T("Invalid XML structure: Neither 'playerShips' nor 'playerCrafts' element found."), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
                     Return
                 End If
 
@@ -7865,10 +7911,10 @@ Namespace SpaceHavenEditor2
                 ' Save the XML file
                 gameStartXmlDoc.Save(gameStartFilePath)
                 ClearGameStartUnsavedChanges() ' Reset unsaved changes flag after successful save
-                MessageBox.Show("Changes saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information)
+                MessageBox.Show(Localization.T("Changes saved successfully!"), Localization.T("Success"), MessageBoxButton.OK, MessageBoxImage.Information)
 
             Catch ex As Exception
-                MessageBox.Show($"Error saving file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+                MessageBox.Show(Localization.F("Error saving file: {0}", ex.Message), Localization.T("Error"), MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 
@@ -7925,16 +7971,14 @@ Namespace SpaceHavenEditor2
             If Not ReferenceEquals(e.OriginalSource, mainNavigationTabs) Then Return
 
             Dim selectedTab = TryCast(mainNavigationTabs.SelectedItem, TabItem)
-            Dim selectedHeader = TryCast(selectedTab?.Header, String)
 
-            Select Case selectedHeader
-                Case "Ship Import and Export"
-                    txtMainEditorTitle.Text = "Ship Blueprint Manager"
-                Case "Game Start Editor"
-                    txtMainEditorTitle.Text = "Game Start & Difficulty Editor"
-                Case Else
-                    txtMainEditorTitle.Text = "Moragar's Space Haven Save Game Editor"
-            End Select
+            If ReferenceEquals(selectedTab, navShipTransfer) Then
+                txtMainEditorTitle.Text = Localization.T("Ship Blueprint Manager")
+            ElseIf ReferenceEquals(selectedTab, navGameStartEditor) Then
+                txtMainEditorTitle.Text = Localization.T("Game Start & Difficulty Editor")
+            Else
+                txtMainEditorTitle.Text = Localization.T("Moragar's Space Haven Save Game Editor")
+            End If
         End Sub
 
     End Class

@@ -5,9 +5,9 @@
     Public ReadOnly Property Name As String
         Get
             If IdCollection.DefaultStorageIDs.ContainsKey(ElementId) Then
-                Return IdCollection.DefaultStorageIDs(ElementId)
+                Return SpaceHavenEditor2.Localization.T(IdCollection.DefaultStorageIDs(ElementId))
             Else
-                Return $"Unknown Item ({ElementId})" ' Return ID if name is unknown
+                Return SpaceHavenEditor2.Localization.F("Unknown Item ({0})", ElementId)
             End If
         End Get
     End Property

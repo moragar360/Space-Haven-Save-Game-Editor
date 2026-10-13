@@ -507,6 +507,11 @@
                 <Separator/>
                 <MenuItem Header="_About" Click="AboutMenu_Click"/>
             </MenuItem>
+            <MenuItem x:Name="menuLanguage" Header="Language / 语言 / 語言">
+                <MenuItem Header="English" Tag="en" IsCheckable="True" Click="LanguageMenu_Click"/>
+                <MenuItem Header="简体中文" Tag="zh-CN" IsCheckable="True" Click="LanguageMenu_Click"/>
+                <MenuItem Header="繁體中文" Tag="zh-TW" IsCheckable="True" Click="LanguageMenu_Click"/>
+            </MenuItem>
         </Menu>
 
         <Grid Margin="10">
@@ -969,7 +974,7 @@
                                                   Style="{StaticResource ModernDataGridStyle}"
                                                   ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
                                             <DataGrid.Columns>
-                                                <DataGridTextColumn Header="Technology" Binding="{Binding TechnologyName}" Width="190"/>
+                                                <DataGridTextColumn Header="Technology" Binding="{Binding DisplayTechnology}" Width="190"/>
                                                 <DataGridTextColumn Header="ID" Binding="{Binding TechId}" Width="65"/>
                                                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="95"/>
                                                 <DataGridTextColumn Header="Stages" Binding="{Binding StageSummary}" Width="65"/>
@@ -1063,7 +1068,7 @@
                                             <DataGridCheckBoxColumn Header="Select"
                                                                     Binding="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                     Width="70"/>
-                                            <DataGridTextColumn Header="Datalog" Binding="{Binding DatalogName}" Width="*"
+                                            <DataGridTextColumn Header="Datalog" Binding="{Binding DisplayName}" Width="*"
                                                                 IsReadOnly="True"/>
                                             <DataGridTextColumn Header="ID" Binding="{Binding DatalogId}" Width="90"
                                                                 IsReadOnly="True"/>
@@ -1132,7 +1137,7 @@
                                             <DataGrid x:Name="dgvAttributes" AutoGenerateColumns="False" IsReadOnly="False" CanUserAddRows="False" CanUserDeleteRows="False" Style="{StaticResource ModernDataGridStyle}" ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}" RowEditEnding="dgvAttributes_RowEditEnding">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="Attr ID" Binding="{Binding Id}" IsReadOnly="True" Width="Auto"/>
-                                                    <DataGridTextColumn Header="Attr Name" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
+                                                    <DataGridTextColumn Header="Attr Name" Binding="{Binding DisplayName}" IsReadOnly="True" Width="*"/>
                                                     <DataGridTextColumn Header="Value" Binding="{Binding Value}" IsReadOnly="False" Width="Auto"/>
                                                 </DataGrid.Columns>
                                             </DataGrid>
@@ -1155,7 +1160,7 @@
                                             <DataGrid x:Name="dgvSkills" AutoGenerateColumns="False" IsReadOnly="False" CanUserAddRows="False" CanUserDeleteRows="False" Style="{StaticResource ModernDataGridStyle}" ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}" ToolTip="Current Level: The character's current skill level. Max Level: The maximum skill level the character can achieve. Characters must train to reach their max level." RowEditEnding="dgvSkills_RowEditEnding">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="Skill ID" Binding="{Binding Id}" IsReadOnly="True" Width="Auto"/>
-                                                    <DataGridTextColumn Header="Skill Name" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
+                                                    <DataGridTextColumn Header="Skill Name" Binding="{Binding DisplayName}" IsReadOnly="True" Width="*"/>
                                                     <DataGridTextColumn Header="Current Level" Binding="{Binding Value}" IsReadOnly="False" Width="Auto"/>
                                                     <DataGridTextColumn Header="Max Level" Binding="{Binding MaxValue}" IsReadOnly="False" Width="Auto"/>
                                                 </DataGrid.Columns>
@@ -1169,12 +1174,12 @@
                                             <TextBlock Text="Current Traits" FontWeight="SemiBold" Margin="0,0,0,5"/>
                                             <DataGrid x:Name="dgvTraits" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Height="200" CanUserAddRows="False" CanUserDeleteRows="False" Style="{StaticResource ModernDataGridStyle}" ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
                                                 <DataGrid.Columns>
-                                                    <DataGridTextColumn Header="Trait Name" Binding="{Binding Name}" Width="*"/>
+                                                    <DataGridTextColumn Header="Trait Name" Binding="{Binding DisplayName}" Width="*"/>
                                                 </DataGrid.Columns>
                                             </DataGrid>
                                             <TextBlock Text="Manage Traits" FontWeight="SemiBold" Margin="0,15,0,5"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                                <ComboBox x:Name="cmb_addTrait" Width="200" DisplayMemberPath="Value" SelectedValuePath="Key"/>
+                                                <ComboBox x:Name="cmb_addTrait" Width="200" DisplayMemberPath="Display" SelectedValuePath="Key"/>
                                                 <Button x:Name="btn_addTrait" Content="Add Trait" Width="100" Click="btn_addTrait_Click" Style="{StaticResource ModernButtonStyle}"/>
                                                 <Button x:Name="btn_deleteTrait" Content="Delete Trait" Width="100" Click="btn_deleteTrait_Click" Style="{StaticResource ModernButtonStyle}"/>
                                             </StackPanel>
@@ -1185,7 +1190,7 @@
                                     <Border Style="{StaticResource CardBorderStyle}">
                                         <StackPanel>
                                             <TextBlock Text="Current Conditions:" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                                            <ListBox x:Name="lstConditions" Height="300" DisplayMemberPath="Name" SelectionMode="Single"/>
+                                            <ListBox x:Name="lstConditions" Height="300" DisplayMemberPath="DisplayName" SelectionMode="Single"/>
                                             <Button x:Name="btnDeleteCondition" Content="Delete Selected Condition" Width="180" HorizontalAlignment="Center" Click="btnDeleteCondition_Click" Style="{StaticResource ModernButtonStyle}"/>
                                         </StackPanel>
                                     </Border>
@@ -1211,10 +1216,10 @@
                                                           Style="{StaticResource ModernDataGridStyle}"
                                                           ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
                                                     <DataGrid.Columns>
-                                                        <DataGridTextColumn Header="Vital" Binding="{Binding VitalName}" Width="*"/>
+                                                        <DataGridTextColumn Header="Vital" Binding="{Binding DisplayVital}" Width="*"/>
                                                         <DataGridTextColumn Header="Current" Binding="{Binding CurrentValue}" Width="85"/>
                                                         <DataGridTextColumn Header="Long-Term" Binding="{Binding LongTermValue}" Width="90"/>
-                                                        <DataGridTextColumn Header="Details" Binding="{Binding Details}" Width="145"/>
+                                                        <DataGridTextColumn Header="Details" Binding="{Binding DisplayDetails}" Width="145"/>
                                                     </DataGrid.Columns>
                                                 </DataGrid>
                                             </Grid>
@@ -1547,7 +1552,7 @@
                                                       ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="ID" Binding="{Binding Id}" IsReadOnly="True" Width="80"/>
-                                                    <DataGridTextColumn Header="Attribute" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
+                                                    <DataGridTextColumn Header="Attribute" Binding="{Binding DisplayName}" IsReadOnly="True" Width="*"/>
                                                     <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="100"/>
                                                 </DataGrid.Columns>
                                             </DataGrid>
@@ -1568,7 +1573,7 @@
                                                       ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="ID" Binding="{Binding Id}" IsReadOnly="True" Width="80"/>
-                                                    <DataGridTextColumn Header="Skill" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
+                                                    <DataGridTextColumn Header="Skill" Binding="{Binding DisplayName}" IsReadOnly="True" Width="*"/>
                                                     <DataGridTextColumn Header="Level" Binding="{Binding Value}" Width="100"/>
                                                 </DataGrid.Columns>
                                             </DataGrid>
@@ -1585,13 +1590,13 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0">
                                                 <TextBlock Text="Available Traits" FontWeight="Bold" Margin="0,0,0,8"/>
-                                                <ComboBox x:Name="cmbEmbeddedAvailableTraits" DisplayMemberPath="Value" SelectedValuePath="Key"/>
+                                                <ComboBox x:Name="cmbEmbeddedAvailableTraits" DisplayMemberPath="Display" SelectedValuePath="Key"/>
                                                 <Button Content="Add Trait" Width="120" HorizontalAlignment="Left"
                                                         Click="btnAddEmbeddedNewTrait_Click" Style="{StaticResource ModernButtonStyle}"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="2">
                                                 <TextBlock Text="Selected Traits" FontWeight="Bold" Margin="0,0,0,8"/>
-                                                <ListBox x:Name="lstEmbeddedNewTraits" Height="250" DisplayMemberPath="Name"/>
+                                                <ListBox x:Name="lstEmbeddedNewTraits" Height="250" DisplayMemberPath="DisplayName"/>
                                                 <Button Content="Remove Selected" Width="140" HorizontalAlignment="Left" Background="IndianRed"
                                                         Click="btnRemoveEmbeddedNewTrait_Click" Style="{StaticResource ModernButtonStyle}"/>
                                             </StackPanel>
@@ -1690,7 +1695,7 @@
                                                    FontStyle="Italic" TextWrapping="Wrap" Margin="0,0,0,8"/>
                                         <TextBlock Text="Select one or more traits to add. Existing traits are skipped, not duplicated."
                                                    TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                        <ListBox x:Name="lstBulkTraits" Height="260" DisplayMemberPath="Value"
+                                        <ListBox x:Name="lstBulkTraits" Height="260" DisplayMemberPath="Display"
                                                  SelectionMode="Extended"/>
                                         <WrapPanel Margin="0,10,0,0">
                                             <Button Content="Add Selected Trait(s) to Ship Crew" Width="250"
@@ -1970,10 +1975,12 @@
                                           Style="{StaticResource ModernDataGridStyle}"
                                           ColumnHeaderStyle="{StaticResource ModernDataGridColumnHeaderStyle}">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Faction" Binding="{Binding FactionName}" Width="150" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="Faction" Binding="{Binding DisplayName}" Width="150" IsReadOnly="True"/>
                                         <DataGridTextColumn Header="Reputation" Binding="{Binding Relationship, UpdateSourceTrigger=PropertyChanged}" Width="85"/>
-                                        <DataGridComboBoxColumn Header="Stance" Width="100"
-                                                                SelectedItemBinding="{Binding Stance, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <DataGridComboBoxColumn x:Name="colFactionStance" Header="Stance" Width="120"
+                                                                SelectedValueBinding="{Binding Stance, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="Value"
+                                                                DisplayMemberPath="Display"/>
                                         <DataGridTextColumn Header="Patience" Binding="{Binding Patience, UpdateSourceTrigger=PropertyChanged}" Width="75"/>
                                         <DataGridCheckBoxColumn Header="Trade" Binding="{Binding AccessTrade}" Width="60"/>
                                         <DataGridCheckBoxColumn Header="Ship" Binding="{Binding AccessShip}" Width="55"/>
